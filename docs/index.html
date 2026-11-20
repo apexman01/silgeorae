@@ -78,6 +78,10 @@
   .simrow td:first-child{white-space:normal}
   .simrow td:nth-child(2),.simrow td:nth-child(4){text-align:left}
   .simrow input{width:18px;height:18px;accent-color:var(--ink);vertical-align:middle}
+  .sum-view{table-layout:fixed;min-width:640px}
+  .sum-view th,.sum-view td{text-align:left!important;vertical-align:top;white-space:normal}
+  .sum-view td b{font-weight:600;display:block}
+  .sum-view td small{display:block;font-size:12px;color:var(--mute);margin-top:2px}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
@@ -526,19 +530,23 @@ function hhOf(se) {
 }
 function renderTables(series) {
   const typeLabel = state.type === "sale" ? "매매" : "전세";
-  let s = `<tr><th>단지</th><th>준공</th><th>세대수</th><th>${typeLabel} 건수</th><th>기간 최고</th><th>최근 거래</th><th>최고 대비</th></tr>`;
+  // 중요한 값(최근 거래·기간 최고)을 앞으로, 숫자는 왼쪽 정렬, 칸 너비는 같게
+  let s = `<colgroup><col style="width:22%">${"<col>".repeat(6)}</colgroup>
+    <tr><th>단지</th><th>최근 거래</th><th>기간 최고</th><th>최고 대비</th><th>${typeLabel} 건수</th><th>세대수</th><th>준공</th></tr>`;
   const best4 = se => se.rows.length ? Math.max(...se.rows.map(r => r[4])) : -1;
+  const cell = (r) => `<b>${eok(r[4])}</b><small>${fmtYM(r[2])}.${r[3]} · ${r[5]}층</small>`;
   [...series].sort((a, b) => best4(b) - best4(a)).forEach(se => {
     const rows = se.rows, off = state.hidden.has(se.name) ? ' class="off"' : "";
-    if (!rows.length) { s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx ? se.cx.built : "-"}</td><td>${hhOf(se)}</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`; return; }
+    const name = `<td><span class="dot" style="background:${se.color}"></span>${se.label}</td>`;
+    if (!rows.length) { s += `<tr${off}>${name}<td>-</td><td>-</td><td>-</td><td>0</td><td>${hhOf(se)}</td><td>${se.cx ? se.cx.built : "-"}</td></tr>`; return; }
     const best = rows.reduce((a, b) => b[4] > a[4] ? b : a);
     const last = rows.reduce((a, b) => (b[2] * 100 + b[3] > a[2] * 100 + a[3] ? b : a));
     const diff = (last[4] - best[4]) / best[4] * 100;
-    s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx.built}</td><td>${hhOf(se)}</td><td>${rows.length}</td>
-      <td>${eok(best[4])} <span class="hint">${fmtYM(best[2])}.${best[3]} · ${best[5]}층</span></td>
-      <td>${eok(last[4])} <span class="hint">${fmtYM(last[2])}.${last[3]} · ${last[5]}층</span></td>
-      <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "최고가" : diff.toFixed(1) + "%"}</td></tr>`;
+    s += `<tr${off}>${name}<td>${cell(last)}</td><td>${cell(best)}</td>
+      <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "최고가" : diff.toFixed(1) + "%"}</td>
+      <td>${rows.length}</td><td>${hhOf(se)}</td><td>${se.cx.built}</td></tr>`;
   });
+  $("summary").className = "sum-view";
   $("summary").innerHTML = s;
 
   const all = series.flatMap(se => se.rows.map(r => ({ r, se })))
@@ -696,7 +704,7 @@ function renderCompare() {
     html += `<div class="foot">${state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값 · " : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균 · "}점에 손가락을 대면 그 달 상단 단지가 보여요 · ★ = 기간 최고<br>국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약"}</div>`;
     card.innerHTML = html;
     bindLegend();
-    $("sumTitle").textContent = "생활권 요약";
+    $("sumTitle").textContent = "생활권 요약"; $("summary").className = "";
     let s = `<tr><th>생활권</th><th>대표 단지</th><th>${state.type === "sale" ? "매매" : "전세"} 건수</th><th>기간 상단</th><th>최근 상단</th><th>상단 대비</th></tr>`;
     series.forEach(se => {
       const rows = se.cs.flatMap(c => c.rows.filter(r => r[2] >= months[0] && r[2] <= months[months.length - 1]).map(r => ({ r, who: c.label })));
@@ -757,7 +765,7 @@ function renderTop() {
     card.innerHTML = html;
     // 비슷한 생활권 표
     const sim = withV.filter(o => o !== base).sort((a, b) => Math.abs(a.v - base.v) - Math.abs(b.v - base.v)).slice(0, 8);
-    $("sumTitle").textContent = "상단이 비슷한 생활권 (가까운 순)";
+    $("sumTitle").textContent = "상단이 비슷한 생활권 (가까운 순)"; $("summary").className = "";
     let s = `<tr><th>비교</th><th>생활권</th><th>상단</th><th>상단 단지</th><th>기준 대비</th></tr>`;
     s += `<tr class="simrow"><td>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td><b>${eok(base.v)}</b></td><td>${base.b.who} <span class="hint">${fmtYM(base.b.r[2])} · ${base.b.r[5]}층</span></td><td>-</td></tr>`;
     sim.forEach(o => {
