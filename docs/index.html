@@ -91,7 +91,7 @@
     <div class="ctl"><label>거래</label>
       <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><label class="chk" id="preWrap"><input type="checkbox" id="chkPre" checked>분양권·입주권 포함</label></div></div>
     <div class="ctl"><label>전용면적</label>
-      <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button></div></div>
+      <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
     <div class="ctl"><label>지표</label>
       <div class="seg" id="segMetric"><button data-v="max" class="on">월 최고가</button><button data-v="avg">월 평균가</button></div></div>
 
@@ -309,10 +309,24 @@ function currentComplexes() {
     return { name: n, label: (z.short && z.short[n]) || n.split("|")[0].split("@")[0], cx: cxs.length ? { ...cxs[0], built } : null, idxs: new Set(cxs.map(x => x.i)) };
   });
 }
-function seriesFor(idxs) {
-  const [lo, hi] = AREA_BANDS[state.area];
+/* 대표 평형: 생활권 설정의 rep 값 → 없으면 그 단지에서 매매(분양권 포함) 거래가 가장 많은 전용면적(정수) */
+const REP_CACHE = {};
+function repArea(c, z) {
+  if (z && z.rep && z.rep[c.name]) return +z.rep[c.name];
+  const key = state.gu + "|" + c.name;
+  if (REP_CACHE[key] !== undefined) return REP_CACHE[key];
+  const cnt = {};
+  const add = rows => rows.forEach(r => { if (c.idxs.has(r[0])) { const a = Math.floor(r[1]); cnt[a] = (cnt[a] || 0) + 1; } });
+  add(DATA.sale); add(PRESALE);
+  if (!Object.keys(cnt).length) add(DATA.jeonse);
+  const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || Math.abs(a[0] - 84) - Math.abs(b[0] - 84))[0];
+  return (REP_CACHE[key] = best ? +best[0] : null);
+}
+function seriesFor(idxs, rep) {
+  const [lo, hi] = AREA_BANDS[state.area] || [0, 0];
+  const inArea = rep ? (r => Math.floor(r[1]) === rep) : (r => r[1] >= lo && r[1] < hi);
   const months = visMonths(), m0 = months[0], m1 = months[months.length - 1];
-  const rows = srcRows().filter(r => idxs.has(r[0]) && r[1] >= lo && r[1] < hi && r[2] >= m0 && r[2] <= m1);
+  const rows = srcRows().filter(r => idxs.has(r[0]) && inArea(r) && r[2] >= m0 && r[2] <= m1);
   const chartRows = state.type === "jeonse" ? rows.filter(r => !r[6]) : rows;   // 전세 그래프는 신규 계약만
   const byM = {};
   chartRows.forEach(r => { (byM[r[2]] = byM[r[2]] || []).push(r); });
@@ -341,11 +355,15 @@ function render() {
   const list = currentComplexes();
   const card = $("chartCard");
   const typeLabel = state.type === "sale" ? "실거래가" : "전세가";
-  const areaLabel = { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상" }[state.area];
+  const areaLabel = { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "단지별 대표 평형" }[state.area];
   const metricLabel = state.metric === "max" ? "그 달 최고" : "그 달 평균";
   const title = z.kind === "pick" ? "직접 고른 단지" : z.name;
 
-  const series = list.map((c, k) => ({ ...c, color: COLORS[k % COLORS.length], ...(c.cx ? seriesFor(c.idxs) : { pts: [], rows: [] }) }));
+  const series = list.map((c, k) => {
+    const rep = state.area === "rep" && c.cx ? repArea(c, z) : null;
+    return { ...c, rep, label: rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
+      ...(c.cx && (state.area !== "rep" || rep) ? seriesFor(c.idxs, rep) : { pts: [], rows: [] }) };
+  });
   const shown = series.filter(s => !state.hidden.has(s.name));
   const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
@@ -417,7 +435,7 @@ function render() {
 
   html += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} 그래프">${g}</svg>`;
   html += `<div class="foot">${state.type === "sale" && state.presale && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권·입주권 거래 · " : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
-    국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"} · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}</div>`;
+    국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"}${state.area === "rep" ? " · 대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : ` · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}`}</div>`;
   card.innerHTML = html;
   bindLegend();
   renderTables(series);
