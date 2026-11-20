@@ -155,6 +155,7 @@ const INDEX = window.DATA_INDEX || { regions: {}, months: [] };
 let DATA = null, PRESALE = [], CX = [];
 function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
 const $ = id => document.getElementById(id);
+const norm = s => String(s).replace(/\s+/g, "").toLowerCase();
 
 /* ---------- 데이터: 구를 고를 때 그 구 파일만 불러오기 ---------- */
 const allMonths = INDEX.months;
@@ -237,11 +238,17 @@ function renderPicker() {
   const q = $("pickSearch").value.trim();
   const counts = {};
   srcRows().forEach(r => { counts[r[0]] = (counts[r[0]] || 0) + 1; });
-  const list = CX.filter(c => c.sido === state.sido && c.gu === state.gu && (!q || c.name.includes(q)))
-    .sort((a, b) => (counts[b.i] || 0) - (counts[a.i] || 0));
+  // 띄어쓰기만 다른 이름(분양권 자료 등)은 하나로 합쳐 보여주기
+  const merged = {};
+  CX.filter(c => !q || norm(c.name).includes(norm(q))).forEach(c => {
+    const k = norm(c.name), m = merged[k] || (merged[k] = { name: c.name, dong: c.dong, n: 0, best: -1 });
+    const n = counts[c.i] || 0; m.n += n;
+    if (n > m.best) { m.best = n; m.name = c.name; m.dong = c.dong; }
+  });
+  const list = Object.values(merged).sort((a, b) => b.n - a.n);
   $("pickList").innerHTML = list.map(c => {
     const on = state.picked.includes(c.name);
-    return `<label><input type="checkbox" data-n="${c.name}" ${on ? "checked" : ""}> ${c.name} <small>${c.dong} · ${counts[c.i] || 0}건</small></label>`;
+    return `<label><input type="checkbox" data-n="${c.name}" ${on ? "checked" : ""}> ${c.name} <small>${c.dong} · ${c.n}건</small></label>`;
   }).join("") || `<div class="hint">검색 결과가 없어요</div>`;
   $("pickList").querySelectorAll("input").forEach(cb => cb.onchange = () => {
     const n = cb.dataset.n;
@@ -294,14 +301,18 @@ function currentComplexes() {
   const z = zonesFor(state.sido, state.gu)[state.zone];
   const names = (z.kind === "base") ? z.complexes : state.picked;
   return names.map(n => {
-    const c = CX.find(x => x.name === n && x.gu === state.gu && x.sido === state.sido);
-    return { name: n, label: (z.short && z.short[n]) || n, cx: c };
+    // "이름1|이름2"처럼 적으면 여러 이름을 한 단지로 합침. 띄어쓰기 차이는 자동으로 합침
+    // "이름@동"처럼 적으면 그 동의 단지만 (같은 이름이 여러 동에 있을 때)
+    const parts = n.split("|").map(p => { const [nm, dong] = p.split("@"); return { nm: norm(nm), dong }; });
+    const cxs = CX.filter(x => parts.some(p => p.nm === norm(x.name) && (!p.dong || x.dong.startsWith(p.dong))));
+    const built = cxs.map(x => x.built).filter(Boolean).sort()[0] || "-";
+    return { name: n, label: (z.short && z.short[n]) || n.split("|")[0].split("@")[0], cx: cxs.length ? { ...cxs[0], built } : null, idxs: new Set(cxs.map(x => x.i)) };
   });
 }
-function seriesFor(cxIdx) {
+function seriesFor(idxs) {
   const [lo, hi] = AREA_BANDS[state.area];
   const months = visMonths(), m0 = months[0], m1 = months[months.length - 1];
-  const rows = srcRows().filter(r => r[0] === cxIdx && r[1] >= lo && r[1] < hi && r[2] >= m0 && r[2] <= m1);
+  const rows = srcRows().filter(r => idxs.has(r[0]) && r[1] >= lo && r[1] < hi && r[2] >= m0 && r[2] <= m1);
   const chartRows = state.type === "jeonse" ? rows.filter(r => !r[6]) : rows;   // 전세 그래프는 신규 계약만
   const byM = {};
   chartRows.forEach(r => { (byM[r[2]] = byM[r[2]] || []).push(r); });
@@ -334,7 +345,7 @@ function render() {
   const metricLabel = state.metric === "max" ? "그 달 최고" : "그 달 평균";
   const title = z.kind === "pick" ? "직접 고른 단지" : z.name;
 
-  const series = list.map((c, k) => ({ ...c, color: COLORS[k % COLORS.length], ...(c.cx ? seriesFor(c.cx.i) : { pts: [], rows: [] }) }));
+  const series = list.map((c, k) => ({ ...c, color: COLORS[k % COLORS.length], ...(c.cx ? seriesFor(c.idxs) : { pts: [], rows: [] }) }));
   const shown = series.filter(s => !state.hidden.has(s.name));
   const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
