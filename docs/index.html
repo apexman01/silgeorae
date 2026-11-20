@@ -91,6 +91,8 @@
   .barrow{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;padding:3px 4px;font-size:13.5px;border-radius:6px}
   .barrow.base{font-weight:700;background:#e8f0fe}
   .baserow td{background:#e8f0fe}
+  .replist{margin:8px 0 2px;font-size:12.5px;color:var(--sub);line-height:1.6}
+  .replist b{color:var(--ink);font-weight:600}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
@@ -665,8 +667,10 @@ function zoneRows(gu, z) {
         const b = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]; rep = b ? +b[0] : -1;
       }
       inArea = r => Math.floor(r[1]) === rep;
+      var repA = rep > 0 ? rep : null;
     }
-    return { name: n, label: (z.short && z.short[n]) || n.split("|")[0].split("@")[0], rows: src.filter(r => idxs.has(r[0]) && inArea(r)) };
+    const base = (z.short && z.short[n]) || n.split("|")[0].split("@")[0];
+    return { name: n, base, rep: repA || null, label: repA ? `${base} ${repA}㎡` : base, rows: src.filter(r => idxs.has(r[0]) && inArea(r)) };
   });
 }
 function zoneMonthly(gu, z, months) {
@@ -721,15 +725,18 @@ function renderCompare() {
     html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}"><i style="background:${s.color}"></i>${s.label}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
     html += vals.length ? chartSvg(shown, vals, months, card, "생활권 비교", { notes: false })
       : `<div class="empty">이 조건에 맞는 거래가 없어요. 면적이나 기간을 바꿔보세요.</div>`;
+    if (state.area === "rep") {
+      html += `<div class="replist">${series.map(s => `<div><span class="dot" style="background:${s.color}"></span><b>${s.label}</b> · ${s.cs.map(c => c.rep ? `${c.base} <b>${c.rep}㎡</b>` : `${c.base} -`).join(" · ")}</div>`).join("")}</div>`;
+    }
     html += `<div class="foot">${state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값 · " : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균 · "}점에 손가락을 대면 그 달 상단 단지가 보여요 · ★ = 기간 최고<br>국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약"}</div>`;
     card.innerHTML = html;
     bindLegend();
     $("sumTitle").textContent = "생활권 요약"; $("summary").className = "sum-view";
-    const cell2 = o => `<b>${eok(o.r[4])}</b><small>${o.who}</small><small>${fmtYM(o.r[2])}.${o.r[3]} ${o.r[5]}층</small>`;
+    const cell2 = o => `<b>${eok(o.r[4])}</b><small>${o.base}</small><small>${fmtYM(o.r[2])}.${o.r[3]} ${o.r[5]}층</small>${state.area === "rep" ? `<small>전용 ${Math.floor(o.r[1])}㎡</small>` : ""}`;
     let s = `<colgroup><col style="width:24%">${"<col>".repeat(5)}</colgroup>
       <tr><th>생활권</th><th>최근 상단</th><th>기간 상단</th><th>상단 대비</th><th>${state.type === "sale" ? "매매" : "전세"} 건수</th><th>대표 단지</th></tr>`;
     series.forEach(se => {
-      const rows = se.cs.flatMap(c => c.rows.filter(r => r[2] >= months[0] && r[2] <= months[months.length - 1]).map(r => ({ r, who: c.label })));
+      const rows = se.cs.flatMap(c => c.rows.filter(r => r[2] >= months[0] && r[2] <= months[months.length - 1]).map(r => ({ r, who: c.label, base: c.base })));
       const name = `<td><span class="dot" style="background:${se.color}"></span>${se.label}</td>`;
       if (!rows.length) { s += `<tr>${name}<td>-</td><td>-</td><td>-</td><td>0</td><td>${se.cs.length}곳</td></tr>`; return; }
       const best = rows.reduce((a, b) => b.r[4] > a.r[4] ? b : a);
