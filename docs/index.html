@@ -762,11 +762,11 @@ function renderTop() {
     const max = Math.max(...withV.map(o => o.v));
     const sorted = withV.slice().sort((a, b) => b.v - a.v);
     let html = `<h2>상단 비교 · ${zoneTitle(base.gu, base.z)} 기준</h2><div class="hint" style="margin:2px 0 4px">${fmtYM(from)}~${fmtYM(to)} · ${cmpUnit().split(" · ")[0]} · ${state.type === "sale" ? "매매" : "전세"} 상단(대표 단지 중 최고 거래가)</div>`;
-    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · 막대 길이 = 상단 가격 · 진한 색 = 기준과 ±10% 이내</div>
+    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · <span style="color:#2a6fdb;font-weight:600">파랑</span> 기준보다 높음 · <span style="color:#e5484d;font-weight:600">빨강</span> 기준보다 낮음 (±10% 이내)</div>
       <div class="barbox${topS.open ? " open" : ""}" id="barBox">`;
     sorted.forEach(o => {
       const isBase = o === base, near = Math.abs(o.v - base.v) / base.v <= 0.10;
-      const col = isBase ? "#1d1f23" : near ? "#2a6fdb" : "#c9d3e3";
+      const col = isBase ? "#1d1f23" : near ? (o.v > base.v ? "#2a6fdb" : "#e5484d") : "#c9d3e3";
       html += `<div class="barrow${isBase ? " base" : ""}">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneTitle(o.gu, o.z)}</span>
         <span style="background:#f1f3f6;border-radius:4px;height:16px;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${(o.v / max * 100).toFixed(1)}%;background:${col};border-radius:4px"></i></span>
