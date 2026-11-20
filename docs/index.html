@@ -57,6 +57,10 @@
   .dual input::-webkit-slider-runnable-track{background:none}
   .ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:0 0 0}
   .seg button:disabled{opacity:.35;cursor:default}
+  .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
+  .chk input{width:18px;height:18px;accent-color:var(--ink)}
+  .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
+  .tag.pre{background:#fff1e8;color:#c2551f}
   .picker.show{display:block}
   .picker .list{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-top:8px;columns:2 260px;column-gap:18px}
   .picker label{display:block;font-size:13.5px;padding:3px 0;break-inside:avoid;cursor:pointer}
@@ -81,7 +85,7 @@
     <div class="ctl"><label>구</label><select id="selGu"></select></div>
     <div class="ctl"><label>생활권</label><select id="selZone"></select></div>
     <div class="ctl"><label>거래</label>
-      <div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div></div>
+      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><label class="chk" id="preWrap"><input type="checkbox" id="chkPre" checked>분양권·입주권 포함</label></div></div>
     <div class="ctl"><label>전용면적</label>
       <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button></div></div>
     <div class="ctl"><label>지표</label>
@@ -142,7 +146,9 @@ const LOW_FLOOR = 3;        // 이 층 이하면 '저층'
 const MAX_PICK = 6;
 const CUSTOM_KEY = "lifezone-custom-v1";
 
-const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, picked: [] };
+const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [] };
+const PRESALE = (DATA.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]);
+function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
 const $ = id => document.getElementById(id);
 
 /* ---------- 데이터 인덱스 ---------- */
@@ -209,7 +215,7 @@ function onZoneChange() {
 function renderPicker() {
   const q = $("pickSearch").value.trim();
   const counts = {};
-  DATA[state.type].forEach(r => { counts[r[0]] = (counts[r[0]] || 0) + 1; });
+  srcRows().forEach(r => { counts[r[0]] = (counts[r[0]] || 0) + 1; });
   const list = CX.filter(c => c.sido === state.sido && c.gu === state.gu && (!q || c.name.includes(q)))
     .sort((a, b) => (counts[b.i] || 0) - (counts[a.i] || 0));
   $("pickList").innerHTML = list.map(c => {
@@ -259,7 +265,8 @@ function bindSeg(id, key) {
     render();
   });
 }
-bindSeg("segType", "type"); bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
+bindSeg("segType", "type");
+$("chkPre").onchange = e => { state.presale = e.target.checked; render(); }; bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
 
 /* ---------- 집계 ---------- */
 function currentComplexes() {
@@ -273,7 +280,7 @@ function currentComplexes() {
 function seriesFor(cxIdx) {
   const [lo, hi] = AREA_BANDS[state.area];
   const months = visMonths(), m0 = months[0], m1 = months[months.length - 1];
-  const rows = DATA[state.type].filter(r => r[0] === cxIdx && r[1] >= lo && r[1] < hi && r[2] >= m0 && r[2] <= m1);
+  const rows = srcRows().filter(r => r[0] === cxIdx && r[1] >= lo && r[1] < hi && r[2] >= m0 && r[2] <= m1);
   const chartRows = state.type === "jeonse" ? rows.filter(r => !r[6]) : rows;   // 전세 그래프는 신규 계약만
   const byM = {};
   chartRows.forEach(r => { (byM[r[2]] = byM[r[2]] || []).push(r); });
@@ -282,7 +289,7 @@ function seriesFor(cxIdx) {
     const top = rs.reduce((a, b) => (b[4] > a[4] ? b : a));
     const avg = rs.reduce((s, r) => s + r[4], 0) / rs.length;
     const v = state.metric === "max" ? top[4] : avg;
-    return { m, v: v / 10000, n: rs.length, floor: top[5] };
+    return { m, v: v / 10000, n: rs.length, floor: top[5], pre: typeof top[6] === "string" ? top[6] : null };
   });
   return { pts, rows };
 }
@@ -296,6 +303,7 @@ function niceStep(range) {
 function fmtV(v) { return (Math.round(v * 10) / 10).toString(); }
 
 function render() {
+  $("preWrap").style.display = state.type === "sale" && PRESALE.length ? "" : "none";
   const z = zonesFor(state.sido, state.gu)[state.zone];
   const list = currentComplexes();
   const card = $("chartCard");
@@ -307,7 +315,7 @@ function render() {
   const series = list.map((c, k) => ({ ...c, color: COLORS[k % COLORS.length], ...(c.cx ? seriesFor(c.cx.i) : { pts: [], rows: [] }) }));
   const vals = series.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
-  let html = `<h2>${title}</h2><div class="unit">${areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
+  let html = `<h2>${title}</h2>${z.note ? `<div class="hint" style="margin:2px 0 4px">${z.note}</div>` : ""}<div class="unit">${areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
   html += `<div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${s.label}</span>`).join("")}</div>`;
 
   if (!vals.length) {
@@ -353,7 +361,9 @@ function render() {
         g += star(cx, cy, 10, s.color);
         g += `<text x="${cx}" y="${cy - 18}" text-anchor="middle" font-size="15" font-weight="700" fill="#222">최고 ${fmtV(p.v)}</text>`;
       } else {
-        g += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${s.color}" stroke="#fff" stroke-width="2"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.n}건 · 최고가 ${p.floor}층</title></circle>`;
+        g += p.pre
+          ? `<circle cx="${cx}" cy="${cy}" r="5.5" fill="#fff" stroke="${s.color}" stroke-width="2.6"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.n}건 · 최고가 ${p.pre} ${p.floor}층</title></circle>`
+          : `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${s.color}" stroke="#fff" stroke-width="2"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.n}건 · 최고가 ${p.floor}층</title></circle>`;
       }
       // 회색 주석: 직전보다 떨어졌는데 1건뿐이거나 저층이면 '약한 하락'
       const prev = k > 0 ? s.pts[idx[k - 1]] : null;
@@ -371,7 +381,7 @@ function render() {
   endLabels.forEach(l => { g += `<text x="${l.x}" y="${l.y}" font-size="16" fill="${l.c}">${l.t}</text>`; });
 
   html += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} 그래프">${g}</svg>`;
-  html += `<div class="foot">회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
+  html += `<div class="foot">${state.type === "sale" && state.presale && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권·입주권 거래 · " : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
     국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"} · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}</div>`;
   card.innerHTML = html;
   renderTables(series);
@@ -405,10 +415,10 @@ function renderTables(series) {
 
   const all = series.flatMap(se => se.rows.map(r => ({ r, se })))
     .sort((a, b) => (b.r[2] * 100 + b.r[3]) - (a.r[2] * 100 + a.r[3])).slice(0, 15);
-  let t = `<tr><th>계약일</th><th>단지</th><th>전용</th><th>층</th><th>${typeLabel}가</th>${state.type === "jeonse" ? "<th>구분</th>" : ""}</tr>`;
+  let t = `<tr><th>계약일</th><th>단지</th><th>전용</th><th>층</th><th>${typeLabel}가</th><th>구분</th></tr>`;
   all.forEach(({ r, se }) => {
     t += `<tr><td>${fmtYM(r[2])}.${r[3]}</td><td style="text-align:left"><span class="dot" style="background:${se.color}"></span>${se.label}</td>
-      <td>${r[1]}㎡</td><td>${r[5]}층</td><td>${eok(r[4])}</td>${state.type === "jeonse" ? `<td>${r[6] ? "갱신" : "신규"}</td>` : ""}</tr>`;
+      <td>${r[1]}㎡</td><td>${r[5]}층</td><td>${eok(r[4])}</td><td>${state.type === "jeonse" ? (r[6] ? "갱신" : "신규") : (typeof r[6] === "string" ? `<span class="tag pre">${r[6]}</span>` : `<span class="tag">매매</span>`)}</td></tr>`;
   });
   $("recent").innerHTML = all.length ? t : `<tr><td class="hint">거래 없음</td></tr>`;
 }
