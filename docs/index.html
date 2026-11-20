@@ -139,7 +139,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="data.js?v=' + _v + '"><\/script><script src="lifezones.js?v=' + _v + '"><\/script>');
+  document.write('<script src="data/index.js?v=' + _v + '"><\/script><script src="lifezones.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -151,22 +151,37 @@ const MAX_PICK = 6;
 const CUSTOM_KEY = "lifezone-custom-v1";
 
 const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [], hidden: new Set() };
-const PRESALE = (DATA.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]);
+const INDEX = window.DATA_INDEX || { regions: {}, months: [] };
+let DATA = null, PRESALE = [], CX = [];
 function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
 const $ = id => document.getElementById(id);
 
-/* ---------- 데이터 인덱스 ---------- */
-const CX = DATA.complexes.map((c, i) => ({ i, name: c[0], sido: c[1], gu: c[2], dong: c[3], built: c[4] }));
-const allMonths = (() => {
-  const s = new Set();
-  DATA.sale.forEach(r => s.add(r[2])); DATA.jeonse.forEach(r => s.add(r[2]));
-  return [...s].sort();
-})();
+/* ---------- 데이터: 구를 고를 때 그 구 파일만 불러오기 ---------- */
+const allMonths = INDEX.months;
+const GU_KEY = "lifezone-last-gu";
+function loadGu(sido, gu, done) {
+  const code = (INDEX.regions[sido] || {})[gu];
+  const use = () => {
+    DATA = window.DATA_GU[gu];
+    CX = DATA.complexes.map((c, i) => ({ i, name: c[0], sido: c[1], gu: c[2], dong: c[3], built: c[4] }));
+    PRESALE = (DATA.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]);
+    try { localStorage.setItem(GU_KEY, gu); } catch (e) {}
+    done();
+  };
+  window.DATA_GU = window.DATA_GU || {};
+  if (window.DATA_GU[gu]) return use();
+  $("chartCard").innerHTML = `<div class="empty">${gu} 자료 불러오는 중…</div>`;
+  const s = document.createElement("script");
+  s.src = `data/${code}.js?v=${INDEX.updated || Date.now()}`;
+  s.onload = use;
+  s.onerror = () => { $("chartCard").innerHTML = `<div class="empty">${gu} 자료를 불러오지 못했어요. 새로고침해 보세요.</div>`; };
+  document.head.appendChild(s);
+}
 function visMonths() { return allMonths.slice(state.from, state.to + 1); }
 const fmtYM = ym => `${String(ym).slice(2, 4)}.${+String(ym).slice(4)}`;
 $("dataInfo").textContent =
   `국토부 실거래가 · 계약일 기준 ${fmtYM(allMonths[0])}~${fmtYM(allMonths[allMonths.length - 1])}` +
-  (DATA.updated ? ` · ${DATA.updated} 갱신` : "") + ` · 매매는 해제·직거래 제외, 전세 그래프는 신규 계약만`;
+  (INDEX.updated ? ` · ${INDEX.updated} 갱신` : "") + ` · 매매는 해제·직거래 제외, 전세 그래프는 신규 계약만`;
 
 /* ---------- 내 생활권(브라우저 저장) ---------- */
 function loadCustom() { try { return JSON.parse(localStorage.getItem(CUSTOM_KEY)) || {}; } catch (e) { return {}; } }
@@ -184,18 +199,20 @@ function fillSelect(sel, items, val) {
   sel.value = val;
 }
 function initSido() {
-  const sidos = [...new Set(CX.map(c => c.sido))];
+  const sidos = Object.keys(INDEX.regions);
   state.sido = sidos[0];
   fillSelect($("selSido"), sidos, 0);
   $("selSido").onchange = e => { state.sido = sidos[+e.target.value]; initGu(); };
   initGu();
 }
 function initGu() {
-  const gus = [...new Set(CX.filter(c => c.sido === state.sido).map(c => c.gu))].sort();
-  state.gu = gus[0];
-  fillSelect($("selGu"), gus, 0);
-  $("selGu").onchange = e => { state.gu = gus[+e.target.value]; state.zone = 0; initZone(); };
-  initZone();
+  const gus = Object.keys(INDEX.regions[state.sido] || {}).sort();
+  let last = null; try { last = localStorage.getItem(GU_KEY); } catch (e) {}
+  const gi = Math.max(0, gus.indexOf(last));
+  state.gu = gus[gi];
+  fillSelect($("selGu"), gus, gi);
+  $("selGu").onchange = e => { state.gu = gus[+e.target.value]; state.zone = 0; state.picked = []; loadGu(state.sido, state.gu, () => initZone()); };
+  loadGu(state.sido, state.gu, () => initZone());
 }
 function initZone(keep) {
   const zs = zonesFor(state.sido, state.gu);
@@ -307,6 +324,7 @@ function niceStep(range) {
 function fmtV(v) { return (Math.round(v * 10) / 10).toString(); }
 
 function render() {
+  if (!DATA) return;
   $("preWrap").style.display = state.type === "sale" && PRESALE.length ? "" : "none";
   const z = zonesFor(state.sido, state.gu)[state.zone];
   const list = currentComplexes();
@@ -473,9 +491,8 @@ rTo.oninput = () => { if (+rTo.value < +rFrom.value) rTo.value = rFrom.value; se
     $("rangeTicks").appendChild(s);
   });
 })();
-state.from = Math.max(0, N - 12); state.to = N - 1;
+setRange(Math.max(0, N - 12), N - 1);
 initSido();
-setRange(state.from, state.to);
 let _rw = 0; window.addEventListener("resize", () => { const w = $("chartCard").clientWidth; if (Math.abs(w - _rw) > 40) { _rw = w; render(); } });
 </script>
 </body>

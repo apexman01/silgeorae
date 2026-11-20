@@ -113,6 +113,9 @@ def save_cache(lawd, kind, data):
 
 
 def main():
+    if os.environ.get("BUILD_ONLY") == "1":   # 캐시로 사이트 파일만 다시 만들기
+        cfg = json.load(open(os.path.join(ROOT, "config.json"), encoding="utf-8"))
+        return build(cfg, month_list(cfg["start_ym"]))
     key = os.environ.get("DATA_GO_KR_KEY", "").strip()
     if not key:
         sys.exit("DATA_GO_KR_KEY 환경변수(공공데이터포털 인증키)가 없습니다.")
@@ -157,42 +160,48 @@ def main():
 
 
 def build(cfg, months):
-    complexes, cx_list = {}, []
-
-    def cx_index(sido, gu, it):
-        k = (gu, it.get("umdNm", ""), it.get("aptNm", ""))
-        if k not in complexes:
-            complexes[k] = len(cx_list)
-            cx_list.append([k[2], sido, gu, k[1], it.get("buildYear", "")])
-        elif not cx_list[complexes[k]][4] and it.get("buildYear"):
-            cx_list[complexes[k]][4] = it.get("buildYear")
-        return complexes[k]
+    """구마다 docs/data/<코드>.js 를 만들고, 목록은 docs/data/index.js 에 적는다."""
+    out_dir = os.path.join(ROOT, "docs", "data")
+    os.makedirs(out_dir, exist_ok=True)
 
     def ymd(it):
         return int(it["dealYear"]) * 100 + int(it["dealMonth"]), int(it["dealDay"])
 
-    sale, jeonse, presale = [], [], []
+    regions, total = {}, [0, 0, 0]
     for sido, gus in cfg["regions"].items():
         for gu, lawd in gus.items():
+            complexes, cx_list = {}, []
+
+            def cx_index(it):
+                k = (it.get("umdNm", ""), it.get("aptNm", ""))
+                if k not in complexes:
+                    complexes[k] = len(cx_list)
+                    cx_list.append([k[1], sido, gu, k[0], it.get("buildYear", "")])
+                elif not cx_list[complexes[k]][4] and it.get("buildYear"):
+                    cx_list[complexes[k]][4] = it.get("buildYear")
+                return complexes[k]
+
+            sale, jeonse, presale = [], [], []
+            sc, rc, pc = load_cache(lawd, "sale"), load_cache(lawd, "rent"), load_cache(lawd, "presale")
             for ym in months:
-                for it in load_cache(lawd, "sale").get(ym, []):
+                for it in sc.get(ym, []):
                     if it.get("cdealType", "").strip() or it.get("dealingGbn") == "직거래":
                         continue
                     p, a = num(it.get("dealAmount")), num(it.get("excluUseAr"))
                     if p is None or a is None:
                         continue
                     m, d = ymd(it)
-                    sale.append([cx_index(sido, gu, it), round(a, 2), m, d, int(p), int(num(it.get("floor")) or 0)])
-                for it in load_cache(lawd, "rent").get(ym, []):
+                    sale.append([cx_index(it), round(a, 2), m, d, int(p), int(num(it.get("floor")) or 0)])
+                for it in rc.get(ym, []):
                     if (num(it.get("monthlyRent")) or 0) > 0:
                         continue
                     p, a = num(it.get("deposit")), num(it.get("excluUseAr"))
                     if p is None or a is None:
                         continue
                     m, d = ymd(it)
-                    jeonse.append([cx_index(sido, gu, it), round(a, 2), m, d, int(p), int(num(it.get("floor")) or 0),
+                    jeonse.append([cx_index(it), round(a, 2), m, d, int(p), int(num(it.get("floor")) or 0),
                                    1 if it.get("contractType") == "갱신" else 0])
-                for it in load_cache(lawd, "presale").get(ym, []):
+                for it in pc.get(ym, []):
                     if it.get("cdealType", "").strip() or it.get("dealingGbn") == "직거래":
                         continue
                     p, a = num(it.get("dealAmount")), num(it.get("excluUseAr"))
@@ -200,13 +209,25 @@ def build(cfg, months):
                         continue
                     m, d = ymd(it)
                     kind = 1 if "입" in it.get("ownershipGbn", "") else 0   # 0 분양권, 1 입주권
-                    presale.append([cx_index(sido, gu, it), round(a, 2), m, d, int(p), int(num(it.get("floor")) or 0), kind])
+                    presale.append([cx_index(it), round(a, 2), m, d, int(p), int(num(it.get("floor")) or 0), kind])
+            if not sale and not jeonse:
+                continue
+            data = {"complexes": cx_list, "sale": sale, "jeonse": jeonse, "presale": presale}
+            with open(os.path.join(out_dir, f"{lawd}.js"), "w", encoding="utf-8") as f:
+                f.write("window.DATA_GU=window.DATA_GU||{};window.DATA_GU[" + json.dumps(gu, ensure_ascii=False) + "]="
+                        + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
+            regions.setdefault(sido, {})[gu] = lawd
+            total[0] += len(sale); total[1] += len(jeonse); total[2] += len(presale)
+            print(f"{gu}: 단지 {len(cx_list)}개, 매매 {len(sale)}건, 전세 {len(jeonse)}건, 분양권·입주권 {len(presale)}건")
 
-    data = {"complexes": cx_list, "sale": sale, "jeonse": jeonse, "presale": presale,
-            "updated": date.today().isoformat(), "source": "공공데이터포털 국토교통부 실거래가 API"}
-    with open(os.path.join(ROOT, "docs", "data.js"), "w", encoding="utf-8") as f:
-        f.write("window.DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
-    print(f"완료: 단지 {len(cx_list)}개, 매매 {len(sale)}건, 전세 {len(jeonse)}건, 분양권·입주권 {len(presale)}건")
+    index = {"regions": regions, "months": [int(m) for m in months],
+             "updated": date.today().isoformat(), "source": "공공데이터포털 국토교통부 실거래가 API"}
+    with open(os.path.join(out_dir, "index.js"), "w", encoding="utf-8") as f:
+        f.write("window.DATA_INDEX=" + json.dumps(index, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    old = os.path.join(ROOT, "docs", "data.js")
+    if os.path.exists(old):
+        os.remove(old)
+    print(f"완료: 매매 {total[0]}건, 전세 {total[1]}건, 분양권·입주권 {total[2]}건")
 
 
 if __name__ == "__main__":
