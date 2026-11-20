@@ -106,8 +106,8 @@
     <div class="ctl c-only" style="width:100%"><label>비교할 생활권 (최대 3개)</label><div class="slots" id="slots"></div></div>
     <div class="ctl t-only" style="width:100%"><label>기준 생활권</label>
       <div class="row"><select id="topGu"></select><select id="topZone"></select>
-        <div class="seg" id="segWin"><button data-v="3">최근 3개월</button><button data-v="6" class="on">6개월</button><button data-v="12">12개월</button></div></div>
-      <span class="hint">상단 = 생활권 대표 단지들 중 기간 안 최고 거래가 · 기간 끝은 아래 기간 슬라이더의 끝 달 기준</span></div>
+        <div class="seg" id="segWin"><button data-v="3">최근 3개월</button><button data-v="6" class="on">6개월</button><button data-v="12">12개월</button><button data-v="custom">직접 선택</button></div></div>
+      <span class="hint">상단 = 생활권 대표 단지들 중 기간 안 최고 거래가 · 최근 N개월은 가장 최근 달까지 · 직접 선택을 누르면 아래에 기간 슬라이더가 나와요</span></div>
     <div class="ctl v-only"><label>시·도</label><select id="selSido"></select></div>
     <div class="ctl v-only"><label>구</label><select id="selGu"></select></div>
     <div class="ctl v-only"><label>생활권</label><select id="selZone"></select></div>
@@ -120,7 +120,7 @@
     <div class="ctl"><label>지표</label>
       <div class="seg" id="segMetric"><button data-v="max" class="on">월 최고가</button><button data-v="avg">월 평균가</button></div></div>
 
-    <div class="ctl period">
+    <div class="ctl period" id="periodCtl">
       <div class="head">
         <label>기간</label>
         <div class="seg" id="segPeriod"><button data-v="12" class="on">12개월</button><button data-v="24">24개월</button><button data-v="36">36개월</button><button data-v="60">5년</button><button data-v="all">전체</button></div>
@@ -727,7 +727,9 @@ function renderTop() {
   const card = $("chartCard"), gus = zoneGus();
   card.innerHTML = `<div class="empty">모든 구 자료 불러오는 중…</div>`;
   ensureAll(gus, () => {
-    const to = allMonths[state.to], from = allMonths[Math.max(0, state.to - topS.win + 1)];
+    const custom = topS.win === "custom", N0 = allMonths.length;
+    const to = custom ? allMonths[state.to] : allMonths[N0 - 1];
+    const from = custom ? allMonths[state.from] : allMonths[Math.max(0, N0 - topS.win)];
     const all = [];
     gus.forEach(g => baseZones(g).forEach((z, i) => { const b = zoneTopIn(g, z, from, to); all.push({ gu: g, zi: i, z, b, v: b ? b.r[4] : null }); }));
     const base = all.find(o => o.gu === topS.gu && o.zi === topS.zi);
@@ -771,8 +773,12 @@ function renderTop() {
   });
 }
 $("segWin").querySelectorAll("button").forEach(b => b.onclick = () => {
-  $("segWin").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); topS.win = +b.dataset.v; render();
+  $("segWin").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  topS.win = b.dataset.v === "custom" ? "custom" : +b.dataset.v; showPeriod(); render();
 });
+function showPeriod() {   // 상단 비교에서는 '직접 선택'일 때만 기간 슬라이더 보이기
+  $("periodCtl").style.display = state.tab === "top" && topS.win !== "custom" ? "none" : "";
+}
 function setTab(tb) {
   state.tab = tb; document.body.dataset.tab = tb;
   $("tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === tb));
@@ -782,6 +788,7 @@ function setTab(tb) {
     renderSlots();
   }
   if (tb === "top") renderTopSel();
+  showPeriod();
   render();
 }
 $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => setTab(b.dataset.t));
