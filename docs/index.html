@@ -123,15 +123,15 @@
     <div class="ctl period" id="periodCtl">
       <div class="head">
         <label>기간</label>
-        <div class="seg" id="segPeriod"><button data-v="12" class="on">12개월</button><button data-v="24">24개월</button><button data-v="36">36개월</button><button data-v="60">5년</button><button data-v="all">전체</button></div>
+        <div class="seg" id="segPeriod"><button data-v="12" class="on">12개월</button><button data-v="24">24개월</button><button data-v="36">36개월</button><button data-v="60">5년</button><button data-v="all">전체</button><button data-v="custom">직접 선택</button></div>
         <div class="range-txt" id="rangeTxt"></div>
       </div>
-      <div class="dual">
+      <div id="sliderWrap"><div class="dual">
         <div class="track"></div><div class="fill" id="rangeFill"></div>
         <input type="range" id="rFrom" min="0" step="1" aria-label="시작 월">
         <input type="range" id="rTo" min="0" step="1" aria-label="끝 월">
       </div>
-      <div class="ticks" id="rangeTicks"></div>
+      <div class="ticks" id="rangeTicks"></div></div>
     </div>
 
     <div class="picker v-only" id="picker">
@@ -175,7 +175,7 @@ const LOW_FLOOR = 3;        // 이 층 이하면 '저층'
 const MAX_PICK = 6;
 const CUSTOM_KEY = "lifezone-custom-v1";
 
-const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [], hidden: new Set(), view: "zone" };
+const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [], hidden: new Set(), view: "zone", customPeriod: false };
 const INDEX = window.DATA_INDEX || { regions: {}, months: [] };
 let DATA = null, PRESALE = [], CX = [];
 function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
@@ -557,7 +557,12 @@ rFrom.max = rTo.max = N - 1;
 $("segPeriod").querySelectorAll("button").forEach(b => {
   const v = b.dataset.v;
   if (v !== "all" && +v > N) b.disabled = true;           // 자료보다 긴 기간은 비활성
-  b.onclick = () => { if (b.disabled) return; setRange(v === "all" ? 0 : Math.max(0, N - +v), N - 1); };
+  b.onclick = () => {
+    if (b.disabled) return;
+    if (v === "custom") { state.customPeriod = true; showPeriod(); markPeriod(); return; }
+    state.customPeriod = false; showPeriod();
+    setRange(v === "all" ? 0 : Math.max(0, N - +v), N - 1);
+  };
 });
 function setRange(from, to, fromSlider) {
   state.from = Math.max(0, Math.min(from, to)); state.to = Math.min(N - 1, Math.max(from, to));
@@ -568,7 +573,8 @@ function setRange(from, to, fromSlider) {
   $("rangeTxt").innerHTML = `${fmtYM(allMonths[state.from])} ~ ${fmtYM(allMonths[state.to])}<small>${len}개월</small>`;
   // 슬라이더 값이 버튼과 맞으면 그 버튼에 불, 아니면 모두 끔
   $("segPeriod").querySelectorAll("button").forEach(b => {
-    const v = b.dataset.v, on = state.to === N - 1 && (v === "all" ? state.from === 0 : state.from === N - +v);
+    const v = b.dataset.v;
+    const on = state.customPeriod ? v === "custom" : v !== "custom" && state.to === N - 1 && (v === "all" ? state.from === 0 : state.from === N - +v);
     b.classList.toggle("on", on);
   });
   render();
@@ -776,9 +782,13 @@ $("segWin").querySelectorAll("button").forEach(b => b.onclick = () => {
   $("segWin").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
   topS.win = b.dataset.v === "custom" ? "custom" : +b.dataset.v; showPeriod(); render();
 });
-function showPeriod() {   // 상단 비교에서는 '직접 선택'일 때만 기간 슬라이더 보이기
-  $("periodCtl").style.display = state.tab === "top" && topS.win !== "custom" ? "none" : "";
+function showPeriod() {   // 기간 슬라이더는 '직접 선택'일 때만 보이기
+  const top = state.tab === "top";
+  $("periodCtl").style.display = top && topS.win !== "custom" ? "none" : "";
+  $("segPeriod").style.display = top ? "none" : "";
+  $("sliderWrap").style.display = top ? "" : (state.customPeriod ? "" : "none");
 }
+function markPeriod() { setRange(state.from, state.to); }
 function setTab(tb) {
   state.tab = tb; document.body.dataset.tab = tb;
   $("tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === tb));
@@ -794,6 +804,7 @@ function setTab(tb) {
 $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => setTab(b.dataset.t));
 setRange(Math.max(0, N - 12), N - 1);
 initSido();
+showPeriod();
 let _rw = 0; window.addEventListener("resize", () => { const w = $("chartCard").clientWidth; if (Math.abs(w - _rw) > 40) { _rw = w; render(); } });
 </script>
 </body>
