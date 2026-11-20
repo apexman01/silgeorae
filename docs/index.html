@@ -458,17 +458,22 @@ function star(cx, cy, r, color) {
 
 /* ---------- 표 ---------- */
 function eok(man) { return (man / 10000).toFixed(2).replace(/\.?0+$/, "") + "억"; }
+function hhOf(se) {
+  const z = zonesFor(state.sido, state.gu)[state.zone];
+  const v = z && z.hh && z.hh[se.name];
+  return v ? Number(v).toLocaleString("ko-KR") : "-";
+}
 function renderTables(series) {
   const typeLabel = state.type === "sale" ? "매매" : "전세";
-  let s = `<tr><th>단지</th><th>준공</th><th>${typeLabel} 건수</th><th>기간 최고</th><th>최근 거래</th><th>최고 대비</th></tr>`;
+  let s = `<tr><th>단지</th><th>준공</th><th>세대수</th><th>${typeLabel} 건수</th><th>기간 최고</th><th>최근 거래</th><th>최고 대비</th></tr>`;
   const best4 = se => se.rows.length ? Math.max(...se.rows.map(r => r[4])) : -1;
   [...series].sort((a, b) => best4(b) - best4(a)).forEach(se => {
     const rows = se.rows, off = state.hidden.has(se.name) ? ' class="off"' : "";
-    if (!rows.length) { s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx ? se.cx.built : "-"}</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`; return; }
+    if (!rows.length) { s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx ? se.cx.built : "-"}</td><td>${hhOf(se)}</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`; return; }
     const best = rows.reduce((a, b) => b[4] > a[4] ? b : a);
     const last = rows.reduce((a, b) => (b[2] * 100 + b[3] > a[2] * 100 + a[3] ? b : a));
     const diff = (last[4] - best[4]) / best[4] * 100;
-    s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx.built}</td><td>${rows.length}</td>
+    s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx.built}</td><td>${hhOf(se)}</td><td>${rows.length}</td>
       <td>${eok(best[4])} <span class="hint">${fmtYM(best[2])}.${best[3]} · ${best[5]}층</span></td>
       <td>${eok(last[4])} <span class="hint">${fmtYM(last[2])}.${last[3]} · ${last[5]}층</span></td>
       <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "최고가" : diff.toFixed(1) + "%"}</td></tr>`;
