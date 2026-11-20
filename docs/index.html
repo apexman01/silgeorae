@@ -86,6 +86,11 @@
   .sum-view td small+small{margin-top:0}
   .sum-view.sum-top{min-width:0}
   #recent th,#recent td{text-align:left!important}
+  .barbox{max-height:330px;overflow-y:auto;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:4px 10px;-webkit-overflow-scrolling:touch}
+  .barbox.open{max-height:none}
+  .barrow{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;padding:3px 4px;font-size:13.5px;border-radius:6px}
+  .barrow.base{font-weight:700;background:#e8f0fe}
+  .baserow td{background:#e8f0fe}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
@@ -609,7 +614,7 @@ rTo.oninput = () => { if (+rTo.value < +rFrom.value) rTo.value = rFrom.value; se
 state.tab = "view";
 const ZCOL = ["#2a6fdb", "#e8663a", "#1aaa72"];
 const cmp = { slots: [null, null, null] };
-const topS = { gu: null, zi: 0, win: 6, picked: [] };
+const topS = { gu: null, zi: 0, win: 6, picked: [], open: false };
 
 function ensureGu(gu, cb) {
   window.DATA_GU = window.DATA_GU || {};
@@ -757,28 +762,38 @@ function renderTop() {
     const max = Math.max(...withV.map(o => o.v));
     const sorted = withV.slice().sort((a, b) => b.v - a.v);
     let html = `<h2>상단 비교 · ${zoneTitle(base.gu, base.z)} 기준</h2><div class="hint" style="margin:2px 0 4px">${fmtYM(from)}~${fmtYM(to)} · ${cmpUnit().split(" · ")[0]} · ${state.type === "sale" ? "매매" : "전세"} 상단(대표 단지 중 최고 거래가)</div>`;
-    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · 막대 길이 = 상단 가격 · 진한 색 = 기준과 ±10% 이내</div><div style="margin-top:10px">`;
+    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · 막대 길이 = 상단 가격 · 진한 색 = 기준과 ±10% 이내</div>
+      <div class="barbox${topS.open ? " open" : ""}" id="barBox">`;
     sorted.forEach(o => {
       const isBase = o === base, near = Math.abs(o.v - base.v) / base.v <= 0.10;
       const col = isBase ? "#1d1f23" : near ? "#2a6fdb" : "#c9d3e3";
-      html += `<div style="display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;margin:4px 0;font-size:13.5px${isBase ? ";font-weight:700" : ""}">
+      html += `<div class="barrow${isBase ? " base" : ""}">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneTitle(o.gu, o.z)}</span>
         <span style="background:#f1f3f6;border-radius:4px;height:16px;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${(o.v / max * 100).toFixed(1)}%;background:${col};border-radius:4px"></i></span>
         <span style="text-align:right">${eok(o.v)}</span></div>`;
     });
-    html += `</div><div class="foot">상단은 거래 1건으로도 정해지니, 표의 상단 단지·층을 같이 확인하세요.</div>`;
+    html += `</div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="barToggle">${topS.open ? "접기" : `전체 펼치기 (${sorted.length}개)`}</button><span class="hint">목록은 기준 생활권이 가운데 오게 맞춰져요</span></div>
+      <div class="foot">상단은 거래 1건으로도 정해지니, 표의 상단 단지·층을 같이 확인하세요.</div>`;
     card.innerHTML = html;
+    const box = $("barBox"), br = box.querySelector(".base");
+    if (!topS.open && br) box.scrollTop = br.offsetTop - box.offsetTop - box.clientHeight / 2 + br.clientHeight / 2;
+    $("barToggle").onclick = () => { topS.open = !topS.open; render(); };
     // 비슷한 생활권 표
-    const sim = withV.filter(o => o !== base).sort((a, b) => Math.abs(a.v - base.v) - Math.abs(b.v - base.v)).slice(0, 8);
-    $("sumTitle").textContent = "상단이 비슷한 생활권 (가까운 순)"; $("summary").className = "sum-view sum-top";
+    const bi = sorted.indexOf(base);
+    const above = sorted.slice(Math.max(0, bi - 4), bi), below = sorted.slice(bi + 1, bi + 5);
+    $("sumTitle").textContent = "상단이 비슷한 생활권 (위 4개 · 기준 · 아래 4개)"; $("summary").className = "sum-view sum-top";
     const c3 = o => `<b>${eok(o.v)}</b><small>${o.b.who}</small><small>${fmtYM(o.b.r[2])}.${o.b.r[3]} ${o.b.r[5]}층</small>`;
     let s = `<colgroup><col style="width:3.2em"><col style="width:36%"><col><col style="width:22%"></colgroup>
       <tr><th>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
-    s += `<tr class="simrow"><td>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td>${c3(base)}</td><td>-</td></tr>`;
-    sim.forEach(o => {
+    const simRow = o => {
       const key = o.gu + "|" + o.zi, d = (o.v - base.v) / base.v * 100, on = topS.picked.includes(key);
-      s += `<tr class="simrow"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
-    });
+      return `<tr class="simrow"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
+    };
+    above.forEach(o => { s += simRow(o); });
+    if (!above.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 높은 생활권이 없어요</td></tr>`;
+    s += `<tr class="simrow baserow"><td>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td>${c3(base)}</td><td>-</td></tr>`;
+    below.forEach(o => { s += simRow(o); });
+    if (!below.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 낮은 생활권이 없어요</td></tr>`;
     s += `<tr><td colspan="4" style="text-align:left;white-space:normal"><button class="btn primary" id="toCmp" type="button">체크한 생활권과 그래프로 비교 (최대 2개)</button></td></tr>`;
     $("summary").innerHTML = s;
     $("summary").querySelectorAll("input[data-k]").forEach(cb => cb.onchange = () => {
