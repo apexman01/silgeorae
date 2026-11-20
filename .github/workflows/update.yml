@@ -14,6 +14,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -38,5 +42,6 @@ jobs:
             echo "바뀐 거래 없음"
           else
             git commit -m "실거래가 자동 갱신 $(date +%Y-%m-%d)"
+            git pull --rebase -X theirs origin main || git pull --rebase origin main
             git push
           fi

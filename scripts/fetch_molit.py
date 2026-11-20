@@ -14,6 +14,7 @@
 """
 import json, os, sys, time, urllib.error, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -134,10 +135,13 @@ def main():
                 todo = [m for m in months if m not in cache or m in recent]
                 got = 0
                 try:
-                    for ym in todo:
-                        cache[ym] = [slim(kind, it) for it in call(url, key, lawd, ym)]
-                        got += len(cache[ym])
-                        time.sleep(0.2)
+                    # 여러 달을 동시에 받아 시간 단축 (동시 6개)
+                    with ThreadPoolExecutor(max_workers=6) as ex:
+                        futs = {ex.submit(call, url, key, lawd, ym): ym for ym in todo}
+                        for f in as_completed(futs):
+                            ym = futs[f]
+                            cache[ym] = [slim(kind, it) for it in f.result()]
+                            got += len(cache[ym])
                 except NotRegistered as e:
                     if kind in OPTIONAL:
                         print(f"※ {kind} API 사용 권한 없음 → 건너뜀 (공공데이터포털 활용신청 필요): {e}")
