@@ -44,6 +44,19 @@
   .down{color:#2a6fdb}.up{color:#d9443a}
   .scroll{overflow-x:auto}
   .picker{display:none;margin-top:4px;width:100%}
+  .period{width:100%;border-top:1px solid var(--line);padding-top:12px;margin-top:2px}
+  .period .head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+  .period .range-txt{font-size:15px;font-weight:700;margin-left:auto}
+  .period .range-txt small{font-weight:400;color:var(--sub);margin-left:6px}
+  .dual{position:relative;height:40px;margin:10px 12px 0}
+  .dual .track{position:absolute;left:0;right:0;top:18px;height:5px;border-radius:3px;background:#e3e6ea}
+  .dual .fill{position:absolute;top:18px;height:5px;border-radius:3px;background:var(--accent)}
+  .dual input{position:absolute;left:-12px;width:calc(100% + 24px);top:6px;height:28px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+  .dual input::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .dual input::-moz-range-thumb{pointer-events:auto;width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer}
+  .dual input::-webkit-slider-runnable-track{background:none}
+  .ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:0 0 0}
+  .seg button:disabled{opacity:.35;cursor:default}
   .picker.show{display:block}
   .picker .list{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-top:8px;columns:2 260px;column-gap:18px}
   .picker label{display:block;font-size:13.5px;padding:3px 0;break-inside:avoid;cursor:pointer}
@@ -71,10 +84,22 @@
       <div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div></div>
     <div class="ctl"><label>전용면적</label>
       <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button></div></div>
-    <div class="ctl"><label>기간</label>
-      <div class="seg" id="segPeriod"><button data-v="12" class="on">최근 12개월</button><button data-v="24">24개월</button><button data-v="all">전체</button></div></div>
     <div class="ctl"><label>지표</label>
       <div class="seg" id="segMetric"><button data-v="max" class="on">월 최고가</button><button data-v="avg">월 평균가</button></div></div>
+
+    <div class="ctl period">
+      <div class="head">
+        <label>기간</label>
+        <div class="seg" id="segPeriod"><button data-v="12" class="on">12개월</button><button data-v="24">24개월</button><button data-v="36">36개월</button><button data-v="60">5년</button><button data-v="all">전체</button></div>
+        <div class="range-txt" id="rangeTxt"></div>
+      </div>
+      <div class="dual">
+        <div class="track"></div><div class="fill" id="rangeFill"></div>
+        <input type="range" id="rFrom" min="0" step="1" aria-label="시작 월">
+        <input type="range" id="rTo" min="0" step="1" aria-label="끝 월">
+      </div>
+      <div class="ticks" id="rangeTicks"></div>
+    </div>
 
     <div class="picker" id="picker">
       <div class="row">
@@ -117,7 +142,7 @@ const LOW_FLOOR = 3;        // 이 층 이하면 '저층'
 const MAX_PICK = 6;
 const CUSTOM_KEY = "lifezone-custom-v1";
 
-const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", period: "12", picked: [] };
+const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, picked: [] };
 const $ = id => document.getElementById(id);
 
 /* ---------- 데이터 인덱스 ---------- */
@@ -127,7 +152,7 @@ const allMonths = (() => {
   DATA.sale.forEach(r => s.add(r[2])); DATA.jeonse.forEach(r => s.add(r[2]));
   return [...s].sort();
 })();
-function visMonths() { return state.period === "all" ? allMonths : allMonths.slice(-(+state.period)); }
+function visMonths() { return allMonths.slice(state.from, state.to + 1); }
 const fmtYM = ym => `${String(ym).slice(2, 4)}.${+String(ym).slice(4)}`;
 $("dataInfo").textContent =
   `국토부 실거래가 · 계약일 기준 ${fmtYM(allMonths[0])}~${fmtYM(allMonths[allMonths.length - 1])}` +
@@ -234,7 +259,7 @@ function bindSeg(id, key) {
     render();
   });
 }
-bindSeg("segPeriod", "period"); bindSeg("segType", "type"); bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
+bindSeg("segType", "type"); bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
 
 /* ---------- 집계 ---------- */
 function currentComplexes() {
@@ -247,8 +272,8 @@ function currentComplexes() {
 }
 function seriesFor(cxIdx) {
   const [lo, hi] = AREA_BANDS[state.area];
-  const months = visMonths(), m0 = months[0];
-  const rows = DATA[state.type].filter(r => r[0] === cxIdx && r[1] >= lo && r[1] < hi && r[2] >= m0);
+  const months = visMonths(), m0 = months[0], m1 = months[months.length - 1];
+  const rows = DATA[state.type].filter(r => r[0] === cxIdx && r[1] >= lo && r[1] < hi && r[2] >= m0 && r[2] <= m1);
   const chartRows = state.type === "jeonse" ? rows.filter(r => !r[6]) : rows;   // 전세 그래프는 신규 계약만
   const byM = {};
   chartRows.forEach(r => { (byM[r[2]] = byM[r[2]] || []).push(r); });
@@ -388,7 +413,44 @@ function renderTables(series) {
   $("recent").innerHTML = all.length ? t : `<tr><td class="hint">거래 없음</td></tr>`;
 }
 
+/* ---------- 기간: 버튼 + 범위 슬라이더 ---------- */
+const N = allMonths.length, rFrom = $("rFrom"), rTo = $("rTo");
+rFrom.max = rTo.max = N - 1;
+$("segPeriod").querySelectorAll("button").forEach(b => {
+  const v = b.dataset.v;
+  if (v !== "all" && +v > N) b.disabled = true;           // 자료보다 긴 기간은 비활성
+  b.onclick = () => { if (b.disabled) return; setRange(v === "all" ? 0 : Math.max(0, N - +v), N - 1); };
+});
+function setRange(from, to, fromSlider) {
+  state.from = Math.max(0, Math.min(from, to)); state.to = Math.min(N - 1, Math.max(from, to));
+  rFrom.value = state.from; rTo.value = state.to;
+  const pct = i => N > 1 ? i / (N - 1) * 100 : 0;
+  $("rangeFill").style.left = pct(state.from) + "%"; $("rangeFill").style.width = (pct(state.to) - pct(state.from)) + "%";
+  const len = state.to - state.from + 1;
+  $("rangeTxt").innerHTML = `${fmtYM(allMonths[state.from])} ~ ${fmtYM(allMonths[state.to])}<small>${len}개월</small>`;
+  // 슬라이더 값이 버튼과 맞으면 그 버튼에 불, 아니면 모두 끔
+  $("segPeriod").querySelectorAll("button").forEach(b => {
+    const v = b.dataset.v, on = state.to === N - 1 && (v === "all" ? state.from === 0 : state.from === N - +v);
+    b.classList.toggle("on", on);
+  });
+  render();
+}
+rFrom.oninput = () => { if (+rFrom.value > +rTo.value) rFrom.value = rTo.value; setRange(+rFrom.value, +rTo.value, true); };
+rTo.oninput = () => { if (+rTo.value < +rFrom.value) rTo.value = rFrom.value; setRange(+rFrom.value, +rTo.value, true); };
+(() => {   // 눈금: 매년 1월
+  const ys = allMonths.map((m, i) => ({ m, i })).filter(o => o.i === 0 || +String(o.m).slice(4) === 1);
+  $("rangeTicks").innerHTML = "";
+  $("rangeTicks").style.position = "relative"; $("rangeTicks").style.height = "16px"; $("rangeTicks").style.margin = "0 12px";
+  ys.forEach(o => {
+    const s = document.createElement("span");
+    s.textContent = `${String(o.m).slice(2, 4)}년${o.i === 0 && +String(o.m).slice(4) !== 1 ? " " + (+String(o.m).slice(4)) + "월" : ""}`;
+    s.style.cssText = `position:absolute;left:${N > 1 ? o.i / (N - 1) * 100 : 0}%;transform:translateX(${o.i === 0 ? "0" : "-50%"})`;
+    $("rangeTicks").appendChild(s);
+  });
+})();
+state.from = Math.max(0, N - 12); state.to = N - 1;
 initSido();
+setRange(state.from, state.to);
 let _rw = 0; window.addEventListener("resize", () => { const w = $("chartCard").clientWidth; if (Math.abs(w - _rw) > 40) { _rw = w; render(); } });
 </script>
 </body>
