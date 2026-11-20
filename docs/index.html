@@ -103,8 +103,11 @@
   <div class="sign">국토교통부 실거래가 자료 기반 · 참고용 · 만든이 비상</div>
 </div>
 
-<script src="data.js"></script>
-<script src="lifezones.js"></script>
+<script>
+  // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
+  var _v = Date.now();
+  document.write('<script src="data.js?v=' + _v + '"><\/script><script src="lifezones.js?v=' + _v + '"><\/script>');
+</script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
 
