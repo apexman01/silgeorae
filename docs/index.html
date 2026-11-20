@@ -82,7 +82,10 @@
   .sum-view th,.sum-view td{padding-left:4px;padding-right:4px}
   .sum-view th,.sum-view td{text-align:left!important;vertical-align:top;white-space:normal}
   .sum-view td b{font-weight:600;display:block}
-  .sum-view td small{display:block;font-size:10px;letter-spacing:-.2px;white-space:nowrap;color:var(--mute);margin-top:2px}
+  .sum-view td small{display:block;font-size:10px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute);margin-top:2px}
+  .sum-view td small+small{margin-top:0}
+  .sum-view.sum-top{min-width:0}
+  #recent th,#recent td{text-align:left!important}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
@@ -705,19 +708,20 @@ function renderCompare() {
     html += `<div class="foot">${state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값 · " : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균 · "}점에 손가락을 대면 그 달 상단 단지가 보여요 · ★ = 기간 최고<br>국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약"}</div>`;
     card.innerHTML = html;
     bindLegend();
-    $("sumTitle").textContent = "생활권 요약"; $("summary").className = "";
-    let s = `<tr><th>생활권</th><th>대표 단지</th><th>${state.type === "sale" ? "매매" : "전세"} 건수</th><th>기간 상단</th><th>최근 상단</th><th>상단 대비</th></tr>`;
+    $("sumTitle").textContent = "생활권 요약"; $("summary").className = "sum-view";
+    const cell2 = o => `<b>${eok(o.r[4])}</b><small>${o.who}</small><small>${fmtYM(o.r[2])}.${o.r[3]} ${o.r[5]}층</small>`;
+    let s = `<colgroup><col style="width:24%">${"<col>".repeat(5)}</colgroup>
+      <tr><th>생활권</th><th>최근 상단</th><th>기간 상단</th><th>상단 대비</th><th>${state.type === "sale" ? "매매" : "전세"} 건수</th><th>대표 단지</th></tr>`;
     series.forEach(se => {
       const rows = se.cs.flatMap(c => c.rows.filter(r => r[2] >= months[0] && r[2] <= months[months.length - 1]).map(r => ({ r, who: c.label })));
-      if (!rows.length) { s += `<tr><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cs.length}곳</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`; return; }
+      const name = `<td><span class="dot" style="background:${se.color}"></span>${se.label}</td>`;
+      if (!rows.length) { s += `<tr>${name}<td>-</td><td>-</td><td>-</td><td>0</td><td>${se.cs.length}곳</td></tr>`; return; }
       const best = rows.reduce((a, b) => b.r[4] > a.r[4] ? b : a);
       const lastM = Math.max(...rows.map(o => o.r[2]));
       const last = rows.filter(o => o.r[2] === lastM).reduce((a, b) => b.r[4] > a.r[4] ? b : a);
       const diff = (last.r[4] - best.r[4]) / best.r[4] * 100;
-      s += `<tr><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cs.length}곳</td><td>${rows.length}</td>
-        <td>${eok(best.r[4])} <span class="hint">${best.who} · ${fmtYM(best.r[2])}</span></td>
-        <td>${eok(last.r[4])} <span class="hint">${last.who} · ${fmtYM(last.r[2])}</span></td>
-        <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "상단" : diff.toFixed(1) + "%"}</td></tr>`;
+      s += `<tr>${name}<td>${cell2(last)}</td><td>${cell2(best)}</td>
+        <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "상단" : diff.toFixed(1) + "%"}</td><td>${rows.length}</td><td>${se.cs.length}곳</td></tr>`;
     });
     $("summary").innerHTML = s;
   });
@@ -766,14 +770,16 @@ function renderTop() {
     card.innerHTML = html;
     // 비슷한 생활권 표
     const sim = withV.filter(o => o !== base).sort((a, b) => Math.abs(a.v - base.v) - Math.abs(b.v - base.v)).slice(0, 8);
-    $("sumTitle").textContent = "상단이 비슷한 생활권 (가까운 순)"; $("summary").className = "";
-    let s = `<tr><th>비교</th><th>생활권</th><th>상단</th><th>상단 단지</th><th>기준 대비</th></tr>`;
-    s += `<tr class="simrow"><td>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td><b>${eok(base.v)}</b></td><td>${base.b.who} <span class="hint">${fmtYM(base.b.r[2])} · ${base.b.r[5]}층</span></td><td>-</td></tr>`;
+    $("sumTitle").textContent = "상단이 비슷한 생활권 (가까운 순)"; $("summary").className = "sum-view sum-top";
+    const c3 = o => `<b>${eok(o.v)}</b><small>${o.b.who}</small><small>${fmtYM(o.b.r[2])}.${o.b.r[3]} ${o.b.r[5]}층</small>`;
+    let s = `<colgroup><col style="width:3.2em"><col style="width:36%"><col><col style="width:22%"></colgroup>
+      <tr><th>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
+    s += `<tr class="simrow"><td>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td>${c3(base)}</td><td>-</td></tr>`;
     sim.forEach(o => {
       const key = o.gu + "|" + o.zi, d = (o.v - base.v) / base.v * 100, on = topS.picked.includes(key);
-      s += `<tr class="simrow"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${eok(o.v)}</td><td>${o.b.who} <span class="hint">${fmtYM(o.b.r[2])} · ${o.b.r[5]}층</span></td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
+      s += `<tr class="simrow"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
     });
-    s += `<tr><td colspan="5" style="text-align:left;white-space:normal"><button class="btn primary" id="toCmp" type="button">체크한 생활권과 그래프로 비교 (최대 2개)</button></td></tr>`;
+    s += `<tr><td colspan="4" style="text-align:left;white-space:normal"><button class="btn primary" id="toCmp" type="button">체크한 생활권과 그래프로 비교 (최대 2개)</button></td></tr>`;
     $("summary").innerHTML = s;
     $("summary").querySelectorAll("input[data-k]").forEach(cb => cb.onchange = () => {
       const k = cb.dataset.k;
