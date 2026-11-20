@@ -146,8 +146,10 @@ def main():
                         print(f"※ {gu} {kind} 받기 실패 → 이번엔 건너뜀: {e}")
                         continue
                     raise
-                # 설정 기간 밖의 달은 버림
+                # 설정 기간 밖의 달은 버림, 전월세는 전세만 보관(저장소 용량 절약)
                 cache = {m: v for m, v in cache.items() if m in set(months)}
+                if kind == "rent":
+                    cache = {m: [it for it in v if (num(it.get("monthlyRent")) or 0) == 0] for m, v in cache.items()}
                 save_cache(lawd, kind, cache)
                 print(f"{gu} {kind}: {len(todo)}개월 새로 받음({got}건), 저장 {len(cache)}개월")
 
