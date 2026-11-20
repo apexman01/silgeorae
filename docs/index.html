@@ -69,11 +69,12 @@
   body:not([data-tab="cmp"]) .c-only{display:none!important}
   body:not([data-tab="top"]) .t-only{display:none!important}
   body:not([data-tab="view"]) .vt-only{display:none!important}
-  .slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%}
-  .slot{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;border-left-width:5px}
-  .slot b{font-size:13px;color:var(--sub)}
-  .slot select{min-width:0;width:100%}
-  @media(max-width:700px){.slots{grid-template-columns:minmax(0,1fr)}}
+  .slots{display:flex;flex-wrap:wrap;gap:8px 12px;width:100%}
+  .slot{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-left:5px solid;border-radius:10px;padding:6px 8px}
+  .slot b{font-size:13px;color:var(--sub);white-space:nowrap}
+  .slot select{min-width:0;font-size:14px;padding:6px 8px}
+  .slot .sGu{width:6.6em}
+  .slot .sZone{width:9.5em}
   .simrow td:first-child{white-space:normal}
   .simrow td:nth-child(2),.simrow td:nth-child(4){text-align:left}
   .simrow input{width:18px;height:18px;accent-color:var(--ink);vertical-align:middle}
@@ -656,9 +657,9 @@ function renderSlots() {
   const gus = zoneGus();
   $("slots").innerHTML = [0, 1, 2].map(k => {
     const s = cmp.slots[k];
-    const go = `<option value="">${k === 0 ? "구 선택" : "선택 안 함"}</option>` + gus.map(g => `<option ${s && s.gu === g ? "selected" : ""}>${g}</option>`).join("");
+    const go = `<option value="">${k === 0 ? "구 선택" : "없음"}</option>` + gus.map(g => `<option ${s && s.gu === g ? "selected" : ""}>${g}</option>`).join("");
     const zo = s ? baseZones(s.gu).map((z, i) => `<option value="${i}" ${s.zi === i ? "selected" : ""}>${z.name}</option>`).join("") : `<option>—</option>`;
-    return `<div class="slot" style="border-left-color:${ZCOL[k]}"><b>생활권 ${k + 1}</b><select class="sGu" data-k="${k}">${go}</select><select class="sZone" data-k="${k}" ${s ? "" : "disabled"}>${zo}</select></div>`;
+    return `<div class="slot" style="border-left-color:${ZCOL[k]}"><b>${k + 1}</b><select class="sGu" data-k="${k}">${go}</select><select class="sZone" data-k="${k}" ${s ? "" : "disabled"}>${zo}</select></div>`;
   }).join("");
   $("slots").querySelectorAll(".sGu").forEach(el => el.onchange = () => { const k = +el.dataset.k; cmp.slots[k] = el.value ? { gu: el.value, zi: 0 } : null; renderSlots(); render(); });
   $("slots").querySelectorAll(".sZone").forEach(el => el.onchange = () => { cmp.slots[+el.dataset.k].zi = +el.value; render(); });
