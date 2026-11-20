@@ -94,7 +94,9 @@
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
-  .tag.pre{background:#fff1e8;color:#c2551f}
+  .tag.pre{background:#fff1e8;color:#c2551f;font-weight:600}
+  .legend .tag{font-size:11px;padding:0 5px}
+  .pre-txt{color:#c2551f;font-weight:700}
   .picker.show{display:block}
   .picker .list{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-top:8px;columns:2 260px;column-gap:18px}
   .picker label{display:block;font-size:13.5px;padding:3px 0;break-inside:avoid;cursor:pointer}
@@ -127,7 +129,7 @@
     <div class="ctl v-only"><label>보기</label>
       <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">거래량 TOP5</button></div></div>
     <div class="ctl"><label>거래</label>
-      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><label class="chk" id="preWrap"><input type="checkbox" id="chkPre" checked>분양권·입주권 포함</label></div></div>
+      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><label class="chk" id="preWrap"><input type="checkbox" id="chkPre" checked>분양권·입주권 포함</label><span class="hint" style="display:block;margin-top:4px">신축 입주 전·재개발 조합원 거래. 그래프에서는 빈 동그라미</span></div></div>
     <div class="ctl"><label>전용면적</label>
       <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
     <div class="ctl"><label>지표</label>
@@ -433,7 +435,7 @@ function render() {
 
   const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
   let html = `<h2>${title}</h2>${sub ? `<div class="hint" style="margin:2px 0 4px">${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
-  html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
+  html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
   if (!vals.length) {
     html += `<div class="empty">${!list.length ? "위에서 단지를 골라주세요." : !shown.length ? "모든 단지를 숨겼어요. 위 단지 버튼을 눌러 다시 켜세요." : "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요."}</div>`;
@@ -537,13 +539,22 @@ function hhOf(se) {
   }
   return v ? Number(v).toLocaleString("ko-KR") : "-";
 }
+function preKind(rows) {   // 이 단지 거래 중 분양권·입주권 종류 (예: "입주권", "분양권·입주권")
+  const k = [...new Set(rows.filter(r => typeof r[6] === "string").map(r => r[6]))].sort();
+  return k.join("·");
+}
+function preTag(rows, all) {
+  const k = preKind(rows); if (!k) return "";
+  const only = all && rows.every(r => typeof r[6] === "string");
+  return ` <span class="tag pre">${only ? k + "만" : "+" + k}</span>`;
+}
 function renderTables(series) {
   const typeLabel = state.type === "sale" ? "매매" : "전세";
   // 중요한 값(최근 거래·기간 최고)을 앞으로, 숫자는 왼쪽 정렬, 칸 너비는 같게
   let s = `<colgroup><col style="width:22%">${"<col>".repeat(6)}</colgroup>
     <tr><th>단지</th><th>최근 거래</th><th>기간 최고</th><th>최고 대비</th><th>${typeLabel} 건수</th><th>세대수</th><th>준공</th></tr>`;
   const best4 = se => se.rows.length ? Math.max(...se.rows.map(r => r[4])) : -1;
-  const cell = (r) => `<b>${eok(r[4])}</b><small>${fmtYM(r[2])}.${r[3]} ${r[5]}층</small>`;
+  const cell = (r) => `<b>${eok(r[4])}</b><small>${typeof r[6] === "string" ? `<span class="pre-txt">${r[6]}</span> ` : ""}${fmtYM(r[2])}.${r[3]} ${r[5]}층</small>`;
   [...series].sort((a, b) => best4(b) - best4(a)).forEach(se => {
     const rows = se.rows, off = state.hidden.has(se.name) ? ' class="off"' : "";
     const name = `<td><span class="dot" style="background:${se.color}"></span>${se.label}</td>`;
