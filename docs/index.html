@@ -652,25 +652,24 @@ function matchIdxs(cx, n) {
   const parts = n.split("|").map(p => { const [nm, dong] = p.split("@"); return { nm: norm(nm), dong }; });
   return new Set(cx.filter(x => parts.some(p => p.nm === norm(x.name) && (!p.dong || x.dong.startsWith(p.dong)))).map(x => x.i));
 }
+function zoneRepArea(gu, z) {   // 생활권 대표 평형: 대표 단지 전체에서 매매(분양권 포함) 거래가 가장 많은 전용면적
+  const P = prep(gu); if (!P || !z) return null;
+  const all = new Set(); z.complexes.forEach(n => matchIdxs(P.cx, n).forEach(i => all.add(i)));
+  const cnt = {};
+  P.d.sale.concat(P.pre).forEach(r => { if (all.has(r[0])) { const a = Math.floor(r[1]); cnt[a] = (cnt[a] || 0) + 1; } });
+  const b = Object.entries(cnt).sort((a, b) => b[1] - a[1] || Math.abs(a[0] - 84) - Math.abs(b[0] - 84))[0];
+  return b ? +b[0] : null;
+}
 function zoneRows(gu, z) {
   const P = prep(gu); if (!P || !z) return [];
   const src = state.type === "sale" ? (state.presale ? P.d.sale.concat(P.pre) : P.d.sale) : P.d.jeonse.filter(r => !r[6]);
   const [lo, hi] = AREA_BANDS[state.area] || [0, 0];
+  const zrep = state.area === "rep" ? zoneRepArea(gu, z) : null;
+  const inArea = zrep ? (r => Math.floor(r[1]) === zrep) : (r => r[1] >= lo && r[1] < hi);
   return z.complexes.map(n => {
     const idxs = matchIdxs(P.cx, n);
-    let inArea = r => r[1] >= lo && r[1] < hi;
-    if (state.area === "rep") {
-      let rep = z.rep && z.rep[n] ? +z.rep[n] : null;
-      if (!rep) {
-        const cnt = {};
-        P.d.sale.concat(P.pre).forEach(r => { if (idxs.has(r[0])) { const a = Math.floor(r[1]); cnt[a] = (cnt[a] || 0) + 1; } });
-        const b = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]; rep = b ? +b[0] : -1;
-      }
-      inArea = r => Math.floor(r[1]) === rep;
-      var repA = rep > 0 ? rep : null;
-    }
     const base = (z.short && z.short[n]) || n.split("|")[0].split("@")[0];
-    return { name: n, base, rep: repA || null, label: repA ? `${base} ${repA}㎡` : base, rows: src.filter(r => idxs.has(r[0]) && inArea(r)) };
+    return { name: n, base, rep: zrep, label: base, rows: src.filter(r => idxs.has(r[0]) && inArea(r)) };
   });
 }
 function zoneMonthly(gu, z, months) {
@@ -704,7 +703,7 @@ function renderSlots() {
 }
 
 function cmpUnit() {
-  const areaLabel = { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "단지별 대표 평형" }[state.area];
+  const areaLabel = { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "생활권별 대표 평형" }[state.area];
   const what = state.metric === "max" ? "생활권 상단(그 달 대표 단지 최고가)" : "대표 단지 월 최고가 평균";
   return `${areaLabel} · ${what} · ${state.type === "sale" ? "매매" : "전세"}(억)`;
 }
@@ -717,7 +716,8 @@ function renderCompare() {
   ensureAll([...new Set(sel.map(s => s.gu))], () => {
     const series = sel.map(s => {
       const z = baseZones(s.gu)[s.zi], r = zoneMonthly(s.gu, z, months);
-      return { name: `cmp${s.k}`, label: zoneTitle(s.gu, z), color: ZCOL[s.k], pts: r.pts, cs: r.cs, z };
+      const ra = state.area === "rep" ? zoneRepArea(s.gu, z) : null;
+      return { name: `cmp${s.k}`, label: zoneTitle(s.gu, z) + (ra ? ` ${ra}㎡` : ""), color: ZCOL[s.k], pts: r.pts, cs: r.cs, z, ra };
     });
     const shown = series.filter(s => !state.hidden.has(s.name));
     const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
@@ -726,7 +726,7 @@ function renderCompare() {
     html += vals.length ? chartSvg(shown, vals, months, card, "생활권 비교", { notes: false })
       : `<div class="empty">이 조건에 맞는 거래가 없어요. 면적이나 기간을 바꿔보세요.</div>`;
     if (state.area === "rep") {
-      html += `<div class="replist">${series.map(s => `<div><span class="dot" style="background:${s.color}"></span><b>${s.label}</b> · ${s.cs.map(c => c.rep ? `${c.base} <b>${c.rep}㎡</b>` : `${c.base} -`).join(" · ")}</div>`).join("")}</div>`;
+      html += `<div class="replist">대표 평형 = 생활권 대표 단지 전체에서 거래가 가장 많은 전용면적 (생활권마다 하나)<br>${series.map(s => `<span class="dot" style="background:${s.color}"></span>${s.label.replace(/ (\d+㎡)$/, " <b>$1</b>")}: ${s.cs.filter(c => c.rows.length).map(c => c.base).join(" · ") || "이 평형 거래 없음"}`).join("<br>")}</div>`;
     }
     html += `<div class="foot">${state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값 · " : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균 · "}점에 손가락을 대면 그 달 상단 단지가 보여요 · ★ = 기간 최고<br>국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약"}</div>`;
     card.innerHTML = html;
