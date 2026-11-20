@@ -28,8 +28,12 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 12px;margin-bottom:14px}
   .card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.3px}
   .card .unit{color:var(--sub);font-size:14px;margin:2px 0 6px}
-  .legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0 2px;font-size:14px}
-  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px;font-size:14px}
+  .legend button{font:inherit;font-size:14px;display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 10px;border:1px solid #d5d9de;border-radius:999px;background:#fff;color:var(--ink);cursor:pointer;min-height:36px}
+  .legend button.off{color:#a3a8b0;background:#f3f4f6;border-style:dashed}
+  .legend button.off i{background:#c5c9cf!important}
+  .legend .lhint{font-size:12px;color:var(--mute);align-self:center}
+  tr.off td{opacity:.4}
   .legend i{display:inline-block;width:22px;height:3px;border-radius:2px;position:relative}
   .legend i::after{content:"";position:absolute;left:7px;top:-3px;width:9px;height:9px;border-radius:50%;background:inherit}
   svg{width:100%;height:auto;display:block}
@@ -146,7 +150,7 @@ const LOW_FLOOR = 3;        // 이 층 이하면 '저층'
 const MAX_PICK = 6;
 const CUSTOM_KEY = "lifezone-custom-v1";
 
-const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [] };
+const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [], hidden: new Set() };
 const PRESALE = (DATA.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]);
 function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
 const $ = id => document.getElementById(id);
@@ -313,14 +317,15 @@ function render() {
   const title = z.kind === "pick" ? "직접 고른 단지" : z.name;
 
   const series = list.map((c, k) => ({ ...c, color: COLORS[k % COLORS.length], ...(c.cx ? seriesFor(c.cx.i) : { pts: [], rows: [] }) }));
-  const vals = series.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
+  const shown = series.filter(s => !state.hidden.has(s.name));
+  const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
   let html = `<h2>${title}</h2>${z.note ? `<div class="hint" style="margin:2px 0 4px">${z.note}</div>` : ""}<div class="unit">${areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
-  html += `<div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${s.label}</span>`).join("")}</div>`;
+  html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
   if (!vals.length) {
-    html += `<div class="empty">${list.length ? "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요." : "위에서 단지를 골라주세요."}</div>`;
-    card.innerHTML = html; renderTables(series); return;
+    html += `<div class="empty">${!list.length ? "위에서 단지를 골라주세요." : !shown.length ? "모든 단지를 숨겼어요. 위 단지 버튼을 눌러 다시 켜세요." : "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요."}</div>`;
+    card.innerHTML = html; bindLegend(); renderTables(series); return;
   }
 
   const months = visMonths();
@@ -341,6 +346,7 @@ function render() {
   const every = months.length > (narrow ? 7 : 14) ? (narrow && months.length > 14 ? 3 : 2) : 1;
   months.forEach((m, i) => {
     const mo = +String(m).slice(4), newYear = i === 0 || mo === 1;
+    if (i === 0 && mo !== 1 && months.some((mm, j) => j > 0 && j < Math.max(every, narrow ? 3 : 2) && +String(mm).slice(4) === 1)) return;
     const nearYear = months.some((mm, j) => j !== i && Math.abs(j - i) < every && (j === 0 || +String(mm).slice(4) === 1));
     if (!newYear && (i % every || nearYear)) return;
     const lab = newYear ? `${String(m).slice(2, 4)}.${mo}` : `${mo}월`;
@@ -348,7 +354,7 @@ function render() {
   });
 
   const endLabels = [];
-  series.forEach(s => {
+  shown.forEach(s => {
     const idx = s.pts.map((p, i) => p ? i : -1).filter(i => i >= 0);
     if (!idx.length) return;
     const d = idx.map((i, k) => `${k ? "L" : "M"}${x(i).toFixed(1)},${y(s.pts[i].v).toFixed(1)}`).join("");
@@ -384,7 +390,15 @@ function render() {
   html += `<div class="foot">${state.type === "sale" && state.presale && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권·입주권 거래 · " : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
     국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"} · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}</div>`;
   card.innerHTML = html;
+  bindLegend();
   renderTables(series);
+}
+function bindLegend() {
+  $("chartCard").querySelectorAll(".legend button").forEach(b => b.onclick = () => {
+    const n = b.dataset.n;
+    state.hidden.has(n) ? state.hidden.delete(n) : state.hidden.add(n);
+    render();
+  });
 }
 function star(cx, cy, r, color) {
   let p = [];
@@ -400,13 +414,14 @@ function eok(man) { return (man / 10000).toFixed(2).replace(/\.?0+$/, "") + "억
 function renderTables(series) {
   const typeLabel = state.type === "sale" ? "매매" : "전세";
   let s = `<tr><th>단지</th><th>준공</th><th>${typeLabel} 건수</th><th>기간 최고</th><th>최근 거래</th><th>최고 대비</th></tr>`;
-  series.forEach(se => {
-    const rows = se.rows;
-    if (!rows.length) { s += `<tr><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx ? se.cx.built : "-"}</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`; return; }
+  const best4 = se => se.rows.length ? Math.max(...se.rows.map(r => r[4])) : -1;
+  [...series].sort((a, b) => best4(b) - best4(a)).forEach(se => {
+    const rows = se.rows, off = state.hidden.has(se.name) ? ' class="off"' : "";
+    if (!rows.length) { s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx ? se.cx.built : "-"}</td><td>0</td><td>-</td><td>-</td><td>-</td></tr>`; return; }
     const best = rows.reduce((a, b) => b[4] > a[4] ? b : a);
     const last = rows.reduce((a, b) => (b[2] * 100 + b[3] > a[2] * 100 + a[3] ? b : a));
     const diff = (last[4] - best[4]) / best[4] * 100;
-    s += `<tr><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx.built}</td><td>${rows.length}</td>
+    s += `<tr${off}><td><span class="dot" style="background:${se.color}"></span>${se.label}</td><td>${se.cx.built}</td><td>${rows.length}</td>
       <td>${eok(best[4])} <span class="hint">${fmtYM(best[2])}.${best[3]} · ${best[5]}층</span></td>
       <td>${eok(last[4])} <span class="hint">${fmtYM(last[2])}.${last[3]} · ${last[5]}층</span></td>
       <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "최고가" : diff.toFixed(1) + "%"}</td></tr>`;
