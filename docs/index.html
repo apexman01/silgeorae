@@ -773,7 +773,7 @@ function renderTop() {
         <span style="text-align:right">${eok(o.v)}</span></div>`;
     });
     html += `</div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="barToggle">${topS.open ? "접기" : `전체 펼치기 (${sorted.length}개)`}</button><span class="hint">목록은 기준 생활권이 가운데 오게 맞춰져요</span></div>
-      <div class="foot">상단은 거래 1건으로도 정해지니, 표의 상단 단지·층을 같이 확인하세요.</div>`;
+      <div class="foot">상단 = 선택한 평형의 기간 안 실제 최고 거래가 (해제·직거래 제외)</div>`;
     card.innerHTML = html;
     const box = $("barBox"), br = box.querySelector(".base");
     if (!topS.open && br) box.scrollTop = br.offsetTop - box.offsetTop - box.clientHeight / 2 + br.clientHeight / 2;
