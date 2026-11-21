@@ -105,7 +105,8 @@
   .jbmini span.late{background:#d0606e;color:#fff}
   .jbrow{display:flex;align-items:center;gap:8px;padding:8px 2px;border-top:1px solid #f3d7d9;font-size:14px}
   .jbrow b{font-weight:600}
-  .jbrow .kd{font-size:11.5px;color:var(--sub)}
+  .jbrow .kd{font-size:11.5px;color:var(--sub);white-space:nowrap}
+  .jbrow b{min-width:0;word-break:keep-all;overflow-wrap:anywhere}
   .jbrow .st{margin-left:auto;font-size:12px;border-radius:6px;padding:2px 7px;background:#f1f2f4;color:#4b5058;white-space:nowrap}
   .jbrow .st.late{background:#d0606e;color:#fff}
   .jbrow .n{font-size:12.5px;color:var(--sub);white-space:nowrap;min-width:62px;text-align:right}
@@ -545,11 +546,11 @@ function jbItem(r) {
     <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
 }
 let JB_LATE = false;   // true = 관리처분 이후(관리처분·착공)만
-const JB_COMPACT_GUS = ["동대문구"];   // 시험: 이 구는 생활권 보기에서 정비사업을 한 줄 요약 + 정비사업 탭으로 연결
+const JB_COMPACT = true;   // 생활권 보기에서는 정비사업 요약 카드 + 정비사업 탭으로 연결 (25개 구 모두)
 function renderJb(z) {
   const card = $("jbCard");
   if (!z || z.kind !== "base" || !JB.rows[state.gu]) { card.style.display = "none"; return; }
-  if (JB_COMPACT_GUS.includes(state.gu)) {
+  if (JB_COMPACT) {
     const zi0 = baseZones(state.gu).findIndex(b => b.name === z.name);
     const l = jbAssign(state.gu).res[zi0] || [];
     const LI = JB.stages.indexOf("관리처분"), si = r => JB.stages.indexOf(r.stage);
@@ -1033,11 +1034,14 @@ function jbItemLink(r, gu, zi, zname) {
   const tag = zname ? `<button class="go" type="button" data-gu="${gu}" data-zi="${zi}">${zname} 시세 보기</button>` : "";
   return h.replace('<div class="cur">', `<div class="cur">`).replace(/<\/div><\/div>$/, `${tag}</div></div>`);
 }
+let jbTok = 0;   // 늦게 끝난 이전 불러오기(예: 서울 전체)가 지금 화면을 덮어쓰지 않게
 function renderJbTab() {
   const card = $("chartCard");
   const gus = jbS.scope === "seoul" ? jbGus() : [jbS.gu];
+  const tok = ++jbTok, want = jbS.scope + "|" + jbS.gu;
   card.innerHTML = `<div class="empty">자료 불러오는 중…</div>`;
   ensureAll(gus, () => {
+    if (tok !== jbTok || state.tab !== "jb" || want !== jbS.scope + "|" + jbS.gu) return;
     const groups = [];   // [제목, [{r, gu, zi, zname}], 강조]
     let all = [];
     gus.forEach(gu => {
@@ -1051,6 +1055,7 @@ function renderJbTab() {
     all = all.filter(o => keep.has(o.r));
     const sortO = l => { const s = jbSortL(l.map(o => o.r)); return s.map(r => l.find(o => o.r === r)); };
     let title, sub;
+    if (jbS.scope !== "seoul") all = all.filter(o => o.gu === jbS.gu);
     if (jbS.scope === "zone") {
       const zn = baseZones(jbS.gu)[jbS.zi].name;
       title = `${jbS.gu} · ${zn} 정비사업`;
