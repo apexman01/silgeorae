@@ -109,6 +109,7 @@
   .baserow td{background:#e8f0fe}
   .replist{margin:8px 0 2px;font-size:12.5px;color:var(--sub);line-height:1.6}
   .replist b{color:var(--ink);font-weight:600}
+  #segJb small{font-size:12px;opacity:.75;margin-left:3px}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
@@ -503,26 +504,35 @@ function jbItem(r) {
     <div class="lb">${JB.stages.map((s, i) => `<span class="${i === k ? "now" : ""}">${JB_SHORT[s] || s}</span>`).join("")}</div>
     <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
 }
+let JB_LATE = false;   // true = 관리처분 이후(관리처분·착공)만
 function renderJb(z) {
   const card = $("jbCard");
   if (!z || z.kind !== "base" || !JB.rows[state.gu]) { card.style.display = "none"; return; }
   const zones = baseZones(state.gu);
   const zi = zones.findIndex(b => b.name === z.name);
-  const { res, none } = jbAssign(state.gu);
-  const total = res.reduce((a, l) => a + l.length, 0) + none.length;
-  let html = `<h3>정비사업 (재개발·재건축)</h3>
-    <div class="seg" id="segJb" style="margin:4px 0 6px"><button data-v="0" class="${JB_ALL ? "" : "on"}">이 생활권 ${res[zi].length}</button><button data-v="1" class="${JB_ALL ? "on" : ""}">${state.gu} 전체 생활권별 ${total}</button></div>`;
+  const a = jbAssign(state.gu);
+  const lateIdx = JB.stages.indexOf("관리처분");
+  const keep = l => JB_LATE ? l.filter(r => JB.stages.indexOf(r.stage) >= lateIdx) : l;
+  const res = a.res.map(keep), none = keep(a.none);
+  const total = res.reduce((s, l) => s + l.length, 0) + none.length;
+  let html = `<h3>${state.gu} 정비사업 (재개발·재건축)</h3>
+    <div class="row" style="margin:4px 0 6px">
+      <div class="seg" id="segJb"><button data-v="0" class="${JB_ALL ? "" : "on"}">선택 생활권 <small>${res[zi].length}개 구역</small></button><button data-v="1" class="${JB_ALL ? "on" : ""}">전체 생활권별 <small>${total}개 구역</small></button></div>
+      <label class="chk" style="margin-left:0"><input type="checkbox" id="chkJbLate" ${JB_LATE ? "checked" : ""}>관리처분 이후만</label>
+    </div>`;
+  const emptyMsg = JB_LATE ? "관리처분 이후 단계 구역이 없어요." : "이 생활권에 연결된 진행 중 구역이 없어요.";
   if (!JB_ALL) {
-    html += res[zi].length ? res[zi].map(jbItem).join("") : `<div class="empty">이 생활권에 연결된 진행 중 구역이 없어요.</div>`;
+    html += res[zi].length ? res[zi].map(jbItem).join("") : `<div class="empty">${emptyMsg}</div>`;
   } else {
     const groups = zones.map((b, i) => [b.name, res[i], i === zi]);
     if (none.length) groups.push(["생활권에 못 붙인 구역", none, false]);
-    html += groups.map(([nm, l, cur]) => `<div class="jbg"><div class="jbh${cur ? " cur" : ""}">${nm} <span>${l.length}곳</span></div>${l.length ? l.map(jbItem).join("") : `<div class="hint" style="padding:6px 0 10px">진행 중 구역 없음</div>`}</div>`).join("");
+    html += groups.map(([nm, l, cur]) => `<div class="jbg"><div class="jbh${cur ? " cur" : ""}">${nm} <span>${l.length}개 구역</span></div>${l.length ? l.map(jbItem).join("") : `<div class="hint" style="padding:6px 0 10px">${JB_LATE ? "관리처분 이후 구역 없음" : "진행 중 구역 없음"}</div>`}</div>`).join("");
   }
-  html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만(준공·입주 단지는 빠짐) · 날짜 = 그 단계에 처음 들어간 날 · 공급 0세대(업무·상업 위주) 구역 제외<br>
+  html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만(준공·입주 단지는 빠짐) · 날짜 = 그 단계에 처음 들어간 날 · 공급 0세대(업무·상업 위주) 구역 제외${JB_LATE ? " · 관리처분 이후 = 관리처분인가·착공 단계" : ""}<br>
     생활권 연결 = 대표 단지가 있는 동 기준 자동${!JB_ALL && none.length ? ` · 이 구에서 생활권에 못 붙인 구역: ${none.map(r => r.name).join(", ")}` : ""}</div>`;
   card.innerHTML = html; card.style.display = "";
   card.querySelectorAll("#segJb button").forEach(b => b.onclick = () => { JB_ALL = b.dataset.v === "1"; renderJb(z); });
+  $("chkJbLate").onchange = e => { JB_LATE = e.target.checked; renderJb(z); };
 }
 function chartSvg(shown, vals, months, card, title, opts) {
   const narrow = card.clientWidth < 620;
