@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>폰 화면 미리보기 · 비상한 아파트 생활권</title>
+<style>
+  body{margin:0;background:#e9ebef;font-family:-apple-system,"Pretendard","Noto Sans KR",sans-serif;color:#1d1f23}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:10px}
+  .bar button{font:inherit;font-size:14px;border:1px solid #c9ced6;background:#fff;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .bar button.on{background:#1f56b3;border-color:#1f56b3;color:#fff}
+  .bar span{font-size:12px;color:#5b616b}
+  .wrap{display:flex;justify-content:center;padding:0 10px 20px}
+  .phone{background:#111;border-radius:34px;padding:12px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+  iframe{display:block;border:0;border-radius:24px;background:#fff}
+</style>
+</head>
+<body>
+<div class="bar" id="bar">
+  <button data-u="beta/" class="on">시험판</button><button data-u="./">정식</button>
+  <span>|</span>
+  <button data-w="360">360</button><button data-w="390" class="on">390</button><button data-w="412">412</button>
+  <button id="rl">새로고침</button>
+</div>
+<div class="wrap"><div class="phone"><iframe id="f" src="beta/"></iframe></div></div>
+<script>
+  const f = document.getElementById("f");
+  let w = 390, u = "beta/";
+  function size() {
+    f.style.width = w + "px";
+    f.style.height = Math.max(480, Math.min(window.innerHeight - 90, w * 2.16)) + "px";
+  }
+  document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => {
+    document.querySelectorAll("[data-w]").forEach(x => x.classList.toggle("on", x === b)); w = +b.dataset.w; size();
+  });
+  document.querySelectorAll("[data-u]").forEach(b => b.onclick = () => {
+    document.querySelectorAll("[data-u]").forEach(x => x.classList.toggle("on", x === b)); u = b.dataset.u; f.src = u + "?t=" + Date.now();
+  });
+  document.getElementById("rl").onclick = () => { f.src = u + "?t=" + Date.now(); };
+  window.onresize = size; size();
+</script>
+</body>
+</html>
