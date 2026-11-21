@@ -80,8 +80,16 @@
   .tabs{display:flex;gap:6px;margin:16px 0 0;flex-wrap:wrap}
   .tabs button{font:inherit;font-size:15px;font-weight:600;padding:10px 16px;border:1px solid #d5d9de;border-bottom:none;border-radius:10px 10px 0 0;background:#eef0f3;color:var(--sub);cursor:pointer;min-height:44px}
   .tabs button.on{background:var(--card);color:var(--ink)}
+  @media(max-width:520px){.tabs{gap:3px;flex-wrap:nowrap}.tabs button{font-size:13.5px;padding:9px 8px;flex:1 1 0;white-space:nowrap}}
   .tabs + .controls{margin-top:0;border-top-left-radius:0}
-  body[data-tab="cmp"] .v-only, body[data-tab="top"] .v-only{display:none!important}
+  body[data-tab="cmp"] .v-only, body[data-tab="top"] .v-only, body[data-tab="jb"] .v-only{display:none!important}
+  body:not([data-tab="jb"]) .j-only{display:none!important}
+  body[data-tab="jb"] .controls > .ctl:not(.j-only), body[data-tab="jb"] .nj{display:none!important}
+  .jbsum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--sub);margin:6px 0 4px}
+  .jbsum b{color:var(--ink)}
+  .jb .go{font:inherit;font-size:12.5px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:3px 10px;margin-left:6px;cursor:pointer;color:var(--accent)}
+  .jbline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px}
+  .jbline .btn{padding:6px 12px}
   body:not([data-tab="cmp"]) .c-only{display:none!important}
   body:not([data-tab="top"]) .t-only{display:none!important}
   body:not([data-tab="view"]) .vt-only{display:none!important}
@@ -135,13 +143,22 @@
     <p id="dataInfo"></p>
   </header>
 
-  <div class="tabs" id="tabs"><button data-t="view" class="on">생활권 보기</button><button data-t="top">상단 비교</button><button data-t="cmp">생활권 비교</button></div>
+  <div class="tabs" id="tabs"><button data-t="view" class="on">생활권 보기</button><button data-t="top">상단 비교</button><button data-t="cmp">생활권 비교</button><button data-t="jb">정비사업</button></div>
   <div class="controls">
     <div class="ctl c-only" style="width:100%"><label>비교할 생활권 (최대 3개)</label><div class="slots" id="slots"></div></div>
     <div class="ctl t-only" style="width:100%"><label>기준 생활권</label>
       <div class="row"><select id="topGu"></select><select id="topZone"></select>
         <div class="seg" id="segWin"><button data-v="3">최근 3개월</button><button data-v="6" class="on">6개월</button><button data-v="12">12개월</button><button data-v="custom">직접 선택</button></div></div>
       <span class="hint">상단 = 생활권 대표 단지들 중 기간 안 최고 거래가 · 최근 N개월은 가장 최근 달까지 · 직접 선택을 누르면 아래에 기간 슬라이더가 나와요</span></div>
+    <div class="ctl j-only" style="width:100%"><label>범위</label>
+      <div class="row"><div class="seg" id="jbScope"><button data-v="zone">선택 생활권</button><button data-v="gu" class="on">구 전체</button><button data-v="seoul">서울 전체</button></div>
+        <select id="jbGu"></select><select id="jbZone"></select></div></div>
+    <div class="ctl j-only"><label>단계</label>
+      <div class="seg" id="jbStage"><button data-v="all" class="on">전체</button><button data-v="사업시행">사업시행 이후</button><button data-v="관리처분">관리처분 이후</button></div></div>
+    <div class="ctl j-only"><label>종류</label>
+      <div class="seg" id="jbType"><button data-v="all" class="on">전체</button><button data-v="재개발">재개발</button><button data-v="재건축">재건축</button></div></div>
+    <div class="ctl j-only"><label>정렬</label>
+      <div class="seg" id="jbSort"><button data-v="stage" class="on">단계 순</button><button data-v="hh">세대수 순</button></div></div>
     <div class="ctl v-only"><label>시·도</label><select id="selSido"></select></div>
     <div class="ctl v-only"><label>구</label><select id="selGu"></select></div>
     <div class="ctl v-only"><label>생활권</label><select id="selZone"></select></div>
@@ -184,7 +201,7 @@
 
   <div class="card vt-only" id="jbCard" style="display:none"></div>
 
-  <div class="card">
+  <div class="card nj">
     <h3 id="sumTitle">단지별 요약</h3>
     <div class="scroll"><table id="summary"></table></div>
   </div>
@@ -431,6 +448,7 @@ function fmtV(v) { return (Math.round(v * 10) / 10).toString(); }
 function render() {
   if (state.tab === "cmp") return renderCompare();
   if (state.tab === "top") return renderTop();
+  if (state.tab === "jb") return renderJbTab();
   if (!DATA) return;
   $("preWrap").style.display = state.type === "sale" && PRESALE.length ? "" : "none";
   const z = zonesFor(state.sido, state.gu)[state.zone];
@@ -478,9 +496,10 @@ const JB = window.JB || { rows: {}, stages: [] };
 const JB_SHORT = { "구역지정": "지정", "추진위": "추진위", "조합설립": "조합", "건축심의": "심의", "사업시행": "사시", "관리처분": "관처", "착공": "착공" };
 const dkey = d => String(d || "").replace(/\d+가$/, "");   // '성수동1가'·'한강로3가' → '성수동'·'한강로'
 function jbMatch(z, name) { return (z.jb || []).some(k => k.endsWith("-") ? name.startsWith(k) : name === k); }
-function jbAssign(gu) {   // 구역 → 생활권 번호 (자동: 대표 단지가 있는 동 / 애매하면 lifezones.js의 jb·jbDongs)
+function jbAssign(gu, cx) {   // 구역 → 생활권 번호 (자동: 대표 단지가 있는 동 / 애매하면 lifezones.js의 jb·jbDongs)
+  cx = cx || CX;
   const zones = baseZones(gu);
-  const autoDongs = zones.map(z => { const ds = new Set(); z.complexes.forEach(n => matchIdxs(CX, n).forEach(i => ds.add(dkey(CX[i].dong)))); return ds; });
+  const autoDongs = zones.map(z => { const ds = new Set(); z.complexes.forEach(n => matchIdxs(cx, n).forEach(i => ds.add(dkey(cx[i].dong)))); return ds; });
   const res = zones.map(() => []), none = [];
   (JB.rows[gu] || []).filter(r => r.new > 0).forEach(r => {
     let zi = zones.findIndex(z => jbMatch(z, r.name));
@@ -505,9 +524,20 @@ function jbItem(r) {
     <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
 }
 let JB_LATE = false;   // true = 관리처분 이후(관리처분·착공)만
+const JB_COMPACT_GUS = ["동대문구"];   // 시험: 이 구는 생활권 보기에서 정비사업을 한 줄 요약 + 정비사업 탭으로 연결
 function renderJb(z) {
   const card = $("jbCard");
   if (!z || z.kind !== "base" || !JB.rows[state.gu]) { card.style.display = "none"; return; }
+  if (JB_COMPACT_GUS.includes(state.gu)) {
+    const zi0 = baseZones(state.gu).findIndex(b => b.name === z.name);
+    const l = jbAssign(state.gu).res[zi0] || [];
+    const late = l.filter(r => JB.stages.indexOf(r.stage) >= JB.stages.indexOf("관리처분")).length;
+    card.innerHTML = `<h3>${state.gu} 정비사업 (재개발·재건축)</h3><div class="jbline"><span>${z.name} <b>${l.length}개 구역</b>${l.length ? ` · 관리처분 이후 <b>${late}개</b>` : ""}${l.length ? ` · ${l.slice(0, 3).map(r => r.name).join(", ")}${l.length > 3 ? " 등" : ""}` : ""}</span>
+      <button class="btn primary" type="button" id="jbGo">정비사업 탭에서 보기</button></div>`;
+    card.style.display = "";
+    $("jbGo").onclick = () => { jbS.gu = state.gu; jbS.zi = Math.max(0, zi0); jbS.scope = "zone"; setTab("jb"); };
+    return;
+  }
   const zones = baseZones(state.gu);
   const zi = zones.findIndex(b => b.name === z.name);
   const a = jbAssign(state.gu);
@@ -930,8 +960,91 @@ function setTab(tb) {
     renderSlots();
   }
   if (tb === "top") renderTopSel();
+  if (tb === "jb") renderJbSel();
   showPeriod();
   render();
+}
+
+/* ================= 정비사업 탭 ================= */
+const jbS = { scope: "gu", gu: null, zi: 0, stage: "all", type: "all", sort: "stage" };
+function jbGus() { return Object.keys(JB.rows).filter(g => baseZones(g).length).sort(); }
+function renderJbSel() {
+  const gus = jbGus();
+  if (!jbS.gu || !gus.includes(jbS.gu)) jbS.gu = gus.includes(state.gu) ? state.gu : gus[0];
+  $("jbGu").innerHTML = gus.map(g => `<option ${g === jbS.gu ? "selected" : ""}>${g}</option>`).join("");
+  $("jbZone").innerHTML = baseZones(jbS.gu).map((z, i) => `<option value="${i}" ${i === jbS.zi ? "selected" : ""}>${z.name}</option>`).join("");
+  $("jbGu").style.display = jbS.scope === "seoul" ? "none" : "";
+  $("jbZone").style.display = jbS.scope === "zone" ? "" : "none";
+  $("jbScope").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === jbS.scope));
+}
+$("jbGu").onchange = e => { jbS.gu = e.target.value; jbS.zi = 0; renderJbSel(); render(); };
+$("jbZone").onchange = e => { jbS.zi = +e.target.value; render(); };
+[["jbScope", "scope"], ["jbStage", "stage"], ["jbType", "type"], ["jbSort", "sort"]].forEach(([id, k]) => {
+  $(id).querySelectorAll("button").forEach(b => b.onclick = () => {
+    $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); jbS[k] = b.dataset.v;
+    if (k === "scope") renderJbSel(); render();
+  });
+});
+function jbKind(r) { return r.type.includes("재건축") ? "재건축" : "재개발"; }
+function jbFilter(l) {
+  const si = JB.stages.indexOf(jbS.stage);
+  return l.filter(r => (jbS.stage === "all" || JB.stages.indexOf(r.stage) >= si) && (jbS.type === "all" || jbKind(r) === jbS.type));
+}
+function jbSortL(l) {
+  const st = r => JB.stages.indexOf(r.stage);
+  return l.slice().sort(jbS.sort === "hh" ? (a, b) => b.new - a.new : (a, b) => st(b) - st(a) || b.new - a.new);
+}
+function jbItemLink(r, gu, zi, zname) {
+  const h = jbItem(r);
+  const tag = zname ? `<button class="go" type="button" data-gu="${gu}" data-zi="${zi}">${zname} 시세 보기</button>` : "";
+  return h.replace('<div class="cur">', `<div class="cur">`).replace(/<\/div><\/div>$/, `${tag}</div></div>`);
+}
+function renderJbTab() {
+  const card = $("chartCard");
+  const gus = jbS.scope === "seoul" ? jbGus() : [jbS.gu];
+  card.innerHTML = `<div class="empty">자료 불러오는 중…</div>`;
+  ensureAll(gus, () => {
+    const groups = [];   // [제목, [{r, gu, zi, zname}], 강조]
+    let all = [];
+    gus.forEach(gu => {
+      const P = prep(gu); if (!P) return;
+      const zones = baseZones(gu), { res, none } = jbAssign(gu, P.cx);
+      res.forEach((l, zi) => l.forEach(r => all.push({ r, gu, zi, zname: zones[zi].name })));
+      none.forEach(r => all.push({ r, gu, zi: -1, zname: "" }));
+    });
+    const before = all.length;
+    const keep = new Set(jbFilter(all.map(o => o.r)));
+    all = all.filter(o => keep.has(o.r));
+    const sortO = l => { const s = jbSortL(l.map(o => o.r)); return s.map(r => l.find(o => o.r === r)); };
+    let title, sub;
+    if (jbS.scope === "zone") {
+      const zn = baseZones(jbS.gu)[jbS.zi].name;
+      title = `${jbS.gu} · ${zn} 정비사업`;
+      groups.push([null, sortO(all.filter(o => o.zi === jbS.zi)), false]);
+    } else if (jbS.scope === "gu") {
+      title = `${jbS.gu} 정비사업 · 생활권별`;
+      baseZones(jbS.gu).forEach((z, zi) => groups.push([z.name, sortO(all.filter(o => o.zi === zi)), false]));
+      const nn = all.filter(o => o.zi < 0); if (nn.length) groups.push(["생활권에 못 붙인 구역", sortO(nn), false]);
+    } else {
+      title = `서울 전체 정비사업 · 구별`;
+      gus.forEach(gu => { const l = all.filter(o => o.gu === gu); if (l.length) groups.push([gu, sortO(l), false]); });
+    }
+    const shownL = groups.flatMap(g => g[1]);
+    const cnt = {}; shownL.forEach(o => cnt[o.r.stage] = (cnt[o.r.stage] || 0) + 1);
+    const hhSum = shownL.reduce((s, o) => s + o.r.new, 0);
+    const filt = [jbS.stage !== "all" ? `${jbS.stage} 이후` : "", jbS.type !== "all" ? jbS.type : ""].filter(Boolean).join(" · ");
+    let html = `<h2>${title}</h2><div class="hint" style="margin:2px 0 4px">${filt ? filt + " · " : ""}${jbS.sort === "hh" ? "세대수 큰 순" : "단계 빠른 순"}</div>
+      <div class="jbsum"><span><b>${shownL.length}개 구역</b>${filt ? ` / 전체 ${before}` : ""}</span><span>공급 <b>${hhSum.toLocaleString()}세대</b></span>${JB.stages.slice().reverse().filter(s => cnt[s]).map(s => `<span>${s} ${cnt[s]}</span>`).join("")}</div>`;
+    html += groups.map(([nm, l]) => `${nm ? `<div class="jbh">${nm} <span>${l.length}개 구역</span></div>` : ""}${l.length ? l.map(o => jbItemLink(o.r, o.gu, o.zi, jbS.scope === "zone" ? "" : (jbS.scope === "seoul" ? (o.zname ? `${o.zname}` : "") : o.zname))).join("") : `<div class="hint" style="padding:6px 0 10px">조건에 맞는 구역 없음</div>`}`).join("");
+    html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만 · 공급 0세대 구역 제외 · '시세 보기'를 누르면 그 생활권 시세 그래프로 이동</div>`;
+    card.innerHTML = html;
+    card.querySelectorAll(".go").forEach(b => b.onclick = () => goZone(b.dataset.gu, +b.dataset.zi));
+  });
+}
+function goZone(gu, zi) {
+  const gus = Object.keys(INDEX.regions[state.sido] || {}).sort();
+  state.gu = gu; state.picked = []; $("selGu").value = gus.indexOf(gu);
+  loadGu(state.sido, gu, () => { initZone(); state.zone = Math.max(0, zi); $("selZone").value = state.zone; setTab("view"); onZoneChange(); window.scrollTo(0, 0); });
 }
 $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => setTab(b.dataset.t));
 setRange(Math.max(0, N - 12), N - 1);
