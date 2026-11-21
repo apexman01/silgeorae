@@ -88,10 +88,11 @@
   .gih .rg:empty{display:none}
   .gi .gst{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .gi .gst div{background:#eef3fb;border:1.5px solid #3f6fb8;border-radius:10px;padding:6px 9px;color:#173a6e}
-  .gi .gst div:nth-child(2){background:#e9f6f1;border-color:#2f8a6c;color:#0f5a47}
-  .gi .gst div:nth-child(3){background:#fdeeef;border-color:#c4505f;color:#9b2c3a}
+  .gi .gst div.tp{background:#e9f6f1;border-color:#2f8a6c;color:#0f5a47}
+  .gi .gst div.tr{background:#fdeeef;border-color:#c4505f;color:#9b2c3a}
   .gi .gst small{display:block;font-size:11px;white-space:nowrap;letter-spacing:-.3px;opacity:.85}
   .gi .gst b{font-size:17px;white-space:nowrap}
+  .gi .gsrc{font-size:11px;color:var(--mute);margin:5px 1px 0;line-height:1.4}
   .gi .ghd{margin:10px 0 0;background:#f5f6f8;border:1px solid #dfe3e8;border-radius:10px;padding:10px 12px;font-size:14.5px;font-weight:600;line-height:1.5}
   .gi .ghd span{display:block;color:var(--sub);font-size:12.5px;font-weight:400;margin-top:4px}
   .gi .gzl{margin:14px 0 6px;font-size:12px;color:var(--sub);font-weight:600}
@@ -326,7 +327,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script>');
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script><script src="../data/gustats.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -412,8 +413,18 @@ function initZone(keep) {
 function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선택 + 구 현황(강의자료) + 생활권 탭
   const G = (window.GUINFO || {})[state.gu];
   $("giRegion").textContent = (G && G.region) || "";
-  $("giBody").innerHTML = G ? `<div class="gst">${G.stats.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join("")}</div>
-    ${G.head ? `<div class="ghd">${G.head.split(/\s*—\s*/).join("<br>")}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : ""}` : "";
+  const S = window.GUSTATS || {}, st = (S.gu || {})[state.gu], pp = (S.pop || {})[state.gu];
+  const ymS = ym => `${String(ym).slice(2, 4)}.${+String(ym).slice(4, 6)}`;
+  const tiles = [];
+  if (pp) tiles.push([`인구 (${ymS(pp[1])})`, `${(pp[0] / 10000).toFixed(1)}만 명`, ""]);
+  else if (G && G.stats && G.stats[0]) tiles.push([...G.stats[0], ""]);
+  if (st) {
+    tiles.push(["84㎡ 중간 거래가", eok(st.med), "tp"]);
+    tiles.push(["서울 순위 · 1년", `${st.rank}위${st.chg != null ? ` · ${st.chg > 0 ? "+" : ""}${st.chg}%` : ""}`, "tr"]);
+  }
+  $("giBody").innerHTML = (tiles.length ? `<div class="gst">${tiles.map(([k, v, c]) => `<div class="${c}"><small>${k}</small><b>${v}</b></div>`).join("")}</div>` : "")
+    + (st ? `<div class="gsrc">84㎡ = 전용 80~90㎡ 매매 · ${ymS(S.from)}~${ymS(S.to)} ${st.n}건의 가운데 값 · 순위는 서울 ${S.total}개 구 중 · 1년 = 1년 전 같은 6개월과 비교</div>` : "")
+    + (G && G.head ? `<div class="ghd">${G.head.split(/\s*—\s*/).join("<br>")}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : "");
   const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
   $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span>`;
   bar.innerHTML = zs.map((x, i) => `<button type="button" data-i="${i}" class="${i === state.zone ? "on" : ""}${x.kind === "pick" ? " add" : ""}">${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</button>`).join("");
