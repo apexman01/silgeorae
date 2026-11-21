@@ -4,6 +4,8 @@ name: 단지 세대수 받기
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "41 20 * * *"   # 매일 한국시간 05:41 - 아직 못 받은 단지만 이어서 받음(하루 호출 한도 때문)
 
 permissions:
   contents: write

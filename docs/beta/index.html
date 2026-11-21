@@ -260,7 +260,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script>');
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -759,7 +759,43 @@ function hhOf(se) {
       if (!v && k.split("|").some(p => norm(p.split("@")[0]) === nm)) v = n;
     }));
   }
+  if (!v && se.idxs) {   // K-apt(공동주택관리정보시스템) 세대수로 채우기
+    const seen = new Set(); let sum = 0;
+    se.idxs.forEach(i => { const c = CX[i]; const k = c && kaptFind(state.gu, c.name, c.dong); if (k && !seen.has(k)) { seen.add(k); sum += k[2]; } });
+    if (sum) v = sum;
+  }
   return v ? Number(v).toLocaleString("ko-KR") : "-";
+}
+function kclean(s, gu, dong) {   // 단지명 비교용: 공백·아파트·임대·차/단지 표기 차이 등을 없앰
+  let t = String(s || "").toLowerCase().replace(/[\s()·.,'’\-_&\[\]]/g, "")
+    .replace(/에스케이/g, "sk").replace(/ipark/g, "아이파크").replace(/이편한세상|e-편한세상/g, "e편한세상").replace(/엘지/g, "lg")
+    .replace(/아파트|apt|임대|분양|신시가지|서울|총세대기준/g, "").replace(/제(\d)/g, "$1").replace(/(\d+)(단지|차)/g, "$1");
+  const stems = [String(dong || "").replace(/\d+가$/, "").replace(/동$/, ""), String(gu || "").replace(/구$/, "")].filter(x => x.length >= 2);
+  for (const st of stems) if (t.startsWith(st) && t.length - st.length >= 2) t = t.slice(st.length);
+  return t;
+}
+const KAPT_MEMO = {};
+function kaptFind(gu, name, dong) {   // 실거래 단지명 → K-apt 단지 [이름, 동, 세대수, 사용승인년]
+  const key = gu + "|" + name + "|" + dong;
+  if (key in KAPT_MEMO) return KAPT_MEMO[key];
+  const L = (window.HH || {})[gu] || [];
+  const d = dkey(dong), n = kclean(name, gu, dong);
+  const same = L.filter(r => dkey(r[1]) === d);
+  const rent = r => /임대/.test(r[0]) ? 1 : 0;
+  const pickBest = c => c.sort((a, b) => rent(a) - rent(b) || Math.abs(kclean(a[0], gu, a[1]).length - n.length) - Math.abs(kclean(b[0], gu, b[1]).length - n.length))[0];
+  let c = same.filter(r => kclean(r[0], gu, r[1]) === n);
+  if (!c.length) { const all = L.filter(r => kclean(r[0], gu, r[1]) === n); if (all.length === 1) c = all; }
+  if (!c.length && n.length >= 3) {
+    const dg = t => (t.match(/\d+/g) || []).join(",");
+    c = (same.length ? same : L).filter(r => { const k = kclean(r[0], gu, r[1]);
+      return k.length >= 3 && (k.includes(n) || n.includes(k)) && dg(k) === dg(n) && Math.min(k.length, n.length) / Math.max(k.length, n.length) >= 0.6; });
+  }
+  if (!c.length && /\d$/.test(n)) {   // '선수기자촌1단지'처럼 K-apt엔 단지를 합친 이름 하나만 있는 경우
+    const nb = n.replace(/\d+$/, "");
+    c = same.filter(r => { const k = kclean(r[0], gu, r[1]); return !/\d/.test(k) && k === nb && nb.length >= 2; });
+  }
+  const hit = c.length ? pickBest(c) : null;
+  return (KAPT_MEMO[key] = hit);
 }
 function preKind(rows) {   // 이 단지 거래 중 분양권·입주권 종류 (예: "입주권", "분양권·입주권")
   const k = [...new Set(rows.filter(r => typeof r[6] === "string").map(r => r[6]))].sort();
