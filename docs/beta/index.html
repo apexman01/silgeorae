@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>생활권별 아파트 실거래가 시험판</title>
+<style>
+  :root{
+    --ink:#1d1f23; --sub:#5b616b; --mute:#9aa0a8; --line:#e6e8eb; --bg:#f6f7f9; --card:#fff;
+    --accent:#2a6fdb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 18px 48px}
+  header h1{font-size:22px;margin:0 0 4px;letter-spacing:-.3px}
+  header p{margin:0;color:var(--sub);font-size:13.5px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:18px 0 14px;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .ctl{display:flex;flex-direction:column;gap:5px}
+  .ctl label{font-size:12px;color:var(--sub);font-weight:600}
+  select,input[type=text]{font:inherit;font-size:14.5px;padding:8px 10px;border:1px solid #d5d9de;border-radius:8px;background:#fff;color:var(--ink);min-width:120px}
+  .seg{display:inline-flex;border:1px solid #d5d9de;border-radius:8px;overflow:hidden}
+  .seg button{font:inherit;font-size:14px;border:0;background:#fff;padding:8px 13px;cursor:pointer;color:var(--sub)}
+  .seg button+button{border-left:1px solid #d5d9de}
+  .seg button.on{background:var(--ink);color:#fff}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 12px;margin-bottom:14px}
+  .card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.3px}
+  .card .unit{color:var(--sub);font-size:14px;margin:2px 0 6px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px;font-size:14px}
+  .legend button{font:inherit;font-size:14px;display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 10px;border:1px solid #d5d9de;border-radius:999px;background:#fff;color:var(--ink);cursor:pointer;min-height:36px}
+  .legend button.off{color:#a3a8b0;background:#f3f4f6;border-style:dashed}
+  .legend button.off i{background:#c5c9cf!important}
+  .legend .lhint{font-size:12px;color:var(--mute);align-self:center}
+  tr.off td{opacity:.4}
+  .legend i{display:inline-block;width:22px;height:3px;border-radius:2px;position:relative}
+  .legend i::after{content:"";position:absolute;left:7px;top:-3px;width:9px;height:9px;border-radius:50%;background:inherit}
+  svg{width:100%;height:auto;display:block}
+  .foot{color:var(--mute);font-size:12px;line-height:1.55;margin-top:6px}
+  .empty{padding:50px 0;text-align:center;color:var(--mute)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th{color:var(--sub);font-weight:600;font-size:12.5px}
+  th:first-child,td:first-child{text-align:left}
+  #recent th:nth-child(2){text-align:left}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .down{color:#2a6fdb}.up{color:#d9443a}
+  .scroll{overflow-x:auto}
+  .picker{display:none;margin-top:4px;width:100%}
+  .period{width:100%;border-top:1px solid var(--line);padding-top:12px;margin-top:2px}
+  .period .head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+  .period .range-txt{font-size:15px;font-weight:700;margin-left:auto}
+  .period .range-txt small{font-weight:400;color:var(--sub);margin-left:6px}
+  .dual{position:relative;height:40px;margin:10px 12px 0}
+  .dual .track{position:absolute;left:0;right:0;top:18px;height:5px;border-radius:3px;background:#e3e6ea}
+  .dual .fill{position:absolute;top:18px;height:5px;border-radius:3px;background:var(--accent)}
+  .dual input{position:absolute;left:-12px;width:calc(100% + 24px);top:6px;height:28px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+  .dual input::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .dual input::-moz-range-thumb{pointer-events:auto;width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer}
+  .dual input::-webkit-slider-runnable-track{background:none}
+  .ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:0 0 0}
+  .seg button:disabled{opacity:.35;cursor:default}
+  .tabs{display:flex;gap:6px;margin:16px 0 0;flex-wrap:wrap}
+  .tabs button{font:inherit;font-size:15px;font-weight:600;padding:10px 16px;border:1px solid #d5d9de;border-bottom:none;border-radius:10px 10px 0 0;background:#eef0f3;color:var(--sub);cursor:pointer;min-height:44px}
+  .tabs button.on{background:var(--card);color:var(--ink)}
+  .tabs + .controls{margin-top:0;border-top-left-radius:0}
+  body[data-tab="cmp"] .v-only, body[data-tab="top"] .v-only{display:none!important}
+  body:not([data-tab="cmp"]) .c-only{display:none!important}
+  body:not([data-tab="top"]) .t-only{display:none!important}
+  body:not([data-tab="view"]) .vt-only{display:none!important}
+  .slots{display:flex;flex-wrap:wrap;gap:8px 12px;width:100%}
+  .slot{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-left:5px solid;border-radius:10px;padding:6px 8px}
+  .slot b{font-size:13px;color:var(--sub);white-space:nowrap}
+  .slot select{min-width:0;font-size:14px;padding:6px 8px}
+  .slot .sGu{width:6.6em}
+  .slot .sZone{width:9.5em}
+  .simrow td:first-child{white-space:normal}
+  .simrow td:nth-child(2),.simrow td:nth-child(4){text-align:left}
+  .simrow input{width:18px;height:18px;accent-color:var(--ink);vertical-align:middle}
+  .sum-view{table-layout:fixed;min-width:660px}
+  .sum-view th,.sum-view td{padding-left:4px;padding-right:4px}
+  .sum-view th,.sum-view td{text-align:left!important;vertical-align:top;white-space:normal}
+  .sum-view td b{font-weight:600;display:block}
+  .sum-view td small{display:block;font-size:10px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute);margin-top:2px}
+  .sum-view td small+small{margin-top:0}
+  .sum-view.sum-top{min-width:0}
+  #recent th,#recent td{text-align:left!important}
+  .barbox{max-height:330px;overflow-y:auto;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:4px 10px;-webkit-overflow-scrolling:touch}
+  .barbox.open{max-height:none}
+  .barrow{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;padding:3px 4px;font-size:13.5px;border-radius:6px}
+  .barrow.base{font-weight:700;background:#e8f0fe}
+  .baserow td{background:#e8f0fe}
+  .replist{margin:8px 0 2px;font-size:12.5px;color:var(--sub);line-height:1.6}
+  .replist b{color:var(--ink);font-weight:600}
+  .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
+  .chk input{width:18px;height:18px;accent-color:var(--ink)}
+  .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
+  .tag.pre{background:#fff1e8;color:#c2551f;font-weight:600}
+  .legend .tag{font-size:11px;padding:0 5px}
+  .pre-txt{color:#c2551f;font-weight:700}
+  .picker.show{display:block}
+  .picker .list{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-top:8px;columns:2 260px;column-gap:18px}
+  .picker label{display:block;font-size:13.5px;padding:3px 0;break-inside:avoid;cursor:pointer}
+  .picker label small{color:var(--mute)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{font:inherit;font-size:13.5px;padding:8px 12px;border-radius:8px;border:1px solid #d5d9de;background:#fff;cursor:pointer}
+  .btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .hint{font-size:12px;color:var(--mute)}
+  h3{font-size:15px;margin:2px 0 10px}
+  .sign{text-align:right;color:var(--mute);font-size:12px;margin-top:18px}
+</style>
+</head>
+<body data-tab="view">
+<div class="wrap">
+  <header>
+    <h1>생활권별 아파트 실거래가 트렌드 <span class="tag pre">시험판</span></h1>
+    <p id="dataInfo"></p>
+  </header>
+
+  <div class="tabs" id="tabs"><button data-t="view" class="on">생활권 보기</button><button data-t="top">상단 비교</button><button data-t="cmp">생활권 비교</button></div>
+  <div class="controls">
+    <div class="ctl c-only" style="width:100%"><label>비교할 생활권 (최대 3개)</label><div class="slots" id="slots"></div></div>
+    <div class="ctl t-only" style="width:100%"><label>기준 생활권</label>
+      <div class="row"><select id="topGu"></select><select id="topZone"></select>
+        <div class="seg" id="segWin"><button data-v="3">최근 3개월</button><button data-v="6" class="on">6개월</button><button data-v="12">12개월</button><button data-v="custom">직접 선택</button></div></div>
+      <span class="hint">상단 = 생활권 대표 단지들 중 기간 안 최고 거래가 · 최근 N개월은 가장 최근 달까지 · 직접 선택을 누르면 아래에 기간 슬라이더가 나와요</span></div>
+    <div class="ctl v-only"><label>시·도</label><select id="selSido"></select></div>
+    <div class="ctl v-only"><label>구</label><select id="selGu"></select></div>
+    <div class="ctl v-only"><label>생활권</label><select id="selZone"></select></div>
+    <div class="ctl v-only"><label>보기</label>
+      <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">거래량 TOP5</button></div></div>
+    <div class="ctl"><label>거래</label>
+      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><label class="chk" id="preWrap"><input type="checkbox" id="chkPre" checked>분양권·입주권 포함</label><span class="hint" style="display:block;margin-top:4px">신축 입주 전·재개발 조합원 거래. 그래프에서는 빈 동그라미</span></div></div>
+    <div class="ctl"><label>전용면적</label>
+      <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
+    <div class="ctl"><label>지표</label>
+      <div class="seg" id="segMetric"><button data-v="max" class="on">월 최고가</button><button data-v="avg">월 평균가</button></div></div>
+
+    <div class="ctl period" id="periodCtl">
+      <div class="head">
+        <label>기간</label>
+        <div class="seg" id="segPeriod"><button data-v="12" class="on">12개월</button><button data-v="24">24개월</button><button data-v="36">36개월</button><button data-v="60">5년</button><button data-v="all">전체</button><button data-v="custom">직접 선택</button></div>
+        <div class="range-txt" id="rangeTxt"></div>
+      </div>
+      <div id="sliderWrap"><div class="dual">
+        <div class="track"></div><div class="fill" id="rangeFill"></div>
+        <input type="range" id="rFrom" min="0" step="1" aria-label="시작 월">
+        <input type="range" id="rTo" min="0" step="1" aria-label="끝 월">
+      </div>
+      <div class="ticks" id="rangeTicks"></div></div>
+    </div>
+
+    <div class="picker v-only" id="picker">
+      <div class="row">
+        <input type="text" id="pickSearch" placeholder="단지명 검색 (예: 래미안)">
+        <input type="text" id="pickName" placeholder="생활권 이름 (예: 답십리역 신축)">
+        <button class="btn primary" id="pickSave">내 생활권으로 저장</button>
+        <button class="btn" id="pickDelete" style="display:none">이 생활권 삭제</button>
+        <span class="hint">최대 6개 단지 · 거래 많은 순</span>
+      </div>
+      <div class="list" id="pickList"></div>
+    </div>
+  </div>
+
+  <div class="card" id="chartCard"></div>
+
+  <div class="card">
+    <h3 id="sumTitle">단지별 요약</h3>
+    <div class="scroll"><table id="summary"></table></div>
+  </div>
+
+  <div class="card vt-only">
+    <h3>최근 거래</h3>
+    <div class="scroll"><table id="recent"></table></div>
+  </div>
+
+  <div class="sign">시험판 · 새 기능을 먼저 만들어 보는 곳 · <a href="../">기본 사이트</a> · <a href="../v1/">v1 고정판</a> · 만든이 비상</div>
+</div>
+
+<script>
+  // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
+  var _v = Date.now();
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script>');
+</script>
+<script>
+const LIFEZONES = window.LIFEZONES || {};
+
+const COLORS = ["#2a6fdb", "#e8663a", "#1aaa72", "#8b5cf6", "#d4a017", "#e04f8c"];
+const AREA_BANDS = { "59": [55, 66], "74": [70, 80], "84": [80, 90], "big": [95, 999] };
+const LOW_FLOOR = 3;        // 이 층 이하면 '저층'
+const MAX_PICK = 6;
+const CUSTOM_KEY = "lifezone-custom-v1";
+
+const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [], hidden: new Set(), view: "zone", customPeriod: false };
+const INDEX = window.DATA_INDEX || { regions: {}, months: [] };
+let DATA = null, PRESALE = [], CX = [];
+function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
+const $ = id => document.getElementById(id);
+const norm = s => String(s).replace(/\s+/g, "").toLowerCase();
+
+/* ---------- 데이터: 구를 고를 때 그 구 파일만 불러오기 ---------- */
+const allMonths = INDEX.months;
+const GU_KEY = "lifezone-last-gu";
+function loadGu(sido, gu, done) {
+  const code = (INDEX.regions[sido] || {})[gu];
+  const use = () => {
+    DATA = window.DATA_GU[gu];
+    CX = DATA.complexes.map((c, i) => ({ i, name: c[0], sido: c[1], gu: c[2], dong: c[3], built: c[4] }));
+    PRESALE = (DATA.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]);
+    try { localStorage.setItem(GU_KEY, gu); } catch (e) {}
+    done();
+  };
+  window.DATA_GU = window.DATA_GU || {};
+  if (window.DATA_GU[gu]) return use();
+  $("chartCard").innerHTML = `<div class="empty">${gu} 자료 불러오는 중…</div>`;
+  const s = document.createElement("script");
+  s.src = `../data/${code}.js?v=${INDEX.updated || Date.now()}`;
+  s.onload = use;
+  s.onerror = () => { $("chartCard").innerHTML = `<div class="empty">${gu} 자료를 불러오지 못했어요. 새로고침해 보세요.</div>`; };
+  document.head.appendChild(s);
+}
+function visMonths() { return allMonths.slice(state.from, state.to + 1); }
+const fmtYM = ym => `${String(ym).slice(2, 4)}.${+String(ym).slice(4)}`;
+$("dataInfo").textContent =
+  `국토부 실거래가 · 계약일 기준 ${fmtYM(allMonths[0])}~${fmtYM(allMonths[allMonths.length - 1])}` +
+  (INDEX.updated ? ` · ${INDEX.updated} 갱신` : "") + ` · 매매는 해제·직거래 제외, 전세 그래프는 신규 계약만`;
+
+/* ---------- 내 생활권(브라우저 저장) ---------- */
+function loadCustom() { try { return JSON.parse(localStorage.getItem(CUSTOM_KEY)) || {}; } catch (e) { return {}; } }
+function saveCustom(obj) { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(obj)); return true; } catch (e) { return false; } }
+
+function zonesFor(sido, gu) {
+  const base = ((LIFEZONES[sido] || {})[gu] || []).map(z => ({ ...z, kind: "base" }));
+  const custom = ((loadCustom()[sido] || {})[gu] || []).map(z => ({ ...z, kind: "custom" }));
+  return [...base, ...custom, { name: "＋ 단지 직접 고르기", kind: "pick", complexes: [] }];
+}
+
+/* ---------- 선택 박스 ---------- */
+function fillSelect(sel, items, val) {
+  sel.innerHTML = items.map((t, i) => `<option value="${i}">${t}</option>`).join("");
+  sel.value = val;
+}
+function initSido() {
+  const sidos = Object.keys(INDEX.regions);
+  state.sido = sidos[0];
+  fillSelect($("selSido"), sidos, 0);
+  $("selSido").onchange = e => { state.sido = sidos[+e.target.value]; initGu(); };
+  initGu();
+}
+function initGu() {
+  const gus = Object.keys(INDEX.regions[state.sido] || {}).sort();
+  let last = null; try { last = localStorage.getItem(GU_KEY); } catch (e) {}
+  const gi = Math.max(0, gus.indexOf(last));
+  state.gu = gus[gi];
+  fillSelect($("selGu"), gus, gi);
+  $("selGu").onchange = e => { state.gu = gus[+e.target.value]; state.zone = 0; state.picked = []; loadGu(state.sido, state.gu, () => initZone()); };
+  loadGu(state.sido, state.gu, () => initZone());
+}
+function initZone(keep) {
+  const zs = zonesFor(state.sido, state.gu);
+  if (!keep || state.zone >= zs.length) state.zone = 0;
+  fillSelect($("selZone"), zs.map(z => (z.kind === "custom" ? "★ " : "") + z.name), state.zone);
+  $("selZone").onchange = e => { state.zone = +e.target.value; onZoneChange(); };
+  onZoneChange();
+}
+function onZoneChange() {
+  const z = zonesFor(state.sido, state.gu)[state.zone];
+  const isPick = z.kind === "pick" || z.kind === "custom";
+  $("picker").classList.toggle("show", isPick);
+  $("pickDelete").style.display = z.kind === "custom" ? "" : "none";
+  if (z.kind === "custom") { state.picked = [...z.complexes]; $("pickName").value = z.name; }
+  else if (z.kind === "pick") { if (!state.picked.length) state.picked = []; $("pickName").value = ""; }
+  if (isPick) renderPicker();
+  render();
+}
+
+/* ---------- 직접 고르기 ---------- */
+function renderPicker() {
+  const q = $("pickSearch").value.trim();
+  const counts = {};
+  srcRows().forEach(r => { counts[r[0]] = (counts[r[0]] || 0) + 1; });
+  // 띄어쓰기만 다른 이름(분양권 자료 등)은 하나로 합쳐 보여주기
+  const merged = {};
+  CX.filter(c => !q || norm(c.name).includes(norm(q))).forEach(c => {
+    const k = norm(c.name), m = merged[k] || (merged[k] = { name: c.name, dong: c.dong, n: 0, best: -1 });
+    const n = counts[c.i] || 0; m.n += n;
+    if (n > m.best) { m.best = n; m.name = c.name; m.dong = c.dong; }
+  });
+  const list = Object.values(merged).sort((a, b) => b.n - a.n);
+  $("pickList").innerHTML = list.map(c => {
+    const on = state.picked.includes(c.name);
+    return `<label><input type="checkbox" data-n="${c.name}" ${on ? "checked" : ""}> ${c.name} <small>${c.dong} · ${c.n}건</small></label>`;
+  }).join("") || `<div class="hint">검색 결과가 없어요</div>`;
+  $("pickList").querySelectorAll("input").forEach(cb => cb.onchange = () => {
+    const n = cb.dataset.n;
+    if (cb.checked) {
+      if (state.picked.length >= MAX_PICK) { cb.checked = false; alertLite(`최대 ${MAX_PICK}개까지 고를 수 있어요`); return; }
+      state.picked.push(n);
+    } else state.picked = state.picked.filter(x => x !== n);
+    render();
+  });
+}
+function alertLite(msg) { const h = document.querySelector(".picker .hint"); const o = h.textContent; h.textContent = msg; h.style.color = "#d9443a"; setTimeout(() => { h.textContent = o; h.style.color = ""; }, 1800); }
+$("pickSearch").oninput = renderPicker;
+$("pickSave").onclick = () => {
+  const name = $("pickName").value.trim();
+  if (!name) { alertLite("생활권 이름을 적어주세요"); return; }
+  if (!state.picked.length) { alertLite("단지를 하나 이상 골라주세요"); return; }
+  const all = loadCustom();
+  all[state.sido] = all[state.sido] || {};
+  const arr = all[state.sido][state.gu] = all[state.sido][state.gu] || [];
+  const ex = arr.find(z => z.name === name);
+  if (ex) ex.complexes = [...state.picked]; else arr.push({ name, complexes: [...state.picked] });
+  if (!saveCustom(all)) { alertLite("이 브라우저에서는 저장이 안 돼요"); return; }
+  const zs = zonesFor(state.sido, state.gu);
+  state.zone = zs.findIndex(z => z.kind === "custom" && z.name === name);
+  initZone(true);
+};
+$("pickDelete").onclick = () => {
+  const z = zonesFor(state.sido, state.gu)[state.zone];
+  const all = loadCustom();
+  const arr = ((all[state.sido] || {})[state.gu] || []);
+  const idx = arr.findIndex(x => x.name === z.name);
+  if (idx >= 0) { arr.splice(idx, 1); saveCustom(all); }
+  state.zone = 0; state.picked = []; initZone(true);
+};
+
+/* ---------- 토글 ---------- */
+function bindSeg(id, key) {
+  $(id).querySelectorAll("button").forEach(b => b.onclick = () => {
+    $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    state[key] = b.dataset.v;
+    if ($("picker").classList.contains("show")) renderPicker();
+    render();
+  });
+}
+bindSeg("segType", "type"); bindSeg("segView", "view");
+$("chkPre").onchange = e => { state.presale = e.target.checked; render(); }; bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
+
+/* ---------- 집계 ---------- */
+/* 거래량 TOP5: 고른 구·기간·거래 종류에서 거래가 가장 많은 '단지+전용면적' 5개 */
+function top5Complexes() {
+  const months = visMonths(), m0 = months[0], m1 = months[months.length - 1];
+  const g = {};
+  srcRows().forEach(r => {
+    if (r[2] < m0 || r[2] > m1) return;
+    const c = CX[r[0]], a = Math.floor(r[1]), k = norm(c.name) + "@" + c.dong + "|" + a;
+    const e = g[k] || (g[k] = { name: c.name, area: a, n: 0, built: c.built, dong: c.dong });
+    e.n++;
+  });
+  return Object.values(g).sort((a, b) => b.n - a.n).slice(0, 5).map((e, k) => {
+    const cxs = CX.filter(x => norm(x.name) === norm(e.name) && x.dong === e.dong);
+    const dup = new Set(CX.filter(x => norm(x.name) === norm(e.name)).map(x => x.dong)).size > 1;   // 같은 이름이 다른 동에도 있으면 동 표시
+    const nm = dup ? `${e.name}(${e.dong.replace(/[0-9]+가$/, "")})` : e.name;
+    return { name: `top${k + 1}|${e.name}@${e.dong}|${e.area}`, label: `${k + 1}위 ${nm} ${e.area}㎡ · ${e.n}건`, rep: e.area,
+             cx: { ...cxs[0], built: cxs.map(x => x.built).filter(Boolean).sort()[0] || "-" }, idxs: new Set(cxs.map(x => x.i)) };
+  });
+}
+function currentComplexes() {
+  if (state.view === "top5") return top5Complexes();
+  const z = zonesFor(state.sido, state.gu)[state.zone];
+  const names = (z.kind === "base") ? z.complexes : state.picked;
+  return names.map(n => {
+    // "이름1|이름2"처럼 적으면 여러 이름을 한 단지로 합침. 띄어쓰기 차이는 자동으로 합침
+    // "이름@동"처럼 적으면 그 동의 단지만 (같은 이름이 여러 동에 있을 때)
+    const parts = n.split("|").map(p => { const [nm, dong] = p.split("@"); return { nm: norm(nm), dong }; });
+    const cxs = CX.filter(x => parts.some(p => p.nm === norm(x.name) && (!p.dong || x.dong.startsWith(p.dong))));
+    const built = cxs.map(x => x.built).filter(Boolean).sort()[0] || "-";
+    return { name: n, label: (z.short && z.short[n]) || n.split("|")[0].split("@")[0], cx: cxs.length ? { ...cxs[0], built } : null, idxs: new Set(cxs.map(x => x.i)) };
+  });
+}
+/* 대표 평형: 생활권 설정의 rep 값 → 없으면 그 단지에서 매매(분양권 포함) 거래가 가장 많은 전용면적(정수) */
+const REP_CACHE = {};
+function repArea(c, z) {
+  if (z && z.rep && z.rep[c.name]) return +z.rep[c.name];
+  const key = state.gu + "|" + c.name;
+  if (REP_CACHE[key] !== undefined) return REP_CACHE[key];
+  const cnt = {};
+  const add = rows => rows.forEach(r => { if (c.idxs.has(r[0])) { const a = Math.floor(r[1]); cnt[a] = (cnt[a] || 0) + 1; } });
+  add(DATA.sale); add(PRESALE);
+  if (!Object.keys(cnt).length) add(DATA.jeonse);
+  const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || Math.abs(a[0] - 84) - Math.abs(b[0] - 84))[0];
+  return (REP_CACHE[key] = best ? +best[0] : null);
+}
+function seriesFor(idxs, rep) {
+  const [lo, hi] = AREA_BANDS[state.area] || [0, 0];
+  const inArea = rep ? (r => Math.floor(r[1]) === rep) : (r => r[1] >= lo && r[1] < hi);
+  const months = visMonths(), m0 = months[0], m1 = months[months.length - 1];
+  const rows = srcRows().filter(r => idxs.has(r[0]) && inArea(r) && r[2] >= m0 && r[2] <= m1);
+  const chartRows = state.type === "jeonse" ? rows.filter(r => !r[6]) : rows;   // 전세 그래프는 신규 계약만
+  const byM = {};
+  chartRows.forEach(r => { (byM[r[2]] = byM[r[2]] || []).push(r); });
+  const pts = months.map(m => {
+    const rs = byM[m]; if (!rs) return null;
+    const top = rs.reduce((a, b) => (b[4] > a[4] ? b : a));
+    const avg = rs.reduce((s, r) => s + r[4], 0) / rs.length;
+    const v = state.metric === "max" ? top[4] : avg;
+    return { m, v: v / 10000, n: rs.length, floor: top[5], pre: typeof top[6] === "string" ? top[6] : null };
+  });
+  return { pts, rows };
+}
+
+/* ---------- 그래프 (SVG 직접 그림) ---------- */
+function niceStep(range) {
+  const raw = range / 5, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p * (raw < 1 ? 1 : 1);
+}
+function fmtV(v) { return (Math.round(v * 10) / 10).toString(); }
+
+function render() {
+  if (state.tab === "cmp") return renderCompare();
+  if (state.tab === "top") return renderTop();
+  if (!DATA) return;
+  $("preWrap").style.display = state.type === "sale" && PRESALE.length ? "" : "none";
+  const z = zonesFor(state.sido, state.gu)[state.zone];
+  const topMode = state.view === "top5";
+  $("selZone").disabled = topMode;
+  $("picker").classList.toggle("show", !topMode && (z.kind === "pick" || z.kind === "custom"));
+  $("segArea").style.opacity = topMode ? .4 : 1; $("segArea").title = topMode ? "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요" : "";
+  const list = currentComplexes();
+  const card = $("chartCard");
+  const typeLabel = state.type === "sale" ? "실거래가" : "전세가";
+  const areaLabel = { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "단지별 대표 평형" }[state.area];
+  const metricLabel = state.metric === "max" ? "그 달 최고" : "그 달 평균";
+  const isTop = state.view === "top5";
+  const title = isTop ? `${state.gu} 거래량 TOP5` : z.kind === "pick" ? "직접 고른 단지" : z.name;
+
+  const series = list.map((c, k) => {
+    const rep = isTop ? c.rep : state.area === "rep" && c.cx ? repArea(c, z) : null;
+    return { ...c, rep, label: isTop ? c.label : rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
+      ...(c.cx && (isTop || state.area !== "rep" || rep) ? seriesFor(c.idxs, rep) : { pts: [], rows: [] }) };
+  });
+  const shown = series.filter(s => !state.hidden.has(s.name));
+  const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
+
+  const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
+  let html = `<h2>${title}</h2>${sub ? `<div class="hint" style="margin:2px 0 4px">${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
+  html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
+
+  if (!vals.length) {
+    html += `<div class="empty">${!list.length ? "위에서 단지를 골라주세요." : !shown.length ? "모든 단지를 숨겼어요. 위 단지 버튼을 눌러 다시 켜세요." : "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요."}</div>`;
+    card.innerHTML = html; bindLegend(); renderTables(series); return;
+  }
+
+  const months = visMonths();
+  html += chartSvg(shown, vals, months, card, title, { notes: state.metric === "max" });
+  html += `<div class="foot">${state.type === "sale" && state.presale && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권·입주권 거래 · " : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
+    국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"}${isTop ? " · TOP5 = 기간 안 거래 건수가 많은 단지+전용면적(소수점 버림) 순" : state.area === "rep" ? " · 대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : ` · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}`}</div>`;
+  card.innerHTML = html;
+  bindLegend();
+  renderTables(series);
+}
+function chartSvg(shown, vals, months, card, title, opts) {
+  const narrow = card.clientWidth < 620;
+  const W = narrow ? 560 : 960, H = narrow ? 440 : 470, L = narrow ? 44 : 58, R = narrow ? 64 : 92, T = 40, B = 46;
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const step = niceStep(Math.max(hi - lo, 0.5));
+  lo = Math.floor((lo - step * 0.3) / step) * step; hi = Math.ceil((hi + step * 0.5) / step) * step;
+  const x = i => L + (W - L - R) * (months.length === 1 ? 0.5 : i / (months.length - 1));
+  const y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+
+  let g = "";
+  for (let v = lo; v <= hi + 1e-9; v += step) {
+    g += `<line x1="${L}" x2="${W - R + 20}" y1="${y(v)}" y2="${y(v)}" stroke="#eceef1"/>`;
+    g += `<text x="${L - 10}" y="${y(v) + 5}" text-anchor="end" font-size="15" fill="#6b717a">${step < 1 ? v.toFixed(1) : Math.round(v)}</text>`;
+  }
+  g += `<line x1="${L}" x2="${W - R + 20}" y1="${H - B}" y2="${H - B}" stroke="#b9bec5" stroke-width="1.5"/>`;
+  const every = months.length > (narrow ? 7 : 14) ? (narrow && months.length > 14 ? 3 : 2) : 1;
+  months.forEach((m, i) => {
+    const mo = +String(m).slice(4), newYear = i === 0 || mo === 1;
+    if (i === 0 && mo !== 1 && months.some((mm, j) => j > 0 && j < Math.max(every, narrow ? 3 : 2) && +String(mm).slice(4) === 1)) return;
+    const nearYear = months.some((mm, j) => j !== i && Math.abs(j - i) < every && (j === 0 || +String(mm).slice(4) === 1));
+    if (!newYear && (i % every || nearYear)) return;
+    const lab = newYear ? `${String(m).slice(2, 4)}.${mo}` : `${mo}월`;
+    g += `<text x="${x(i)}" y="${H - B + 26}" text-anchor="middle" font-size="15" fill="${newYear ? "#222" : "#555"}" font-weight="${newYear ? 700 : 400}">${lab}</text>`;
+  });
+
+  const endLabels = [];
+  shown.forEach(s => {
+    const idx = s.pts.map((p, i) => p ? i : -1).filter(i => i >= 0);
+    if (!idx.length) return;
+    const d = idx.map((i, k) => `${k ? "L" : "M"}${x(i).toFixed(1)},${y(s.pts[i].v).toFixed(1)}`).join("");
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // 기간 최고
+    let best = idx[0]; idx.forEach(i => { if (s.pts[i].v > s.pts[best].v) best = i; });
+    idx.forEach((i, k) => {
+      const p = s.pts[i], cx = x(i), cy = y(p.v);
+      if (i === best) {
+        g += star(cx, cy, 10, s.color);
+        g += `<text x="${cx}" y="${cy - 18}" text-anchor="middle" font-size="15" font-weight="700" fill="#222">최고 ${fmtV(p.v)}</text>`;
+      } else {
+        g += p.pre
+          ? `<circle cx="${cx}" cy="${cy}" r="5.5" fill="#fff" stroke="${s.color}" stroke-width="2.6"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 ${p.pre} ${p.floor}층</title></circle>`
+          : `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${s.color}" stroke="#fff" stroke-width="2"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 ${p.floor}층</title></circle>`;
+      }
+      // 회색 주석: 직전보다 떨어졌는데 1건뿐이거나 저층이면 '약한 하락'
+      const prev = k > 0 ? s.pts[idx[k - 1]] : null;
+      if (opts.notes && prev && p.v < prev.v * 0.98 && (p.n === 1 || p.floor <= LOW_FLOOR)) {
+        g += `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13" fill="#9aa0a8">${p.floor}층·${p.n}건</text>`;
+      }
+    });
+    const last = idx[idx.length - 1];
+    endLabels.push({ x: x(last) + 14, y: y(s.pts[last].v) + 5, t: fmtV(s.pts[last].v), c: "#444", isBest: last === best });
+  });
+  // 끝 라벨 겹침 정리
+  endLabels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < endLabels.length; i++)
+    if (Math.abs(endLabels[i].x - endLabels[i - 1].x) < 50 && endLabels[i].y - endLabels[i - 1].y < 18) endLabels[i].y = endLabels[i - 1].y + 18;
+  endLabels.forEach(l => { g += `<text x="${l.x}" y="${l.y}" font-size="16" fill="${l.c}">${l.t}</text>`; });
+
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} 그래프">${g}</svg>`;
+}
+function bindLegend() {
+  $("chartCard").querySelectorAll(".legend button").forEach(b => b.onclick = () => {
+    const n = b.dataset.n;
+    state.hidden.has(n) ? state.hidden.delete(n) : state.hidden.add(n);
+    render();
+  });
+}
+function star(cx, cy, r, color) {
+  let p = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
+    p.push(`${(cx + rr * Math.cos(a)).toFixed(1)},${(cy + rr * Math.sin(a)).toFixed(1)}`);
+  }
+  return `<polygon points="${p.join(" ")}" fill="${color}" stroke="#fff" stroke-width="1.5"/>`;
+}
+
+/* ---------- 표 ---------- */
+function eok(man) { return (man / 10000).toFixed(2).replace(/\.?0+$/, "") + "억"; }
+function hhOf(se) {
+  const z = zonesFor(state.sido, state.gu)[state.zone];
+  let v = z && z.hh && z.hh[se.name];
+  if (!v && se.cx) {   // 다른 생활권 설정에 적힌 세대수라도 찾아보기 (TOP5 등)
+    const nm = norm(se.cx.name);
+    zonesFor(state.sido, state.gu).forEach(zz => Object.entries(zz.hh || {}).forEach(([k, n]) => {
+      if (!v && k.split("|").some(p => norm(p.split("@")[0]) === nm)) v = n;
+    }));
+  }
+  return v ? Number(v).toLocaleString("ko-KR") : "-";
+}
+function preKind(rows) {   // 이 단지 거래 중 분양권·입주권 종류 (예: "입주권", "분양권·입주권")
+  const k = [...new Set(rows.filter(r => typeof r[6] === "string").map(r => r[6]))].sort();
+  return k.join("·");
+}
+function preTag(rows, all) {
+  const k = preKind(rows); if (!k) return "";
+  const only = all && rows.every(r => typeof r[6] === "string");
+  return ` <span class="tag pre">${only ? k + "만" : "+" + k}</span>`;
+}
+function renderTables(series) {
+  const typeLabel = state.type === "sale" ? "매매" : "전세";
+  // 중요한 값(최근 거래·기간 최고)을 앞으로, 숫자는 왼쪽 정렬, 칸 너비는 같게
+  let s = `<colgroup><col style="width:22%">${"<col>".repeat(6)}</colgroup>
+    <tr><th>단지</th><th>최근 거래</th><th>기간 최고</th><th>최고 대비</th><th>${typeLabel} 건수</th><th>세대수</th><th>준공</th></tr>`;
+  const best4 = se => se.rows.length ? Math.max(...se.rows.map(r => r[4])) : -1;
+  const cell = (r) => `<b>${eok(r[4])}</b>${typeof r[6] === "string" ? `<small class="pre-txt">${r[6]}</small>` : ""}<small>${fmtYM(r[2])}.${r[3]} ${r[5]}층</small>`;
+  [...series].sort((a, b) => best4(b) - best4(a)).forEach(se => {
+    const rows = se.rows, off = state.hidden.has(se.name) ? ' class="off"' : "";
+    const name = `<td><span class="dot" style="background:${se.color}"></span>${se.label}</td>`;
+    if (!rows.length) { s += `<tr${off}>${name}<td>-</td><td>-</td><td>-</td><td>0</td><td>${hhOf(se)}</td><td>${se.cx ? se.cx.built : "-"}</td></tr>`; return; }
+    const best = rows.reduce((a, b) => b[4] > a[4] ? b : a);
+    const last = rows.reduce((a, b) => (b[2] * 100 + b[3] > a[2] * 100 + a[3] ? b : a));
+    const diff = (last[4] - best[4]) / best[4] * 100;
+    s += `<tr${off}>${name}<td>${cell(last)}</td><td>${cell(best)}</td>
+      <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "최고가" : diff.toFixed(1) + "%"}</td>
+      <td>${rows.length}</td><td>${hhOf(se)}</td><td>${se.cx.built}</td></tr>`;
+  });
+  $("summary").className = "sum-view";
+  $("summary").innerHTML = s;
+
+  const all = series.flatMap(se => se.rows.map(r => ({ r, se })))
+    .sort((a, b) => (b.r[2] * 100 + b.r[3]) - (a.r[2] * 100 + a.r[3])).slice(0, 15);
+  let t = `<tr><th>계약일</th><th>단지</th><th>전용</th><th>층</th><th>${typeLabel}가</th><th>구분</th></tr>`;
+  all.forEach(({ r, se }) => {
+    t += `<tr><td>${fmtYM(r[2])}.${r[3]}</td><td style="text-align:left"><span class="dot" style="background:${se.color}"></span>${se.label}</td>
+      <td>${r[1]}㎡</td><td>${r[5]}층</td><td>${eok(r[4])}</td><td>${state.type === "jeonse" ? (r[6] ? "갱신" : "신규") : (typeof r[6] === "string" ? `<span class="tag pre">${r[6]}</span>` : `<span class="tag">매매</span>`)}</td></tr>`;
+  });
+  $("recent").innerHTML = all.length ? t : `<tr><td class="hint">거래 없음</td></tr>`;
+}
+
+/* ---------- 기간: 버튼 + 범위 슬라이더 ---------- */
+const N = allMonths.length, rFrom = $("rFrom"), rTo = $("rTo");
+rFrom.max = rTo.max = N - 1;
+$("segPeriod").querySelectorAll("button").forEach(b => {
+  const v = b.dataset.v;
+  if (v !== "all" && +v > N) b.disabled = true;           // 자료보다 긴 기간은 비활성
+  b.onclick = () => {
+    if (b.disabled) return;
+    if (v === "custom") { state.customPeriod = true; showPeriod(); markPeriod(); return; }
+    state.customPeriod = false; showPeriod();
+    setRange(v === "all" ? 0 : Math.max(0, N - +v), N - 1);
+  };
+});
+function setRange(from, to, fromSlider) {
+  state.from = Math.max(0, Math.min(from, to)); state.to = Math.min(N - 1, Math.max(from, to));
+  rFrom.value = state.from; rTo.value = state.to;
+  const pct = i => N > 1 ? i / (N - 1) * 100 : 0;
+  $("rangeFill").style.left = pct(state.from) + "%"; $("rangeFill").style.width = (pct(state.to) - pct(state.from)) + "%";
+  const len = state.to - state.from + 1;
+  $("rangeTxt").innerHTML = `${fmtYM(allMonths[state.from])} ~ ${fmtYM(allMonths[state.to])}<small>${len}개월</small>`;
+  // 슬라이더 값이 버튼과 맞으면 그 버튼에 불, 아니면 모두 끔
+  $("segPeriod").querySelectorAll("button").forEach(b => {
+    const v = b.dataset.v;
+    const on = state.customPeriod ? v === "custom" : v !== "custom" && state.to === N - 1 && (v === "all" ? state.from === 0 : state.from === N - +v);
+    b.classList.toggle("on", on);
+  });
+  render();
+}
+rFrom.oninput = () => { if (+rFrom.value > +rTo.value) rFrom.value = rTo.value; setRange(+rFrom.value, +rTo.value, true); };
+rTo.oninput = () => { if (+rTo.value < +rFrom.value) rTo.value = rFrom.value; setRange(+rFrom.value, +rTo.value, true); };
+(() => {   // 눈금: 매년 1월
+  const ys = allMonths.map((m, i) => ({ m, i })).filter(o => o.i === 0 || +String(o.m).slice(4) === 1);
+  $("rangeTicks").innerHTML = "";
+  $("rangeTicks").style.position = "relative"; $("rangeTicks").style.height = "16px"; $("rangeTicks").style.margin = "0 12px";
+  ys.forEach(o => {
+    const s = document.createElement("span");
+    s.textContent = `${String(o.m).slice(2, 4)}년${o.i === 0 && +String(o.m).slice(4) !== 1 ? " " + (+String(o.m).slice(4)) + "월" : ""}`;
+    s.style.cssText = `position:absolute;left:${N > 1 ? o.i / (N - 1) * 100 : 0}%;transform:translateX(${o.i === 0 ? "0" : "-50%"})`;
+    $("rangeTicks").appendChild(s);
+  });
+})();
+
+/* ================= 생활권 비교 · 상단 비교 ================= */
+state.tab = "view";
+const ZCOL = ["#2a6fdb", "#e8663a", "#1aaa72"];
+const cmp = { slots: [null, null, null] };
+const topS = { gu: null, zi: 0, win: 6, picked: [], open: false };
+
+function ensureGu(gu, cb) {
+  window.DATA_GU = window.DATA_GU || {};
+  if (window.DATA_GU[gu]) return cb();
+  const code = (INDEX.regions[state.sido] || {})[gu];
+  if (!code) return cb();
+  const s = document.createElement("script");
+  s.src = `../data/${code}.js?v=${INDEX.updated || Date.now()}`;
+  s.onload = cb; s.onerror = cb; document.head.appendChild(s);
+}
+function ensureAll(gus, cb) { let left = gus.length; if (!left) return cb(); gus.forEach(g => ensureGu(g, () => { if (--left === 0) cb(); })); }
+const GU_PREP = {};
+function prep(gu) {
+  if (GU_PREP[gu]) return GU_PREP[gu];
+  const d = (window.DATA_GU || {})[gu]; if (!d) return null;
+  return (GU_PREP[gu] = { d, cx: d.complexes.map((c, i) => ({ i, name: c[0], dong: c[3], built: c[4] })),
+    pre: (d.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]) });
+}
+function baseZones(gu) { return (LIFEZONES[state.sido] || {})[gu] || []; }
+function zoneGus() { return Object.keys(INDEX.regions[state.sido] || {}).filter(g => baseZones(g).length).sort(); }
+function matchIdxs(cx, n) {
+  const parts = n.split("|").map(p => { const [nm, dong] = p.split("@"); return { nm: norm(nm), dong }; });
+  return new Set(cx.filter(x => parts.some(p => p.nm === norm(x.name) && (!p.dong || x.dong.startsWith(p.dong)))).map(x => x.i));
+}
+function zoneRepArea(gu, z) {   // 생활권 대표 평형: 대표 단지 전체에서 매매(분양권 포함) 거래가 가장 많은 전용면적
+  const P = prep(gu); if (!P || !z) return null;
+  const all = new Set(); z.complexes.forEach(n => matchIdxs(P.cx, n).forEach(i => all.add(i)));
+  const cnt = {};
+  P.d.sale.concat(P.pre).forEach(r => { if (all.has(r[0])) { const a = Math.floor(r[1]); cnt[a] = (cnt[a] || 0) + 1; } });
+  const b = Object.entries(cnt).sort((a, b) => b[1] - a[1] || Math.abs(a[0] - 84) - Math.abs(b[0] - 84))[0];
+  return b ? +b[0] : null;
+}
+function zoneRows(gu, z) {
+  const P = prep(gu); if (!P || !z) return [];
+  const src = state.type === "sale" ? (state.presale ? P.d.sale.concat(P.pre) : P.d.sale) : P.d.jeonse.filter(r => !r[6]);
+  const [lo, hi] = AREA_BANDS[state.area] || [0, 0];
+  const zrep = state.area === "rep" ? zoneRepArea(gu, z) : null;
+  const inArea = zrep ? (r => Math.floor(r[1]) === zrep) : (r => r[1] >= lo && r[1] < hi);
+  return z.complexes.map(n => {
+    const idxs = matchIdxs(P.cx, n);
+    const base = (z.short && z.short[n]) || n.split("|")[0].split("@")[0];
+    return { name: n, base, rep: zrep, label: base, rows: src.filter(r => idxs.has(r[0]) && inArea(r)) };
+  });
+}
+function zoneMonthly(gu, z, months) {
+  const cs = zoneRows(gu, z);
+  const pts = months.map(m => {
+    let best = null; const tops = [];
+    cs.forEach(c => {
+      const rs = c.rows.filter(r => r[2] === m); if (!rs.length) return;
+      const top = rs.reduce((a, b) => b[4] > a[4] ? b : a); tops.push(top[4]);
+      if (!best || top[4] > best.r[4]) best = { r: top, who: c.label };
+    });
+    if (!best) return null;
+    const v = state.metric === "max" ? best.r[4] : tops.reduce((s, x) => s + x, 0) / tops.length;
+    return { m, v: v / 10000, n: tops.length, floor: best.r[5], pre: typeof best.r[6] === "string" ? best.r[6] : null, who: best.who };
+  });
+  return { pts, cs };
+}
+const guShort = g => g.replace(/구$/, "");
+const zoneTitle = (gu, z) => `${guShort(gu)} · ${z.name}`;
+
+function renderSlots() {
+  const gus = zoneGus();
+  $("slots").innerHTML = [0, 1, 2].map(k => {
+    const s = cmp.slots[k];
+    const go = `<option value="">${k === 0 ? "구 선택" : "없음"}</option>` + gus.map(g => `<option ${s && s.gu === g ? "selected" : ""}>${g}</option>`).join("");
+    const zo = s ? baseZones(s.gu).map((z, i) => `<option value="${i}" ${s.zi === i ? "selected" : ""}>${z.name}</option>`).join("") : `<option>—</option>`;
+    return `<div class="slot" style="border-left-color:${ZCOL[k]}"><b>${k + 1}</b><select class="sGu" data-k="${k}">${go}</select><select class="sZone" data-k="${k}" ${s ? "" : "disabled"}>${zo}</select></div>`;
+  }).join("");
+  $("slots").querySelectorAll(".sGu").forEach(el => el.onchange = () => { const k = +el.dataset.k; cmp.slots[k] = el.value ? { gu: el.value, zi: 0 } : null; renderSlots(); render(); });
+  $("slots").querySelectorAll(".sZone").forEach(el => el.onchange = () => { cmp.slots[+el.dataset.k].zi = +el.value; render(); });
+}
+
+function cmpUnit() {
+  const areaLabel = { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "생활권별 대표 평형" }[state.area];
+  const what = state.metric === "max" ? "생활권 상단(그 달 대표 단지 최고가)" : "대표 단지 월 최고가 평균";
+  return `${areaLabel} · ${what} · ${state.type === "sale" ? "매매" : "전세"}(억)`;
+}
+function renderCompare() {
+  $("segArea").style.opacity = 1; $("preWrap").style.display = state.type === "sale" ? "" : "none";
+  const card = $("chartCard"), months = visMonths();
+  const sel = cmp.slots.map((s, k) => s && { ...s, k }).filter(Boolean);
+  if (!sel.length) { card.innerHTML = `<div class="empty">위에서 비교할 생활권을 골라주세요 (최대 3개).</div>`; $("summary").innerHTML = ""; return; }
+  card.innerHTML = `<div class="empty">자료 불러오는 중…</div>`;
+  ensureAll([...new Set(sel.map(s => s.gu))], () => {
+    const series = sel.map(s => {
+      const z = baseZones(s.gu)[s.zi], r = zoneMonthly(s.gu, z, months);
+      const ra = state.area === "rep" ? zoneRepArea(s.gu, z) : null;
+      return { name: `cmp${s.k}`, label: zoneTitle(s.gu, z) + (ra ? ` ${ra}㎡` : ""), color: ZCOL[s.k], pts: r.pts, cs: r.cs, z, ra };
+    });
+    const shown = series.filter(s => !state.hidden.has(s.name));
+    const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
+    let html = `<h2>생활권 비교</h2><div class="hint" style="margin:2px 0 4px">각 생활권 대표 단지(생활권 보기에 나오는 단지)로 계산</div><div class="unit">${cmpUnit()}</div>`;
+    html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}"><i style="background:${s.color}"></i>${s.label}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
+    html += vals.length ? chartSvg(shown, vals, months, card, "생활권 비교", { notes: false })
+      : `<div class="empty">이 조건에 맞는 거래가 없어요. 면적이나 기간을 바꿔보세요.</div>`;
+    if (state.area === "rep") {
+      html += `<div class="replist">대표 평형 = 생활권 대표 단지 전체에서 거래가 가장 많은 전용면적 (생활권마다 하나)<br>${series.map(s => `<span class="dot" style="background:${s.color}"></span>${s.label.replace(/ (\d+㎡)$/, " <b>$1</b>")}: ${s.cs.filter(c => c.rows.length).map(c => c.base).join(" · ") || "이 평형 거래 없음"}`).join("<br>")}</div>`;
+    }
+    html += `<div class="foot">${state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값 · " : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균 · "}점에 손가락을 대면 그 달 상단 단지가 보여요 · ★ = 기간 최고<br>국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약"}</div>`;
+    card.innerHTML = html;
+    bindLegend();
+    $("sumTitle").textContent = "생활권 요약"; $("summary").className = "sum-view";
+    const cell2 = o => `<b>${eok(o.r[4])}</b><small>${o.base}</small><small>${fmtYM(o.r[2])}.${o.r[3]} ${o.r[5]}층</small>${state.area === "rep" ? `<small>전용 ${Math.floor(o.r[1])}㎡</small>` : ""}`;
+    let s = `<colgroup><col style="width:24%">${"<col>".repeat(5)}</colgroup>
+      <tr><th>생활권</th><th>최근 상단</th><th>기간 상단</th><th>상단 대비</th><th>${state.type === "sale" ? "매매" : "전세"} 건수</th><th>대표 단지</th></tr>`;
+    series.forEach(se => {
+      const rows = se.cs.flatMap(c => c.rows.filter(r => r[2] >= months[0] && r[2] <= months[months.length - 1]).map(r => ({ r, who: c.label, base: c.base })));
+      const name = `<td><span class="dot" style="background:${se.color}"></span>${se.label}</td>`;
+      if (!rows.length) { s += `<tr>${name}<td>-</td><td>-</td><td>-</td><td>0</td><td>${se.cs.length}곳</td></tr>`; return; }
+      const best = rows.reduce((a, b) => b.r[4] > a.r[4] ? b : a);
+      const lastM = Math.max(...rows.map(o => o.r[2]));
+      const last = rows.filter(o => o.r[2] === lastM).reduce((a, b) => b.r[4] > a.r[4] ? b : a);
+      const diff = (last.r[4] - best.r[4]) / best.r[4] * 100;
+      s += `<tr>${name}<td>${cell2(last)}</td><td>${cell2(best)}</td>
+        <td class="${diff < 0 ? "down" : ""}">${diff === 0 ? "상단" : diff.toFixed(1) + "%"}</td><td>${rows.length}</td><td>${se.cs.length}곳</td></tr>`;
+    });
+    $("summary").innerHTML = s;
+  });
+}
+
+/* 상단 비교: 기준 생활권의 최근 상단과 가까운 생활권 찾기 */
+function zoneTopIn(gu, z, from, to) {
+  let best = null;
+  zoneRows(gu, z).forEach(c => c.rows.forEach(r => { if (r[2] >= from && r[2] <= to && (!best || r[4] > best.r[4])) best = { r, who: c.label }; }));
+  return best;
+}
+function renderTopSel() {
+  const gus = zoneGus();
+  if (!topS.gu || !gus.includes(topS.gu)) { topS.gu = gus.includes(state.gu) ? state.gu : gus[0]; topS.zi = gus.includes(state.gu) ? Math.min(state.zone, baseZones(state.gu).length - 1) : 0; }
+  $("topGu").innerHTML = gus.map(g => `<option ${g === topS.gu ? "selected" : ""}>${g}</option>`).join("");
+  $("topZone").innerHTML = baseZones(topS.gu).map((z, i) => `<option value="${i}" ${i === topS.zi ? "selected" : ""}>${z.name}</option>`).join("");
+  $("topGu").onchange = e => { topS.gu = e.target.value; topS.zi = 0; topS.picked = []; renderTopSel(); render(); };
+  $("topZone").onchange = e => { topS.zi = +e.target.value; topS.picked = []; render(); };
+}
+function renderTop() {
+  $("segArea").style.opacity = 1; $("preWrap").style.display = state.type === "sale" ? "" : "none";
+  const card = $("chartCard"), gus = zoneGus();
+  card.innerHTML = `<div class="empty">모든 구 자료 불러오는 중…</div>`;
+  ensureAll(gus, () => {
+    const custom = topS.win === "custom", N0 = allMonths.length;
+    const to = custom ? allMonths[state.to] : allMonths[N0 - 1];
+    const from = custom ? allMonths[state.from] : allMonths[Math.max(0, N0 - topS.win)];
+    const all = [];
+    gus.forEach(g => baseZones(g).forEach((z, i) => { const b = zoneTopIn(g, z, from, to); all.push({ gu: g, zi: i, z, b, v: b ? b.r[4] : null }); }));
+    const base = all.find(o => o.gu === topS.gu && o.zi === topS.zi);
+    const withV = all.filter(o => o.v);
+    if (!base || !base.v) { card.innerHTML = `<div class="empty">기준 생활권에 이 기간·조건의 거래가 없어요. 기간이나 면적을 바꿔보세요.</div>`; $("summary").innerHTML = ""; return; }
+    const max = Math.max(...withV.map(o => o.v));
+    const sorted = withV.slice().sort((a, b) => b.v - a.v);
+    let html = `<h2>상단 비교 · ${zoneTitle(base.gu, base.z)} 기준</h2><div class="hint" style="margin:2px 0 4px">${fmtYM(from)}~${fmtYM(to)} · ${cmpUnit().split(" · ")[0]} · ${state.type === "sale" ? "매매" : "전세"} 상단(대표 단지 중 최고 거래가)</div>`;
+    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · <span style="color:#2a6fdb;font-weight:600">파랑</span> 기준보다 높음 · <span style="color:#e5484d;font-weight:600">빨강</span> 기준보다 낮음 (±10% 이내)</div>
+      <div class="barbox${topS.open ? " open" : ""}" id="barBox">`;
+    sorted.forEach(o => {
+      const isBase = o === base, near = Math.abs(o.v - base.v) / base.v <= 0.10;
+      const col = isBase ? "#1d1f23" : near ? (o.v > base.v ? "#2a6fdb" : "#e5484d") : "#c9d3e3";
+      html += `<div class="barrow${isBase ? " base" : ""}">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneTitle(o.gu, o.z)}</span>
+        <span style="background:#f1f3f6;border-radius:4px;height:16px;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${(o.v / max * 100).toFixed(1)}%;background:${col};border-radius:4px"></i></span>
+        <span style="text-align:right">${eok(o.v)}</span></div>`;
+    });
+    html += `</div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="barToggle">${topS.open ? "접기" : `전체 펼치기 (${sorted.length}개)`}</button><span class="hint">목록은 기준 생활권이 가운데 오게 맞춰져요</span></div>
+      <div class="foot">상단 = 선택한 평형의 기간 안 실제 최고 거래가 (해제·직거래 제외)</div>`;
+    card.innerHTML = html;
+    const box = $("barBox"), br = box.querySelector(".base");
+    if (!topS.open && br) box.scrollTop = br.offsetTop - box.offsetTop - box.clientHeight / 2 + br.clientHeight / 2;
+    $("barToggle").onclick = () => { topS.open = !topS.open; render(); };
+    // 비슷한 생활권 표
+    const bi = sorted.indexOf(base);
+    const above = sorted.slice(Math.max(0, bi - 4), bi), below = sorted.slice(bi + 1, bi + 5);
+    $("sumTitle").textContent = "상단이 비슷한 생활권 (위 4개 · 기준 · 아래 4개)"; $("summary").className = "sum-view sum-top";
+    const c3 = o => `<b>${eok(o.v)}</b><small>${o.b.who}</small><small>${fmtYM(o.b.r[2])}.${o.b.r[3]} ${o.b.r[5]}층</small>`;
+    let s = `<colgroup><col style="width:3.2em"><col style="width:36%"><col><col style="width:22%"></colgroup>
+      <tr><th>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
+    const simRow = o => {
+      const key = o.gu + "|" + o.zi, d = (o.v - base.v) / base.v * 100, on = topS.picked.includes(key);
+      return `<tr class="simrow"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
+    };
+    above.forEach(o => { s += simRow(o); });
+    if (!above.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 높은 생활권이 없어요</td></tr>`;
+    s += `<tr class="simrow baserow"><td>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td>${c3(base)}</td><td>-</td></tr>`;
+    below.forEach(o => { s += simRow(o); });
+    if (!below.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 낮은 생활권이 없어요</td></tr>`;
+    s += `<tr><td colspan="4" style="text-align:left;white-space:normal"><button class="btn primary" id="toCmp" type="button">체크한 생활권과 그래프로 비교 (최대 2개)</button></td></tr>`;
+    $("summary").innerHTML = s;
+    $("summary").querySelectorAll("input[data-k]").forEach(cb => cb.onchange = () => {
+      const k = cb.dataset.k;
+      if (cb.checked) { if (topS.picked.length >= 2) { cb.checked = false; return; } topS.picked.push(k); }
+      else topS.picked = topS.picked.filter(x => x !== k);
+    });
+    $("toCmp").onclick = () => {
+      cmp.slots = [{ gu: base.gu, zi: base.zi }, ...topS.picked.map(k => { const [gu, zi] = k.split("|"); return { gu, zi: +zi }; })];
+      while (cmp.slots.length < 3) cmp.slots.push(null);
+      setTab("cmp");
+    };
+  });
+}
+$("segWin").querySelectorAll("button").forEach(b => b.onclick = () => {
+  $("segWin").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  topS.win = b.dataset.v === "custom" ? "custom" : +b.dataset.v; showPeriod(); render();
+});
+function showPeriod() {   // 기간 슬라이더는 '직접 선택'일 때만 보이기
+  const top = state.tab === "top";
+  $("periodCtl").style.display = top && topS.win !== "custom" ? "none" : "";
+  $("segPeriod").style.display = top ? "none" : "";
+  $("sliderWrap").style.display = top ? "" : (state.customPeriod ? "" : "none");
+}
+function markPeriod() { setRange(state.from, state.to); }
+function setTab(tb) {
+  state.tab = tb; document.body.dataset.tab = tb;
+  $("tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === tb));
+  $("sumTitle").textContent = "단지별 요약";
+  if (tb === "cmp") {
+    if (!cmp.slots.some(Boolean) && baseZones(state.gu).length) cmp.slots[0] = { gu: state.gu, zi: Math.min(state.zone, baseZones(state.gu).length - 1) };
+    renderSlots();
+  }
+  if (tb === "top") renderTopSel();
+  showPeriod();
+  render();
+}
+$("tabs").querySelectorAll("button").forEach(b => b.onclick = () => setTab(b.dataset.t));
+setRange(Math.max(0, N - 12), N - 1);
+initSido();
+showPeriod();
+let _rw = 0; window.addEventListener("resize", () => { const w = $("chartCard").clientWidth; if (Math.abs(w - _rw) > 40) { _rw = w; render(); } });
+</script>
+</body>
+</html>

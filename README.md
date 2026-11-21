@@ -16,6 +16,17 @@
 | `scripts/build_from_csv.py` | (예비용) 실거래가 공개시스템 CSV로 자료 만들기 |
 | `.github/workflows/update.yml` | 매월 3일 새벽 자동 실행 설정 |
 
+## 버전 관리
+
+| 주소 | 파일 | 용도 |
+|---|---|---|
+| `/silgeorae/` | `docs/index.html` | 기본 사이트 (검증된 기능만) |
+| `/silgeorae/v1/` | `docs/v1/` | 버전 1 고정판 — 화면·생활권 설정(`docs/v1/lifezones.js`)은 그대로, 실거래 자료만 매달 갱신 |
+| `/silgeorae/beta/` | `docs/beta/` | 시험판 — 새 기능은 여기서 먼저 만들고, 확인 후 기본 사이트에 반영 |
+
+- 저장소 태그 `v1` = 2026-11-21 버전 1 상태(코드+자료). 문제가 생기면 이 태그로 되돌리거나 여기서 다시 시작.
+- 약속: `docs/data/` 자료 형식(complexes·sale·jeonse·presale 칸 순서)은 바꾸지 않음. 새 기능에 필요한 자료는 새 파일로 추가 → v1이 깨지지 않음.
+
 ## 처음 한 번 설정
 
 1. **인증키 넣기**: 저장소 Settings > Secrets and variables > Actions > New repository secret
