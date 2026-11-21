@@ -33,6 +33,12 @@ jobs:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
         run: python3 scripts/fetch_molit.py
 
+      - name: 단지 세대수 받기 (K-apt, 새 단지만)
+        continue-on-error: true
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: python3 scripts/fetch_hh.py
+
       - name: 정비사업 자료 만들기 (data/jb/의 최신 엑셀)
         run: |
           pip install --quiet openpyxl
