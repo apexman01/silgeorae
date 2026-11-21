@@ -105,6 +105,19 @@
   .gi .gsrc p b{color:var(--ink);font-weight:600;margin-right:6px}
   .gi .ghd{margin:10px 0 0;background:#f5f6f8;border:1px solid #dfe3e8;border-radius:10px;padding:10px 12px;font-size:14.5px;font-weight:600;line-height:1.5}
   .gi .ghd span{display:block;color:var(--sub);font-size:12.5px;font-weight:400;margin-top:4px}
+  .ztr{margin-top:12px;border:1px solid #dfe3e8;border-radius:10px;padding:10px 12px}
+  .ztr .zh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--sub);font-weight:600}
+  .ztr .zh span{font-weight:400;color:var(--mute);font-size:11.5px}
+  .ztr .ln{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 2px}
+  .ztr .ln i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 8px;border-radius:999px;color:#fff;font-size:12.5px;font-weight:700;box-sizing:border-box}
+  .ztr .ln i.n{padding:0;width:24px}
+  .ztr .ln i.pl{background:#aab0b9!important}
+  .ztr .tm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
+  .ztr .tm div{background:#f6f7f9;border-radius:8px;padding:6px 4px;text-align:center}
+  .ztr .tm small{display:block;font-size:11px;color:var(--sub)}
+  .ztr .tm b{font-size:16px}
+  .ztr .tm b em{font-style:normal;font-size:11.5px;font-weight:500;color:var(--sub);margin-left:1px}
+  .ztr .nt{font-size:11px;color:var(--mute);margin-top:6px}
   .gi .gzl{margin:14px 0 6px;font-size:12px;color:var(--sub);font-weight:600}
   .gi .gzl span{font-weight:400;color:var(--mute)}
   .gi .gzt{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 2px}
@@ -254,6 +267,7 @@
     <div id="giBody"></div>
     <div class="gzl" id="zoneLabel">생활권 선택</div>
     <div class="gzt" id="zoneTabs"></div>
+    <div id="zoneTransit"></div>
   </div>
   <div class="card tt-only gi hc" id="topHead">
     <div class="gih"><select id="topGu" aria-label="구"></select><b>기준 생활권</b><span class="rg">상단 비교</span></div>
@@ -337,7 +351,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script><script src="../data/gustats.js?v=' + _v + '"><\/script>');
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script><script src="../data/gustats.js?v=' + _v + '"><\/script><script src="../transit.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -421,6 +435,16 @@ function initZone(keep) {
   onZoneChange();
 }
 function shiftYm(ym, k) { let y = +String(ym).slice(0, 4), m = +String(ym).slice(4, 6) + k; while (m <= 0) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}${String(m).padStart(2, "0")}`; }
+function renderTransit(z) {   // 생활권 교통: 노선 뱃지(예정은 회색 점선) + 3대 업무지구까지 시간
+  const T = window.TRANSIT, box = $("zoneTransit");
+  const d = T && z && z.kind === "base" && T.zones[state.gu + "|" + z.name];
+  if (!d) { box.innerHTML = ""; return; }
+  const badge = (l, pl) => { const short = /^\d$/.test(l); return `<i class="${short ? "n" : ""}${pl ? " pl" : ""}" style="background:${T.colors[l] || "#888"}" title="${l}${pl ? " (예정)" : ""}">${l}${pl ? " 예정" : ""}</i>`; };
+  box.innerHTML = `<div class="ztr"><div class="zh">교통 · ${z.name}<span>${d.st}</span></div>
+    <div class="ln">${d.lines.map(l => badge(l)).join("")}${(d.plan || []).map(([l]) => badge(l, true)).join("")}</div>
+    <div class="tm"><div><small>광화문 (CBD)</small><b>${d.t.CBD}<em>분</em></b></div><div><small>강남역 (GBD)</small><b>${d.t.GBD}<em>분</em></b></div><div><small>여의도 (YBD)</small><b>${d.t.YBD}<em>분</em></b></div></div>
+    <div class="nt">기준 역에서 지하철 대략 시간(환승 포함, 걷는 시간 제외)${(d.plan || []).length ? " · 회색 = 예정 노선: " + d.plan.map(([l, st]) => `${l}(${st})`).join(", ") : ""}</div></div>`;
+}
 function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선택 + 구 현황(강의자료) + 생활권 탭
   const G = (window.GUINFO || {})[state.gu];
   $("giRegion").textContent = (G && G.region) || "";
@@ -612,7 +636,7 @@ function render() {
   $("selZone").disabled = topMode;
   $("picker").classList.toggle("show", !topMode && (z.kind === "pick" || z.kind === "custom"));
   $("segArea").style.opacity = topMode ? .4 : 1; $("segArea").title = topMode ? "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요" : "";
-  renderGuInfo(z);
+  renderGuInfo(z); renderTransit(z);
   const list = currentComplexes();
   const card = $("chartCard");
   const typeLabel = state.type === "sale" ? "실거래가" : "전세가";
