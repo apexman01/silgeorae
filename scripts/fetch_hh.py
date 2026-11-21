@@ -26,7 +26,6 @@ LIST_APIS = [
 ]
 BASIC_APIS = [
     "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4",
-    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusDtlInfoV5",
     "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusBassInfoV5",
     "https://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusBassInfoV3",
     "https://apis.data.go.kr/1613000/AptBasisInfoService1/getAphusBassInfo",
@@ -77,12 +76,15 @@ def get_items(url, params):
     return items, int(root.findtext(".//totalCount") or len(items))
 
 
-def pick_api(cands, params, label):
+def pick_api(cands, params, label, need=None):
     for u in cands:
         for drop in (False, True):
             p = {k: v for k, v in params.items() if not (drop and k == "_type")}
             try:
                 items, _ = get_items(u, p)
+                if need and not any(need in it for it in items):
+                    print(f"[{label}] {u}: '{need}' 항목 없음 -> 다음 후보 (항목: {sorted(items[0].keys()) if items else '-'})")
+                    break
                 print(f"[{label}] 사용: {u} ({len(items)}건){' (_type 없이)' if drop else ''}")
                 return u
             except Exception as e:
@@ -122,10 +124,10 @@ def main():
 
     # 2) 기본정보 (새 단지만)
     cache = json.load(open(CACHE, encoding="utf-8")) if os.path.exists(CACHE) else {}
-    todo = [x["code"] for l in lists.values() for x in l if x["code"] not in cache]
+    todo = [x["code"] for l in lists.values() for x in l if not (cache.get(x["code"]) or {}).get("cnt")]
     print(f"기본정보 새로 받을 단지: {len(todo)}개 (저장된 것 {len(cache)}개)")
     if todo:
-        basic_api = pick_api(BASIC_APIS, {"serviceKey": key, "kaptCode": todo[0], "_type": "json"}, "기본정보")
+        basic_api = pick_api(BASIC_APIS, {"serviceKey": key, "kaptCode": todo[0], "_type": "json"}, "기본정보", need="kaptdaCnt")
         if not basic_api:
             print("기본 정보 API를 쓸 수 없어요(활용신청 확인).")
         else:
