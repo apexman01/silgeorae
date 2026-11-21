@@ -110,8 +110,8 @@
   .ch h3{margin:0;font-size:17px}
   .cbtn{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .mini{font:inherit;font-size:12.5px;border:1px solid #cfd4db;background:#fff;color:var(--ink);border-radius:999px;padding:5px 10px;cursor:pointer;white-space:nowrap}
-  .capb{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1px solid #d5d9de;background:#fff;color:#4b5058;cursor:pointer;padding:0;flex:none;transition:background .15s,color .15s}
-  .capb:hover,.capb:active{background:#1f56b3;border-color:#1f56b3;color:#fff}
+  .capb{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:0;background:none;color:#9aa0a8;cursor:pointer;padding:0;flex:none;border-radius:6px}
+  .capb:hover,.capb:active{color:#1f56b3;background:#eef3fb}
   .capb.busy{animation:capspin 1s linear infinite;color:#1f56b3}
   @keyframes capspin{50%{opacity:.35}}
   .gih .capb{margin-left:4px}
@@ -285,13 +285,13 @@
 
   <div class="tabs" id="tabs"><button data-t="view" class="on">생활권 보기</button><button data-t="top">상단 비교</button><button data-t="cmp">생활권 비교</button><button data-t="jb">정비사업</button></div>
   <div class="card vt-only gi hc" id="guInfo">
-    <div class="gih"><select id="selSido" aria-label="시·도"></select><select id="selGu" aria-label="구"></select><b>현황</b><span class="rg" id="giRegion"></span><button type="button" class="capb cap" data-cap="guInfo" data-html2canvas-ignore aria-label="사진으로 저장" title="사진으로 저장"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.2" r="3.4"/></svg></button><select id="selZone" hidden></select></div>
+    <div class="gih"><select id="selSido" aria-label="시·도"></select><select id="selGu" aria-label="구"></select><b>현황</b><span class="rg" id="giRegion"></span><button type="button" class="capb cap" data-cap="guInfo" data-html2canvas-ignore aria-label="사진으로 저장" title="사진으로 저장"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg></button><select id="selZone" hidden></select></div>
     <div id="giBody"></div>
     <div class="gzl" id="zoneLabel">생활권 선택</div>
     <div class="gzt" id="zoneTabs"></div>
   </div>
   <div class="card vt-only" id="trCard" style="display:none">
-    <div class="ch"><h3>교통</h3><span class="cbtn" data-html2canvas-ignore><button type="button" class="mini" id="trAll">전체 생활권 펼치기</button><button type="button" class="capb cap" data-cap="trCard" aria-label="사진으로 저장" title="사진으로 저장"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.2" r="3.4"/></svg></button></span></div>
+    <div class="ch"><h3>교통</h3><span class="cbtn" data-html2canvas-ignore><button type="button" class="mini" id="trAll">전체 생활권 펼치기</button><button type="button" class="capb cap" data-cap="trCard" aria-label="사진으로 저장" title="사진으로 저장"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg></button></span></div>
     <div id="zoneTransit"></div>
   </div>
   <div class="card tt-only gi hc" id="topHead">
@@ -694,7 +694,7 @@ function render() {
   const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
   const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
-  const capBtns = `<span class="cbtn" data-html2canvas-ignore>${isTop ? "" : `<button type="button" class="mini${CH_ALL ? " on" : ""}" id="chAll">${CH_ALL ? "선택 생활권만" : "전체 생활권 펼치기"}</button>`}<button type="button" class="capb cap" data-cap="chartCard" aria-label="사진으로 저장" title="사진으로 저장"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.2" r="3.4"/></svg></button></span>`;
+  const capBtns = `<span class="cbtn" data-html2canvas-ignore>${isTop ? "" : `<button type="button" class="mini${CH_ALL ? " on" : ""}" id="chAll">${CH_ALL ? "선택 생활권만" : "전체 생활권 펼치기"}</button>`}<button type="button" class="capb cap" data-cap="chartCard" aria-label="사진으로 저장" title="사진으로 저장"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg></button></span>`;
   let html = `<div class="ch"><h2>${title}</h2>${capBtns}</div>${sub ? `<div class="${isTop ? "hint" : "znote"}"${isTop ? ' style="margin:2px 0 4px"' : ""}>${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
   html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
