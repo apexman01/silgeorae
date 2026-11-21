@@ -38,9 +38,12 @@
   .jb .lb span.now{color:#e8663a;font-weight:700}
   .jb .cur{font-size:13px;margin-top:4px}
   .jbg{margin-top:6px}
-  .jbh{position:sticky;top:0;background:#f4f6f9;border-radius:8px;padding:8px 10px;margin:10px 0 2px;font-weight:700;font-size:15px}
-  .jbh span{color:#8a9099;font-weight:500;font-size:13px;margin-left:4px}
-  .jbh.cur{background:#fff1ea;color:#c2551f}
+  .jbh{position:sticky;top:0;z-index:1;background:#2b4a7a;color:#fff;border-radius:8px;padding:9px 12px;margin:22px 0 4px;font-weight:700;font-size:15.5px}
+  .jbg:first-child .jbh, .jbsum + .jbh{margin-top:10px}
+  .jbh span{color:#c9d6ec;font-weight:500;font-size:13px;margin-left:6px}
+  .jbh.cur{background:#c2551f}
+  .jbh.cur span{color:#ffe1d2}
+  .jbh.zero{background:#9aa8bf}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 12px;margin-bottom:14px}
   .card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.3px}
   .card .unit{color:var(--sub);font-size:14px;margin:2px 0 6px}
@@ -1035,7 +1038,7 @@ function renderJbTab() {
     const filt = [jbS.stage !== "all" ? `${jbS.stage} 이후` : "", jbS.type !== "all" ? jbS.type : ""].filter(Boolean).join(" · ");
     let html = `<h2>${title}</h2><div class="hint" style="margin:2px 0 4px">${filt ? filt + " · " : ""}${jbS.sort === "hh" ? "세대수 큰 순" : "단계 빠른 순"}</div>
       <div class="jbsum"><span><b>${shownL.length}개 구역</b>${filt ? ` / 전체 ${before}` : ""}</span><span>공급 <b>${hhSum.toLocaleString()}세대</b></span>${JB.stages.slice().reverse().filter(s => cnt[s]).map(s => `<span>${s} ${cnt[s]}</span>`).join("")}</div>`;
-    html += groups.map(([nm, l]) => `${nm ? `<div class="jbh">${nm} <span>${l.length}개 구역</span></div>` : ""}${l.length ? l.map(o => jbItemLink(o.r, o.gu, o.zi, jbS.scope === "zone" ? "" : (jbS.scope === "seoul" ? (o.zname ? `${o.zname}` : "") : o.zname))).join("") : `<div class="hint" style="padding:6px 0 10px">조건에 맞는 구역 없음</div>`}`).join("");
+    html += groups.map(([nm, l]) => `${nm ? `<div class="jbh${l.length ? "" : " zero"}">${nm} <span>${l.length}개 구역</span></div>` : ""}${l.length ? l.map(o => jbItemLink(o.r, o.gu, o.zi, jbS.scope === "zone" ? "" : (jbS.scope === "seoul" ? (o.zname ? `${o.zname}` : "") : o.zname))).join("") : `<div class="hint" style="padding:6px 0 10px">조건에 맞는 구역 없음</div>`}`).join("");
     html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만 · 공급 0세대 구역 제외 · '시세 보기'를 누르면 그 생활권 시세 그래프로 이동</div>`;
     card.innerHTML = html;
     card.querySelectorAll(".go").forEach(b => b.onclick = () => goZone(b.dataset.gu, +b.dataset.zi));
