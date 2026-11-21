@@ -88,6 +88,8 @@
   .gih .rg:empty{display:none}
   .gi .gst{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .gi .gst div{background:#eef3fb;border:1.5px solid #3f6fb8;border-radius:10px;padding:6px 9px;color:#173a6e}
+  .gi .gst{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .gi .gst div.t4{background:#f4f2fb;border-color:#7a68c4;color:#40327e}
   .gi .gst div.tp{background:#e9f6f1;border-color:#2f8a6c;color:#0f5a47}
   .gi .gst div.tr{background:#fdeeef;border-color:#c4505f;color:#9b2c3a}
   .gi .gst small{display:block;font-size:11px;white-space:nowrap;letter-spacing:-.3px;opacity:.85}
@@ -105,7 +107,7 @@
   .znote{font-size:15px;color:#3d434b;margin:3px 0 4px;line-height:1.45}
   .seg button{white-space:nowrap}
   @media(max-width:520px){.seg button{padding:8px 10px;font-size:13.5px}}
-  @media(max-width:520px){.gi .gst b{font-size:15px}.gi .gst div{padding:6px 7px}}
+  @media(max-width:520px){.gi .gst{gap:6px}.gi .gst b{font-size:15px}.gi .gst div{padding:6px 6px}.gi .gst small{font-size:10.5px}}
   .cfoot{margin-top:6px;font-size:12.5px;color:var(--sub);line-height:1.5}
   .cfoot details{display:inline}
   .cfoot summary{display:inline;cursor:pointer;color:#2a6fdb;list-style:none;margin-left:6px;white-space:nowrap}
@@ -415,16 +417,16 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
   $("giRegion").textContent = (G && G.region) || "";
   const S = window.GUSTATS || {}, st = (S.gu || {})[state.gu], pp = (S.pop || {})[state.gu];
   const ymS = ym => `${String(ym).slice(2, 4)}.${+String(ym).slice(4, 6)}`;
-  const tiles = [];
-  if (pp) tiles.push([`인구 (${ymS(pp[1])})`, `${(pp[0] / 10000).toFixed(1)}만 명`, ""]);
-  else if (G && G.stats && G.stats[0]) tiles.push([...G.stats[0], ""]);
+  const tiles = [], e2 = v => (v / 10000).toFixed(1).replace(/\.0$/, "");
   if (st) {
-    const e2 = v => (v / 10000).toFixed(1).replace(/\.0$/, "");
-    tiles.push(["84㎡ 최고가", st.max != null ? `${e2(st.max)}억` : eok(st.med), "tp"]);
-    tiles.push(["서울 순위·1년 상승률", `${st.rank}위${st.chg != null ? ` · ${st.chg > 0 ? "+" : ""}${st.chg}%` : ""}`, "tr"]);
+    tiles.push(["서울 순위", `${st.rank}위`, "t1"]);
+    tiles.push(["84㎡ 최고가", `${e2(st.max)}억`, "tp"]);
+    if (st.chg != null) tiles.push(["1년 상승률", `${st.chg > 0 ? "+" : ""}${st.chg}%`, "tr"]);
   }
+  if (pp) tiles.push([`인구 (${ymS(pp[1])})`, `${(pp[0] / 10000).toFixed(1)}만`, "t4"]);
+  else if (G && G.stats && G.stats[0]) tiles.push([G.stats[0][0], G.stats[0][1].replace(/\s*명$/, ""), "t4"]);
   $("giBody").innerHTML = (tiles.length ? `<div class="gst">${tiles.map(([k, v, c]) => `<div class="${c}"><small>${k}</small><b>${v}</b></div>`).join("")}</div>` : "")
-    + (st ? `<div class="gsrc">전용 80~90㎡ 매매 ${ymS(S.from)}~${ymS(S.to)} ${st.n}건 · 순위 = 84㎡ 최고가 기준 서울 ${S.total}개 구 중 · 1년 상승률 = 거래가 가운데 값을 1년 전 같은 6개월과 비교</div>` : "")
+    + (st ? `<div class="gsrc">${ymS(S.from)}~${ymS(S.to)} 84㎡ 매매 ${st.n}건 · 상승률은 가운데 값 기준</div>` : "")
     + (G && G.head ? `<div class="ghd">${G.head.split(/\s*—\s*/).join("<br>")}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : "");
   const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
   $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span>`;
