@@ -56,7 +56,7 @@ def fetch_pop(key, regions):
             ok = 0
             for gu, code in regions.items():
                 q = urllib.parse.urlencode({"serviceKey": key, "stdgCd": code + "00000", "srchFrYm": ym, "srchToYm": ym,
-                                            "lv": "2", "regSeCd": "1", "type": "JSON", "numOfRows": 10, "pageNo": 1})
+                                            "lv": "2", "regSeCd": "1", "type": "JSON", "numOfRows": 1000, "pageNo": 1})
                 try:
                     with urllib.request.urlopen(f"{api}?{q}", timeout=30) as r:
                         txt = r.read().decode("utf-8", "replace")
@@ -64,7 +64,12 @@ def fetch_pop(key, regions):
                     items = (((j.get("Response") or j.get("response") or {}).get("items") or {}).get("item")) or []
                     if isinstance(items, dict):
                         items = [items]
-                    tot = sum(int(str(i.get("totNmprCnt") or 0).replace(",", "")) for i in items)
+                    if gu == next(iter(regions)):
+                        print(f"인구 응답 예시({gu}): {len(items)}개 항목, 첫 항목 {json.dumps(items[:2], ensure_ascii=False)[:600]}")
+                    num = lambda i: int(str(i.get("totNmprCnt") or 0).replace(",", ""))
+                    mine = [i for i in items if str(i.get("sggNm", "")).strip() == gu] or items
+                    whole = [i for i in mine if not str(i.get("stdgNm") or i.get("dongNm") or "").strip()]
+                    tot = num(whole[0]) if whole else sum(num(i) for i in mine)
                     if tot:
                         out[gu] = [tot, ym]; ok += 1
                     elif ok == 0 and gu == next(iter(regions)):
