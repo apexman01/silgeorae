@@ -22,7 +22,7 @@
   <button data-w="360">360</button><button data-w="390" class="on">390</button><button data-w="412">412</button>
   <button id="rl">새로고침</button>
 </div>
-<div class="wrap"><div class="phone"><iframe id="f" src="beta/"></iframe></div></div>
+<div class="wrap"><div class="phone"><iframe id="f"></iframe></div></div>
 <script>
   const f = document.getElementById("f");
   let w = 390, u = "beta/";
@@ -38,6 +38,7 @@
   });
   document.getElementById("rl").onclick = () => { f.src = u + "?t=" + Date.now(); };
   window.onresize = size; size();
+  f.src = u + "?t=" + Date.now();   // 열 때마다 최신 시험판 (브라우저 저장본 무시)
 </script>
 </body>
 </html>
