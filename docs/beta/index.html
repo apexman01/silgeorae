@@ -38,12 +38,13 @@
   .jb .lb span.now{color:#e8663a;font-weight:700}
   .jb .cur{font-size:13px;margin-top:4px}
   .jbg{margin-top:6px}
-  .jbh{position:sticky;top:0;z-index:1;background:#2b4a7a;color:#fff;border-radius:8px;padding:9px 12px;margin:22px 0 4px;font-weight:700;font-size:15.5px}
+  .jbh{position:sticky;top:0;z-index:1;background:#d0606e;color:#fff;border-radius:8px;padding:9px 12px;margin:22px 0 4px;font-weight:700;font-size:15.5px}
   .jbg:first-child .jbh, .jbsum + .jbh{margin-top:10px}
-  .jbh span{color:#c9d6ec;font-weight:500;font-size:13px;margin-left:6px}
-  .jbh.cur{background:#c2551f}
-  .jbh.cur span{color:#ffe1d2}
-  .jbh.zero{background:#9aa8bf}
+  .jbh span{color:#ffe2e5;font-weight:500;font-size:13px;margin-left:6px}
+  .jbh.cur{background:#a3303f}
+  .jbh.cur span{color:#ffd6db}
+  .jbh.zero{background:#e7b9bd;color:#7a3940}
+  .jbh.zero span{color:#8f5359}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 12px;margin-bottom:14px}
   .card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.3px}
   .card .unit{color:var(--sub);font-size:14px;margin:2px 0 6px}
@@ -91,8 +92,25 @@
   .jbsum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--sub);margin:6px 0 4px}
   .jbsum b{color:var(--ink)}
   .jb .go{font:inherit;font-size:12.5px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:3px 10px;margin-left:6px;cursor:pointer;color:var(--accent)}
-  .jbline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px}
-  .jbline .btn{padding:6px 12px}
+  #jbCard{background:#fff7f7;border:1px solid #efc4c7;border-left:5px solid #d0606e}
+  #jbCard h3{color:#8e2a37}
+  #jbCard .jb{border-top-color:#f3d7d9}
+  .jbtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 10px}
+  .jbtiles div{background:#fff;border:1px solid #f0cfd2;border-radius:10px;padding:8px 9px}
+  .jbtiles small{display:block;font-size:12px;color:var(--sub)}
+  .jbtiles div{white-space:nowrap;font-size:12.5px}
+  .jbtiles b{font-size:18px;color:#a3303f;margin-right:1px}
+  .jbmini{display:flex;flex-wrap:wrap;gap:4px 6px;margin:0 0 8px;font-size:12.5px}
+  .jbmini span{background:#fbe4e6;color:#8e2a37;border-radius:999px;padding:3px 9px}
+  .jbmini span.late{background:#d0606e;color:#fff}
+  .jbrow{display:flex;align-items:center;gap:8px;padding:8px 2px;border-top:1px solid #f3d7d9;font-size:14px}
+  .jbrow b{font-weight:600}
+  .jbrow .kd{font-size:11.5px;color:var(--sub)}
+  .jbrow .st{margin-left:auto;font-size:12px;border-radius:6px;padding:2px 7px;background:#f1f2f4;color:#4b5058;white-space:nowrap}
+  .jbrow .st.late{background:#d0606e;color:#fff}
+  .jbrow .n{font-size:12.5px;color:var(--sub);white-space:nowrap;min-width:62px;text-align:right}
+  .jbmore{font-size:12.5px;color:var(--sub);padding:6px 2px 0}
+  #jbGo{width:100%;margin-top:10px;background:#d0606e;border-color:#d0606e;color:#fff}
   body:not([data-tab="cmp"]) .c-only{display:none!important}
   body:not([data-tab="top"]) .t-only{display:none!important}
   body:not([data-tab="view"]) .vt-only{display:none!important}
@@ -202,12 +220,12 @@
 
   <div class="card" id="chartCard"></div>
 
-  <div class="card vt-only" id="jbCard" style="display:none"></div>
-
   <div class="card nj">
     <h3 id="sumTitle">단지별 요약</h3>
     <div class="scroll"><table id="summary"></table></div>
   </div>
+
+  <div class="card vt-only" id="jbCard" style="display:none"></div>
 
   <div class="card vt-only">
     <h3>최근 거래</h3>
@@ -534,9 +552,22 @@ function renderJb(z) {
   if (JB_COMPACT_GUS.includes(state.gu)) {
     const zi0 = baseZones(state.gu).findIndex(b => b.name === z.name);
     const l = jbAssign(state.gu).res[zi0] || [];
-    const late = l.filter(r => JB.stages.indexOf(r.stage) >= JB.stages.indexOf("관리처분")).length;
-    card.innerHTML = `<h3>${state.gu} 정비사업 (재개발·재건축)</h3><div class="jbline"><span>${z.name} <b>${l.length}개 구역</b>${l.length ? ` · 관리처분 이후 <b>${late}개</b>` : ""}${l.length ? ` · ${l.slice(0, 3).map(r => r.name).join(", ")}${l.length > 3 ? " 등" : ""}` : ""}</span>
-      <button class="btn primary" type="button" id="jbGo">정비사업 탭에서 보기</button></div>`;
+    const LI = JB.stages.indexOf("관리처분"), si = r => JB.stages.indexOf(r.stage);
+    const late = l.filter(r => si(r) >= LI).length;
+    const hh = l.reduce((t, r) => t + (r.new || 0), 0);
+    const cnt = JB.stages.map((s, i) => [s, l.filter(r => si(r) === i).length, i >= LI]).filter(x => x[1]);
+    const kind = r => r.type.includes("재건축") ? "재건축" : "재개발";
+    const MAX = 6;
+    let h = `<h3>${z.name} 정비사업 (재개발·재건축)</h3>`;
+    if (!l.length) h += `<div class="hint" style="padding:4px 0 2px">이 생활권에 연결된 진행 중 구역이 없어요.</div>`;
+    else {
+      h += `<div class="jbtiles"><div><small>진행 구역</small><b>${l.length}</b>개</div><div><small>공급 예정</small><b>${hh.toLocaleString()}</b>세대</div><div><small>관리처분 이후</small><b>${late}</b>개</div></div>`;
+      h += `<div class="jbmini">${cnt.map(([s, n, lt]) => `<span class="${lt ? "late" : ""}">${s} ${n}</span>`).join("")}</div>`;
+      h += l.slice(0, MAX).map(r => `<div class="jbrow"><b>${r.name}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${r.new.toLocaleString()}세대</span></div>`).join("");
+      if (l.length > MAX) h += `<div class="jbmore">외 ${l.length - MAX}개 구역은 정비사업 탭에서</div>`;
+    }
+    h += `<button class="btn primary" type="button" id="jbGo">정비사업 탭에서 자세히 보기 (단계·이주 일정)</button>`;
+    card.innerHTML = h;
     card.style.display = "";
     $("jbGo").onclick = () => { jbS.gu = state.gu; jbS.zi = Math.max(0, zi0); jbS.scope = "zone"; setTab("jb"); };
     return;
