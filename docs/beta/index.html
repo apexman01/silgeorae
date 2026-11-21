@@ -87,12 +87,12 @@
   .gih .rg{margin-left:auto;color:#1f56b3;background:#eef3fb;font-size:12.5px;border-radius:999px;padding:4px 10px;font-weight:600}
   .gih .rg:empty{display:none}
   .gi .gst{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-  .gi .gst div{background:#f6f7f9;border:1px solid #dfe3e8;border-radius:10px;padding:6px 6px;color:var(--ink);text-align:center}
-  .gi .gst div.t1{background:#fdeeef;border:1.5px solid #c4505f;color:#9b2c3a}
-  .gi .gst b.up{color:#d03a4b}
-  .gi .gst b.dn{color:#1f56b3}
-  .gi .gst small{display:block;font-size:11px;white-space:nowrap;letter-spacing:-.3px;color:var(--sub)}
-  .gi .gst div.t1 small{color:#9b2c3a}
+  .gi .gst div{border-radius:10px;padding:6px 6px;text-align:center;border:1.5px solid}
+  .gi .gst div.t1{background:#fdeeef;border-color:#c4505f;color:#9b2c3a}
+  .gi .gst div.tp{background:#eef3fb;border-color:#3f6fb8;color:#173a6e}
+  .gi .gst div.tr{background:#fff5e2;border-color:#d39a2c;color:#7a4f06}
+  .gi .gst div.t4{background:#e9f6f1;border-color:#2f8a6c;color:#0f5a47}
+  .gi .gst small{display:block;font-size:11px;white-space:nowrap;letter-spacing:-.3px;opacity:.85}
   .gi .gst b{display:block;font-size:17px;white-space:nowrap}
   .gi .gsrc{font-size:12.5px;margin:6px 1px 0;line-height:1.5}
   .gi .gsrc summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;list-style:none}
@@ -430,7 +430,7 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
   if (st) {
     tiles.push(["서울 순위", `${st.rank}위`, "t1"]);
     tiles.push(["84㎡ 최고가", `${e2(st.max)}억`, "tp"]);
-    if (st.chg != null) tiles.push(["1년 상승률", `${st.chg > 0 ? "+" : ""}${st.chg}%`, "tr", st.chg > 0 ? "up" : st.chg < 0 ? "dn" : ""]);
+    if (st.chg != null) tiles.push(["1년 상승률", `${st.chg > 0 ? "▲" : st.chg < 0 ? "▼" : ""}${Math.abs(st.chg)}%`, "tr"]);
   }
   if (pp) tiles.push([`인구 (${ymS(pp[1])})`, `${(pp[0] / 10000).toFixed(1)}만`, "t4"]);
   else if (G && G.stats && G.stats[0]) tiles.push([G.stats[0][0], G.stats[0][1].replace(/\s*명$/, ""), "t4"]);
