@@ -68,6 +68,22 @@
   .chtip .tr b{white-space:nowrap}
   .chtip .ts{font-size:11px;color:var(--mute);margin-left:15px}
   .chtip .ts:empty{display:none}
+  .gi h3{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:18px}
+  .gi h3 .rg{background:#2b4a7a;color:#fff;font-size:12px;border-radius:5px;padding:3px 8px;font-weight:600}
+  .gi .gst{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .gi .gst div{border:1.5px solid #2b4a7a;border-radius:10px;padding:7px 10px}
+  .gi .gst div:nth-child(2){border-color:#e08a4f}
+  .gi .gst div:nth-child(3){border-color:#3f9e8f}
+  .gi .gst small{display:block;font-size:11px;color:var(--sub);white-space:nowrap;letter-spacing:-.3px}
+  .gi .gst b{font-size:17px;white-space:nowrap}
+  .gi .ghd{margin:10px 0 0;background:#fdf1e8;border-left:4px solid #e08a4f;border-radius:6px;padding:8px 11px;font-size:14px;font-weight:600}
+  .gi .ghd span{display:block;color:#d0702f;font-size:12.5px;font-weight:600;margin-top:2px}
+  .gi .gzt{display:flex;gap:6px;overflow-x:auto;margin:12px 0 0;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  .gi .gzt button{flex:none;font:inherit;font-size:13.5px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:6px 12px;cursor:pointer;color:var(--ink)}
+  .gi .gzt button.on{background:#2b4a7a;border-color:#2b4a7a;color:#fff;font-weight:600}
+  .gi .gzd{margin-top:8px;font-size:14px;color:var(--ink)}
+  .gi .gzd b{color:#2b4a7a}
+  @media(max-width:520px){.gi .gst b{font-size:15px}.gi .gst div{padding:6px 7px}}
   .cfoot{margin-top:6px;font-size:12.5px;color:var(--sub);line-height:1.5}
   .cfoot details{display:inline}
   .cfoot summary{display:inline;cursor:pointer;color:#2a6fdb;list-style:none;margin-left:6px;white-space:nowrap}
@@ -240,6 +256,8 @@
     </div>
   </div>
 
+  <div class="card vt-only gi" id="guInfo" style="display:none"></div>
+
   <div class="card" id="chartCard"></div>
 
   <div class="card nj">
@@ -260,7 +278,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script>');
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -342,6 +360,24 @@ function initZone(keep) {
   fillSelect($("selZone"), zs.map(z => (z.kind === "custom" ? "★ " : "") + z.name), state.zone);
   $("selZone").onchange = e => { state.zone = +e.target.value; onZoneChange(); };
   onZoneChange();
+}
+function renderGuInfo(z) {   // 생활권 보기 위: 강의자료 구 현황 + 생활권 작은 탭
+  const box = $("guInfo"), G = (window.GUINFO || {})[state.gu];
+  if (!G || state.view === "top5") { box.style.display = "none"; return; }
+  const zs = zonesFor(state.sido, state.gu).filter(x => x.kind === "base");
+  box.innerHTML = `<h3>${G.region ? `<span class="rg">${G.region}</span>` : ""}${state.gu} 현황</h3>
+    <div class="gst">${G.stats.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join("")}</div>
+    ${G.head ? `<div class="ghd">${G.head}${G.tags ? `<span>${G.tags.map(t => "#" + t).join(" ")}</span>` : ""}</div>` : ""}
+    <div class="gzt">${zs.map(x => `<button type="button" data-n="${x.name}" class="${x.name === z.name ? "on" : ""}">${x.name}</button>`).join("")}</div>
+    <div class="gzd">${z.kind === "base" ? `<b>${z.name}</b> · ${(G.zones || {})[z.name] || z.note || ""}` : "위 탭을 누르면 그 생활권 그래프로 바뀌어요"}</div>`;
+  box.style.display = "";
+  box.querySelectorAll(".gzt button").forEach(b => b.onclick = () => {
+    const i = zonesFor(state.sido, state.gu).findIndex(x => x.name === b.dataset.n);
+    if (i < 0 || i === state.zone) return;
+    state.zone = i; $("selZone").value = i; onZoneChange();
+  });
+  const on = box.querySelector(".gzt .on"), bar = box.querySelector(".gzt");
+  if (on) bar.scrollLeft = on.offsetLeft - bar.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2;
 }
 function onZoneChange() {
   const z = zonesFor(state.sido, state.gu)[state.zone];
@@ -506,6 +542,7 @@ function render() {
   $("selZone").disabled = topMode;
   $("picker").classList.toggle("show", !topMode && (z.kind === "pick" || z.kind === "custom"));
   $("segArea").style.opacity = topMode ? .4 : 1; $("segArea").title = topMode ? "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요" : "";
+  renderGuInfo(z);
   const list = currentComplexes();
   const card = $("chartCard");
   const typeLabel = state.type === "sale" ? "실거래가" : "전세가";
