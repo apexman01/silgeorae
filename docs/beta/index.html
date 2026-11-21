@@ -68,8 +68,13 @@
   .chtip .tr b{white-space:nowrap}
   .chtip .ts{font-size:11px;color:var(--mute);margin-left:15px}
   .chtip .ts:empty{display:none}
-  .gi h3{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:18px}
-  .gi h3 .rg{background:#2b4a7a;color:#fff;font-size:12px;border-radius:5px;padding:3px 8px;font-weight:600}
+  body[data-tab="view"] .tabs + .gi{border-top-left-radius:0}
+  body:not([data-tab="view"]) .gi + .controls{margin-top:0;border-top-left-radius:0}
+  body[data-tab="view"] .gi + .controls{margin-top:0}
+  .gih{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;font-size:18px}
+  .gih select{font-size:17px;font-weight:700;padding:6px 30px 6px 10px}
+  .gih .rg{background:#2b4a7a;color:#fff;font-size:12px;border-radius:5px;padding:3px 8px;font-weight:600}
+  .gih .rg:empty{display:none}
   .gi .gst{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .gi .gst div{border:1.5px solid #2b4a7a;border-radius:10px;padding:7px 10px}
   .gi .gst div:nth-child(2){border-color:#e08a4f}
@@ -78,11 +83,14 @@
   .gi .gst b{font-size:17px;white-space:nowrap}
   .gi .ghd{margin:10px 0 0;background:#fdf1e8;border-left:4px solid #e08a4f;border-radius:6px;padding:8px 11px;font-size:14px;font-weight:600}
   .gi .ghd span{display:block;color:#d0702f;font-size:12.5px;font-weight:600;margin-top:2px}
-  .gi .gzt{display:flex;gap:6px;overflow-x:auto;margin:12px 0 0;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-  .gi .gzt button{flex:none;font:inherit;font-size:13.5px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:6px 12px;cursor:pointer;color:var(--ink)}
+  .gi .gzt{display:flex;gap:6px;overflow-x:auto;margin:12px 0 2px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  .gi .gzt button{flex:none;font:inherit;font-size:14px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:7px 13px;cursor:pointer;color:var(--ink)}
   .gi .gzt button.on{background:#2b4a7a;border-color:#2b4a7a;color:#fff;font-weight:600}
-  .gi .gzd{margin-top:8px;font-size:14px;color:var(--ink)}
-  .gi .gzd b{color:#2b4a7a}
+  .gi .gzt button.add{color:var(--sub);border-style:dashed}
+  .gi .gzt.dim{opacity:.4;pointer-events:none}
+  .znote{font-size:15px;color:#3d434b;margin:3px 0 4px;line-height:1.45}
+  .seg button{white-space:nowrap}
+  @media(max-width:520px){.seg button{padding:8px 10px;font-size:13.5px}}
   @media(max-width:520px){.gi .gst b{font-size:15px}.gi .gst div{padding:6px 7px}}
   .cfoot{margin-top:6px;font-size:12.5px;color:var(--sub);line-height:1.5}
   .cfoot details{display:inline}
@@ -203,6 +211,11 @@
   </header>
 
   <div class="tabs" id="tabs"><button data-t="view" class="on">생활권 보기</button><button data-t="top">상단 비교</button><button data-t="cmp">생활권 비교</button><button data-t="jb">정비사업</button></div>
+  <div class="card vt-only gi" id="guInfo">
+    <div class="gih"><span class="rg" id="giRegion"></span><select id="selSido" aria-label="시·도"></select><select id="selGu" aria-label="구"></select><b>현황</b><select id="selZone" hidden></select></div>
+    <div id="giBody"></div>
+    <div class="gzt" id="zoneTabs"></div>
+  </div>
   <div class="controls">
     <div class="ctl c-only" style="width:100%"><label>비교할 생활권 (최대 3개)</label><div class="slots" id="slots"></div></div>
     <div class="ctl t-only" style="width:100%"><label>기준 생활권</label>
@@ -218,9 +231,6 @@
       <div class="seg" id="jbType"><button data-v="all" class="on">전체</button><button data-v="재개발">재개발</button><button data-v="재건축">재건축</button></div></div>
     <div class="ctl j-only"><label>정렬</label>
       <div class="seg" id="jbSort"><button data-v="stage" class="on">단계 순</button><button data-v="hh">세대수 순</button></div></div>
-    <div class="ctl v-only"><label>시·도</label><select id="selSido"></select></div>
-    <div class="ctl v-only"><label>구</label><select id="selGu"></select></div>
-    <div class="ctl v-only"><label>생활권</label><select id="selZone"></select></div>
     <div class="ctl v-only"><label>보기</label>
       <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">거래량 TOP5</button></div></div>
     <div class="ctl"><label>거래</label>
@@ -255,8 +265,6 @@
       <div class="list" id="pickList"></div>
     </div>
   </div>
-
-  <div class="card vt-only gi" id="guInfo" style="display:none"></div>
 
   <div class="card" id="chartCard"></div>
 
@@ -341,7 +349,7 @@ function fillSelect(sel, items, val) {
 function initSido() {
   const sidos = Object.keys(INDEX.regions);
   state.sido = sidos[0];
-  fillSelect($("selSido"), sidos, 0);
+  fillSelect($("selSido"), sidos, 0); $("selSido").style.display = sidos.length > 1 ? "" : "none";
   $("selSido").onchange = e => { state.sido = sidos[+e.target.value]; initGu(); };
   initGu();
 }
@@ -361,22 +369,19 @@ function initZone(keep) {
   $("selZone").onchange = e => { state.zone = +e.target.value; onZoneChange(); };
   onZoneChange();
 }
-function renderGuInfo(z) {   // 생활권 보기 위: 강의자료 구 현황 + 생활권 작은 탭
-  const box = $("guInfo"), G = (window.GUINFO || {})[state.gu];
-  if (!G || state.view === "top5") { box.style.display = "none"; return; }
-  const zs = zonesFor(state.sido, state.gu).filter(x => x.kind === "base");
-  box.innerHTML = `<h3>${G.region ? `<span class="rg">${G.region}</span>` : ""}${state.gu} 현황</h3>
-    <div class="gst">${G.stats.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join("")}</div>
-    ${G.head ? `<div class="ghd">${G.head}${G.tags ? `<span>${G.tags.map(t => "#" + t).join(" ")}</span>` : ""}</div>` : ""}
-    <div class="gzt">${zs.map(x => `<button type="button" data-n="${x.name}" class="${x.name === z.name ? "on" : ""}">${x.name}</button>`).join("")}</div>
-    <div class="gzd">${z.kind === "base" ? `<b>${z.name}</b> · ${(G.zones || {})[z.name] || z.note || ""}` : "위 탭을 누르면 그 생활권 그래프로 바뀌어요"}</div>`;
-  box.style.display = "";
-  box.querySelectorAll(".gzt button").forEach(b => b.onclick = () => {
-    const i = zonesFor(state.sido, state.gu).findIndex(x => x.name === b.dataset.n);
-    if (i < 0 || i === state.zone) return;
+function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선택 + 구 현황(강의자료) + 생활권 탭
+  const G = (window.GUINFO || {})[state.gu];
+  $("giRegion").textContent = (G && G.region) || "";
+  $("giBody").innerHTML = G ? `<div class="gst">${G.stats.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join("")}</div>
+    ${G.head ? `<div class="ghd">${G.head}${G.tags ? `<span>${G.tags.map(t => "#" + t).join(" ")}</span>` : ""}</div>` : ""}` : "";
+  const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
+  bar.innerHTML = zs.map((x, i) => `<button type="button" data-i="${i}" class="${i === state.zone ? "on" : ""}${x.kind === "pick" ? " add" : ""}">${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</button>`).join("");
+  bar.classList.toggle("dim", state.view === "top5");
+  bar.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const i = +b.dataset.i; if (i === state.zone) return;
     state.zone = i; $("selZone").value = i; onZoneChange();
   });
-  const on = box.querySelector(".gzt .on"), bar = box.querySelector(".gzt");
+  const on = bar.querySelector(".on");
   if (on) bar.scrollLeft = on.offsetLeft - bar.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2;
 }
 function onZoneChange() {
@@ -560,7 +565,7 @@ function render() {
   const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
   const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
-  let html = `<h2>${title}</h2>${sub ? `<div class="hint" style="margin:2px 0 4px">${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
+  let html = `<h2>${title}</h2>${sub ? `<div class="${isTop ? "hint" : "znote"}"${isTop ? ' style="margin:2px 0 4px"' : ""}>${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
   html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
   if (!vals.length) {
