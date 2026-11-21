@@ -53,6 +53,8 @@ def get_items(url, params):
     else:
         raise RuntimeError(f"연결 실패: {last}")
     txt = body.decode("utf-8", "replace").strip()
+    if "OpenAPI_ServiceResponse" in txt or "LIMITED_NUMBER" in txt or "SERVICE_KEY" in txt:
+        raise RuntimeError("게이트웨이 오류: " + txt[:200].replace("\n", " "))
     if txt.startswith("{"):
         j = json.loads(txt)
         resp = j.get("response", j)
@@ -134,17 +136,25 @@ def main():
             def one(code):
                 try:
                     items, _ = get_items(basic_api, {"serviceKey": key, "kaptCode": code, "_type": "json"})
-                    it = items[0] if items else {}
+                    if not items or not items[0].get("kaptdaCnt"):
+                        return code, ("빈 응답", items[:1])
+                    it = items[0]
                     return code, {"cnt": int(float(it.get("kaptdaCnt") or it.get("hoCnt") or 0)),
                                   "use": str(it.get("kaptUsedate") or "")[:4], "name": it.get("kaptName", "")}
                 except Exception as e:
-                    return code, None
-            fails = 0
+                    return code, (str(e)[:200], None)
+            fails, streak, shown = 0, 0, 0
             with ThreadPoolExecutor(6) as ex:
                 for n, (code, v) in enumerate(ex.map(one, todo), 1):
-                    if v is None:
-                        fails += 1
+                    if isinstance(v, tuple):
+                        fails += 1; streak += 1
+                        if shown < 3:
+                            print(f"  실패 {code}: {v[0]} {v[1] or ''}"); shown += 1
+                        if streak >= 40:
+                            print("  연속 40번 실패 - 하루 호출 한도일 수 있어 멈춤(다음 실행 때 이어서 받음)")
+                            ex.shutdown(cancel_futures=True); break
                     else:
+                        streak = 0
                         cache[code] = v
                     if n % 300 == 0:
                         print(f"  {n}/{len(todo)}")
