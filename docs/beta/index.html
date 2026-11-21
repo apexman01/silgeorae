@@ -419,11 +419,12 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
   if (pp) tiles.push([`인구 (${ymS(pp[1])})`, `${(pp[0] / 10000).toFixed(1)}만 명`, ""]);
   else if (G && G.stats && G.stats[0]) tiles.push([...G.stats[0], ""]);
   if (st) {
-    tiles.push(["84㎡ 중간 거래가", eok(st.med), "tp"]);
+    const e2 = v => (v / 10000).toFixed(1).replace(/\.0$/, "");
+    tiles.push(["84㎡ 최저 ~ 최고", st.max != null ? `${e2(st.min)}~${e2(st.max)}억` : eok(st.med), "tp"]);
     tiles.push(["서울 순위 · 1년", `${st.rank}위${st.chg != null ? ` · ${st.chg > 0 ? "+" : ""}${st.chg}%` : ""}`, "tr"]);
   }
   $("giBody").innerHTML = (tiles.length ? `<div class="gst">${tiles.map(([k, v, c]) => `<div class="${c}"><small>${k}</small><b>${v}</b></div>`).join("")}</div>` : "")
-    + (st ? `<div class="gsrc">84㎡ = 전용 80~90㎡ 매매 · ${ymS(S.from)}~${ymS(S.to)} ${st.n}건의 가운데 값 · 순위는 서울 ${S.total}개 구 중 · 1년 = 1년 전 같은 6개월과 비교</div>` : "")
+    + (st ? `<div class="gsrc">전용 80~90㎡ 매매 ${ymS(S.from)}~${ymS(S.to)} ${st.n}건 · 순위 = 최고가 기준 서울 ${S.total}개 구 중 · 1년 = 가운데 거래가를 1년 전 같은 6개월과 비교</div>` : "")
     + (G && G.head ? `<div class="ghd">${G.head.split(/\s*—\s*/).join("<br>")}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : "");
   const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
   $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span>`;

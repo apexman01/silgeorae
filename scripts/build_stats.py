@@ -1,5 +1,6 @@
 """구별 현황 숫자 -> docs/data/gustats.js
 
+  - 84㎡ 최저~최고: 같은 기간 거래 중 가장 싼 값과 가장 비싼 값 (순위·상승률은 최고가 기준 = 사이트의 '상단')
   - 84㎡ 중간 거래가: 최근 6개월 매매(전용 80~90㎡ 미만, 해제·직거래 제외 = 이미 빠진 자료) 거래가의 중앙값
   - 1년 상승률: 같은 6개월 구간을 1년 전과 비교한 중앙값 변화
   - 서울 순위: 84㎡ 중간 거래가 높은 순
@@ -110,12 +111,16 @@ def main():
         if not cur:
             continue
         med = statistics.median(cur)
-        o = {"med": round(med), "n": len(cur)}
+        ok = [v for v in cur if v >= med * 0.4]   # 지분·특수 거래로 보이는 너무 싼 값(중간값의 40% 미만)은 최저가에서 뺌
+        o = {"med": round(med), "n": len(cur), "max": max(cur), "min": min(ok)}
         if len(pre) >= 5:
             pm = statistics.median(pre)
             o["prev"] = round(pm); o["chg"] = round((med / pm - 1) * 100, 1)
+            o["prevMax"] = max(pre); o["chgMax"] = round((max(cur) / max(pre) - 1) * 100, 1)
         stats[gu] = o
     for i, gu in enumerate(sorted(stats, key=lambda g: -stats[g]["med"]), 1):
+        stats[gu]["rankMed"] = i
+    for i, gu in enumerate(sorted(stats, key=lambda g: -stats[g]["max"]), 1):
         stats[gu]["rank"] = i
 
     old = prev_out()
