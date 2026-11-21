@@ -94,7 +94,14 @@
   .gi .gst div.tr{background:#fdeeef;border-color:#c4505f;color:#9b2c3a}
   .gi .gst small{display:block;font-size:11px;white-space:nowrap;letter-spacing:-.3px;opacity:.85}
   .gi .gst b{font-size:17px;white-space:nowrap}
-  .gi .gsrc{font-size:11px;color:var(--mute);margin:5px 1px 0;line-height:1.4}
+  .gi .gsrc{font-size:12.5px;margin:6px 1px 0;line-height:1.5}
+  .gi .gsrc summary{display:inline-block;cursor:pointer;color:#1f56b3;list-style:none}
+  .gi .gsrc summary::-webkit-details-marker{display:none}
+  .gi .gsrc[open] summary{color:var(--mute)}
+  .gi .gsrc > div{margin-top:6px;padding:8px 11px;background:#f6f7f9;border-radius:8px;color:var(--sub);font-size:12.5px}
+  .gi .gsrc p{margin:2px 0}
+  .gi .gsrc p b{color:var(--ink);font-weight:600;margin-right:6px}
+  .gi .gst small{text-align:center}
   .gi .ghd{margin:10px 0 0;background:#f5f6f8;border:1px solid #dfe3e8;border-radius:10px;padding:10px 12px;font-size:14.5px;font-weight:600;line-height:1.5}
   .gi .ghd span{display:block;color:var(--sub);font-size:12.5px;font-weight:400;margin-top:4px}
   .gi .gzl{margin:14px 0 6px;font-size:12px;color:var(--sub);font-weight:600}
@@ -412,6 +419,7 @@ function initZone(keep) {
   $("selZone").onchange = e => { state.zone = +e.target.value; onZoneChange(); };
   onZoneChange();
 }
+function shiftYm(ym, k) { let y = +String(ym).slice(0, 4), m = +String(ym).slice(4, 6) + k; while (m <= 0) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}${String(m).padStart(2, "0")}`; }
 function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선택 + 구 현황(강의자료) + 생활권 탭
   const G = (window.GUINFO || {})[state.gu];
   $("giRegion").textContent = (G && G.region) || "";
@@ -426,7 +434,10 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
   if (pp) tiles.push([`인구 (${ymS(pp[1])})`, `${(pp[0] / 10000).toFixed(1)}만`, "t4"]);
   else if (G && G.stats && G.stats[0]) tiles.push([G.stats[0][0], G.stats[0][1].replace(/\s*명$/, ""), "t4"]);
   $("giBody").innerHTML = (tiles.length ? `<div class="gst">${tiles.map(([k, v, c]) => `<div class="${c}"><small>${k}</small><b>${v}</b></div>`).join("")}</div>` : "")
-    + (st ? `<div class="gsrc">${ymS(S.from)}~${ymS(S.to)} 84㎡ 매매 ${st.n}건 · 상승률은 가운데 값 기준</div>` : "")
+    + (st ? `<details class="gsrc"><summary>ⓘ 숫자 기준</summary><div>
+        <p><b>서울 순위</b> 84㎡ 최고가가 높은 순서 · 서울 ${S.total}개 구 중</p>
+        <p><b>84㎡ 최고가</b> 최근 6개월(${ymS(S.from)}~${ymS(S.to)}) 전용 80~90㎡ 매매 ${st.n}건 중 가장 비싼 거래</p>
+        <p><b>1년 상승률</b> 중위가격(거래를 가격 순으로 세운 한가운데 값)을 1년 전 같은 6개월(${ymS(shiftYm(S.from,-12))}~${ymS(shiftYm(S.to,-12))})과 비교</p></div></details>` : "")
     + (G && G.head ? `<div class="ghd">${G.head.split(/\s*—\s*/).join("<br>")}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : "");
   const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
   $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span>`;
