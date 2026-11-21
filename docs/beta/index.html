@@ -58,6 +58,16 @@
   .legend i::after{content:"";position:absolute;left:7px;top:-3px;width:9px;height:9px;border-radius:50%;background:inherit}
   svg{width:100%;height:auto;display:block}
   .foot{color:var(--mute);font-size:12px;line-height:1.55;margin-top:6px}
+  .chwrap{position:relative}
+  .chwrap svg{touch-action:pan-y}
+  .chtip{display:none;position:absolute;z-index:3;min-width:150px;max-width:62%;background:rgba(255,255,255,.96);border:1px solid #d5d9de;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.12);padding:7px 10px;font-size:12.5px;pointer-events:none}
+  .chtip .tm{font-weight:700;margin-bottom:3px}
+  .chtip .tr{display:flex;align-items:center;gap:6px;margin-top:3px}
+  .chtip .tr i{width:9px;height:9px;border-radius:50%;flex:none}
+  .chtip .tl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chtip .tr b{white-space:nowrap}
+  .chtip .ts{font-size:11px;color:var(--mute);margin-left:15px}
+  .chtip .ts:empty{display:none}
   .cfoot{margin-top:6px;font-size:12.5px;color:var(--sub);line-height:1.5}
   .cfoot details{display:inline}
   .cfoot summary{display:inline;cursor:pointer;color:#2a6fdb;list-style:none;margin-left:6px;white-space:nowrap}
@@ -686,8 +696,42 @@ function chartSvg(shown, vals, months, card, title, opts) {
     if (Math.abs(endLabels[i].x - endLabels[i - 1].x) < 50 && endLabels[i].y - endLabels[i - 1].y < 18) endLabels[i].y = endLabels[i - 1].y + 18;
   endLabels.forEach(l => { g += `<text x="${l.x}" y="${l.y}" font-size="16" fill="${l.c}">${l.t}</text>`; });
 
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} 그래프">${g}</svg>`;
+  const cid = ++CH_SEQ;
+  CHARTS[cid] = { W, H, T, B, months, x, y, ser: shown.map(s => ({ label: s.label, color: s.color, pts: s.pts })) };
+  g += `<g class="hov" style="display:none;pointer-events:none"><line y1="${T - 10}" y2="${H - B}" stroke="#8a9099" stroke-width="1.5" stroke-dasharray="4 4"/></g>`;
+  return `<div class="chwrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} 그래프" data-ch="${cid}">${g}</svg><div class="chtip"></div></div>`;
 }
+// 그래프 위에서 마우스/손가락을 따라다니는 세로선 + 그 달 가격 상자
+const CHARTS = {}; let CH_SEQ = 0;
+function chHover(svg, clientX) {
+  const C = CHARTS[svg.dataset.ch]; if (!C) return;
+  const rc = svg.getBoundingClientRect(), sx = (clientX - rc.left) / rc.width * C.W;
+  let bi = -1, bd = 1e9;
+  C.months.forEach((m, i) => { if (!C.ser.some(s => s.pts[i])) return; const d = Math.abs(C.x(i) - sx); if (d < bd) { bd = d; bi = i; } });
+  if (bi < 0) return chHide(svg);
+  const hov = svg.querySelector(".hov"), X = C.x(bi);
+  hov.style.display = "";
+  hov.querySelector("line").setAttribute("x1", X); hov.querySelector("line").setAttribute("x2", X);
+  hov.querySelectorAll("circle").forEach(c => c.remove());
+  const rows = C.ser.map(s => ({ s, p: s.pts[bi] })).filter(o => o.p).sort((a, b) => b.p.v - a.p.v);
+  rows.forEach(o => { const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", X); c.setAttribute("cy", C.y(o.p.v)); c.setAttribute("r", 8); c.setAttribute("fill", "none"); c.setAttribute("stroke", o.s.color); c.setAttribute("stroke-width", 3); hov.appendChild(c); });
+  const m = String(C.months[bi]);
+  const tip = svg.parentNode.querySelector(".chtip");
+  tip.innerHTML = `<div class="tm">${m.slice(0, 4)}년 ${+m.slice(4)}월</div>` + rows.map(o => `<div class="tr"><i style="background:${o.s.color}"></i><span class="tl">${o.s.label}</span><b>${fmtV(o.p.v)}억</b></div><div class="ts">${[o.p.who && o.p.who !== o.s.label ? o.p.who : "", o.p.floor ? o.p.floor + "층" : "", o.p.n ? o.p.n + "건" : "", o.p.pre || ""].filter(Boolean).join(" · ")}</div>`).join("");
+  tip.style.display = "block";
+  const px = X / C.W * rc.width, tw = tip.offsetWidth;
+  tip.style.left = (px > rc.width / 2 ? Math.max(0, px - tw - 12) : Math.min(rc.width - tw, px + 12)) + "px";
+  tip.style.top = "4px";
+}
+function chHide(svg) { const h = svg.querySelector(".hov"); if (h) h.style.display = "none"; const t = svg.parentNode.querySelector(".chtip"); if (t) t.style.display = "none"; }
+document.addEventListener("pointermove", e => { const svg = e.target.closest && e.target.closest("svg[data-ch]"); if (svg) chHover(svg, e.clientX); });
+document.addEventListener("pointerdown", e => {
+  const svg = e.target.closest && e.target.closest("svg[data-ch]");
+  document.querySelectorAll("svg[data-ch]").forEach(o => { if (o !== svg) chHide(o); });
+  if (svg) chHover(svg, e.clientX);
+});
+document.addEventListener("pointerout", e => { if (e.pointerType === "mouse" && e.target.closest && e.target.closest("svg[data-ch]") && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("svg[data-ch]"))) chHide(e.target.closest("svg[data-ch]")); });
 function bindLegend() {
   $("chartCard").querySelectorAll(".legend button").forEach(b => b.onclick = () => {
     const n = b.dataset.n;
