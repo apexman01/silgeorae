@@ -133,7 +133,7 @@
     <div class="ctl v-only"><label>보기</label>
       <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">거래량 TOP5</button></div></div>
     <div class="ctl"><label>거래</label>
-      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><span id="preWrap"><label class="chk"><input type="checkbox" id="chkBun" checked>분양권</label><label class="chk"><input type="checkbox" id="chkIp">입주권</label></span><span class="hint" style="display:block;margin-top:4px">분양권 = 분양가+프리미엄이라 매매와 비교 가능(빈 동그라미) · 입주권 = 추가분담금이 빠진 금액이라 실제 총매매가보다 낮게 보여 기본은 빼둠(빈 네모, 총매매가 = 초투+승계 이주비+분담금, 1주 97p)</span></div></div>
+      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><span id="preWrap"><label class="chk"><input type="checkbox" id="chkBun" checked>분양권</label><label class="chk"><input type="checkbox" id="chkIp" checked>입주권</label></span><span class="hint" style="display:block;margin-top:4px">분양권 = 분양가+프리미엄이라 매매와 비교 가능(빈 동그라미) · 입주권 = 조합원 매도가(빈 네모). 입주 임박 단지는 매매·분양권과 비슷하게 거래(서울 67개 단지·평형 비교 중앙값 +3%). 착공 전후 초기 입주권은 앞으로 낼 분담금이 빠진 금액이라 낮게 보일 수 있음(총매매가 = 초투+승계 이주비+분담금, 1주 97p)</span></div></div>
     <div class="ctl"><label>전용면적</label>
       <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
     <div class="ctl"><label>지표</label>
@@ -197,7 +197,7 @@ const LOW_FLOOR = 3;        // 이 층 이하면 '저층'
 const MAX_PICK = 6;
 const CUSTOM_KEY = "lifezone-custom-v1";
 
-const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, bun: true, ip: false, outl: "mark", picked: [], hidden: new Set(), view: "zone", customPeriod: false };
+const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, bun: true, ip: true, outl: "mark", picked: [], hidden: new Set(), view: "zone", customPeriod: false };
 const INDEX = window.DATA_INDEX || { regions: {}, months: [] };
 let DATA = null, PRESALE = [], CX = [];
 /* 분양권·입주권 각각 켜고 끄기 + 튀는 거래 빼기 */
