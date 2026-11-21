@@ -136,10 +136,12 @@ def main():
             def one(code):
                 try:
                     items, _ = get_items(basic_api, {"serviceKey": key, "kaptCode": code, "_type": "json"})
-                    if not items or not items[0].get("kaptdaCnt"):
-                        return code, ("빈 응답", items[:1])
-                    it = items[0]
-                    return code, {"cnt": int(float(it.get("kaptdaCnt") or it.get("hoCnt") or 0)),
+                    it = items[0] if items else {}
+                    num = lambda k: int(float(it.get(k) or 0))
+                    cnt = num("kaptdaCnt") or num("hoCnt") or sum(num(k) for k in ("kaptMparea60", "kaptMparea85", "kaptMparea135", "kaptMparea136"))
+                    if not cnt:
+                        return code, ("세대수 없음", sorted(it.keys()))
+                    return code, {"cnt": cnt,
                                   "use": str(it.get("kaptUsedate") or "")[:4], "name": it.get("kaptName", "")}
                 except Exception as e:
                     return code, (str(e)[:200], None)
@@ -147,7 +149,8 @@ def main():
             with ThreadPoolExecutor(6) as ex:
                 for n, (code, v) in enumerate(ex.map(one, todo), 1):
                     if isinstance(v, tuple):
-                        fails += 1; streak += 1
+                        fails += 1
+                        if v[0] != "세대수 없음": streak += 1
                         if shown < 3:
                             print(f"  실패 {code}: {v[0]} {v[1] or ''}"); shown += 1
                         if streak >= 40:
