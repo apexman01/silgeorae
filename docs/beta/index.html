@@ -25,6 +25,18 @@
   .seg button{font:inherit;font-size:14px;border:0;background:#fff;padding:8px 13px;cursor:pointer;color:var(--sub)}
   .seg button+button{border-left:1px solid #d5d9de}
   .seg button.on{background:var(--ink);color:#fff}
+  .jb{border-top:1px solid var(--line);padding:12px 0 10px}
+  .jb:first-of-type{border-top:0}
+  .jb .t{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+  .jb .t b{font-size:16px}
+  .jb .hh{color:var(--sub,#6b717a);font-size:13px}
+  .jb .bar{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:8px 0 3px}
+  .jb .bar i{height:8px;border-radius:3px;background:#e6e8ec}
+  .jb .bar i.on{background:#2a6fdb}
+  .jb .bar i.now{background:#e8663a}
+  .jb .lb{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;color:#8a9099;text-align:center}
+  .jb .lb span.now{color:#e8663a;font-weight:700}
+  .jb .cur{font-size:13px;margin-top:4px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 12px;margin-bottom:14px}
   .card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.3px}
   .card .unit{color:var(--sub);font-size:14px;margin:2px 0 6px}
@@ -165,6 +177,8 @@
 
   <div class="card" id="chartCard"></div>
 
+  <div class="card vt-only" id="jbCard" style="display:none"></div>
+
   <div class="card">
     <h3 id="sumTitle">단지별 요약</h3>
     <div class="scroll"><table id="summary"></table></div>
@@ -181,7 +195,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script>');
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -451,6 +465,47 @@ function render() {
   card.innerHTML = html;
   bindLegend();
   renderTables(series);
+  renderJb(isTop ? null : z);
+}
+
+/* ---------- 정비사업 카드 (서울시 정비사업 추진현황) ---------- */
+const JB = window.JB || { rows: {}, stages: [] };
+const JB_SHORT = { "구역지정": "지정", "추진위": "추진위", "조합설립": "조합", "건축심의": "심의", "사업시행": "사시", "관리처분": "관처", "착공": "착공" };
+function jbMatch(z, name) { return (z.jb || []).some(k => k.endsWith("-") ? name.startsWith(k) : name === k); }
+function jbAssign(gu) {   // 구역 → 생활권 번호 (자동: 대표 단지가 있는 동 / 애매하면 lifezones.js의 jb·jbDongs)
+  const zones = baseZones(gu);
+  const autoDongs = zones.map(z => { const ds = new Set(); z.complexes.forEach(n => matchIdxs(CX, n).forEach(i => ds.add(CX[i].dong))); return ds; });
+  const res = zones.map(() => []), none = [];
+  (JB.rows[gu] || []).filter(r => r.new > 0).forEach(r => {
+    let zi = zones.findIndex(z => jbMatch(z, r.name));
+    if (zi < 0) zi = zones.findIndex(z => (z.jbDongs || []).includes(r.dong));
+    if (zi < 0) { const hit = autoDongs.map((ds, i) => ds.has(r.dong) ? i : -1).filter(i => i >= 0); if (hit.length === 1) zi = hit[0]; }
+    (zi < 0 ? none : res[zi]).push(r);
+  });
+  const st = r => JB.stages.indexOf(r.stage);
+  res.forEach(a => a.sort((a, b) => st(b) - st(a) || b.new - a.new));
+  return { res, none };
+}
+function renderJb(z) {
+  const card = $("jbCard");
+  if (!z || z.kind !== "base" || !JB.rows[state.gu]) { card.style.display = "none"; return; }
+  const zi = baseZones(state.gu).findIndex(b => b.name === z.name);
+  const { res, none } = jbAssign(state.gu);
+  const list = res[zi] || [];
+  const ym = d => d ? d.slice(2, 7) : "";
+  const kind = r => r.type.includes("재건축") ? "재건축" : r.type.includes("도시정비형") ? "도시정비형 재개발" : "재개발";
+  let html = `<h3>정비사업 (재개발·재건축)</h3>`;
+  html += list.length ? list.map(r => {
+    const k = JB.stages.indexOf(r.stage);
+    const iju = r.dates["이주시작"] && k >= 5 ? ` · 이주 ${ym(r.dates["이주시작"])}~${r.dates["이주종료"] ? ym(r.dates["이주종료"]) : ""}` : "";
+    return `<div class="jb"><div class="t"><b>${r.name}</b><span class="tag">${kind(r)}</span>${r.jc ? `<span class="tag">재정비촉진</span>` : ""}<span class="hh">${r.new.toLocaleString()}세대${r.old ? ` (기존 ${r.old.toLocaleString()})` : ""}</span></div>
+      <div class="bar">${JB.stages.map((s, i) => `<i class="${i < k ? "on" : i === k ? "now" : ""}"></i>`).join("")}</div>
+      <div class="lb">${JB.stages.map((s, i) => `<span class="${i === k ? "now" : ""}">${JB_SHORT[s] || s}</span>`).join("")}</div>
+      <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
+  }).join("") : `<div class="empty">이 생활권에 연결된 진행 중 구역이 없어요.</div>`;
+  html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만(준공·입주 단지는 빠짐) · 날짜 = 그 단계에 처음 들어간 날 · 공급 0세대(업무·상업 위주) 구역 제외<br>
+    생활권 연결 = 대표 단지가 있는 동 기준 자동${none.length ? ` · 이 구에서 생활권에 못 붙인 구역: ${none.map(r => r.name).join(", ")}` : ""}</div>`;
+  card.innerHTML = html; card.style.display = "";
 }
 function chartSvg(shown, vals, months, card, title, opts) {
   const narrow = card.clientWidth < 620;

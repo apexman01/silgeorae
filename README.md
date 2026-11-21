@@ -27,6 +27,12 @@
 - 저장소 브랜치 `v1` = 2026-11-21 버전 1 상태(코드+자료) 저장본. 이 브랜치에는 커밋하지 않음. 문제가 생기면 여기로 되돌리거나 여기서 다시 시작.
 - 약속: `docs/data/` 자료 형식(complexes·sale·jeonse·presale 칸 순서)은 바꾸지 않음. 새 기능에 필요한 자료는 새 파일로 추가 → v1이 깨지지 않음.
 
+## 정비사업 카드 (시험판)
+
+- 자료: 서울 열린데이터광장 「서울특별시 도시정비사업 통계」(OA-22856) 엑셀, 분기마다 갱신
+- 새 엑셀이 나오면 `data/jb/`에 `YYYY-MM 서울시 정비사업 추진현황.xlsx` 이름으로 넣기 → 자동 갱신 때 `scripts/build_jb.py`가 `docs/data/jb.js`를 다시 만듦
+- 생활권 연결: 구역 지번의 동 = 대표 단지가 있는 동이면 자동. 애매하면 `docs/lifezones.js`의 `jb`(구역명)·`jbDongs`(동)로 지정
+
 ## 처음 한 번 설정
 
 1. **인증키 넣기**: 저장소 Settings > Secrets and variables > Actions > New repository secret
