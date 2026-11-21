@@ -133,7 +133,7 @@
     <div class="ctl v-only"><label>보기</label>
       <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">거래량 TOP5</button></div></div>
     <div class="ctl"><label>거래</label>
-      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><span id="preWrap"><label class="chk"><input type="checkbox" id="chkBun" checked>분양권</label><label class="chk"><input type="checkbox" id="chkIp" checked>입주권</label></span><span class="hint" style="display:block;margin-top:4px">분양권 = 분양가+프리미엄이라 매매와 비교 가능(빈 동그라미) · 입주권 = 조합원 매도가(빈 네모). 입주 임박 단지는 매매·분양권과 비슷하게 거래(서울 67개 단지·평형 비교 중앙값 +3%). 착공 전후 초기 입주권은 앞으로 낼 분담금이 빠진 금액이라 낮게 보일 수 있음(총매매가 = 초투+승계 이주비+분담금, 1주 97p)</span></div></div>
+      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><span id="preWrap"></span></div></div>
     <div class="ctl"><label>전용면적</label>
       <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
     <div class="ctl"><label>지표</label>
@@ -371,7 +371,7 @@ function bindSeg(id, key) {
   });
 }
 bindSeg("segType", "type"); bindSeg("segView", "view");
-$("chkBun").onchange = e => { state.bun = e.target.checked; render(); }; $("chkIp").onchange = e => { state.ip = e.target.checked; render(); }; bindSeg("segOutl", "outl"); bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
+bindSeg("segOutl", "outl"); bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
 
 /* ---------- 집계 ---------- */
 /* 거래량 TOP5: 고른 구·기간·거래 종류에서 거래가 가장 많은 '단지+전용면적' 5개 */
@@ -481,7 +481,7 @@ function render() {
 
   const months = visMonths();
   html += chartSvg(shown, vals, months, card, title, { notes: state.metric === "max" });
-  html += `<div class="foot">${state.type === "sale" && (state.bun || state.ip) && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권 · 빈 네모 = 입주권 · " : ""}${state.type === "sale" ? (state.outl === "drop" ? "튀는 거래는 빼고 계산 · " : "주황 ⚠ = 그 달 최고가가 튀는 거래 · ") : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
+  html += `<div class="foot">${state.type === "sale" && (state.bun || state.ip) && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권 · 빈 네모 = 입주권(조합원 거래, 착공 전후 초기 입주권은 앞으로 낼 분담금 별도) · " : ""}${state.type === "sale" ? (state.outl === "drop" ? "튀는 거래는 빼고 계산 · " : "주황 ⚠ = 그 달 최고가가 튀는 거래 · ") : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
     국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"}${isTop ? " · TOP5 = 기간 안 거래 건수가 많은 단지+전용면적(소수점 버림) 순" : state.area === "rep" ? " · 대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : ` · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}`}</div>`;
   card.innerHTML = html;
   bindLegend();
