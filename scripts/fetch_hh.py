@@ -19,11 +19,14 @@ OUT = os.path.join(ROOT, "docs", "data", "hh.js")
 
 LIST_APIS = [
     "https://apis.data.go.kr/1613000/AptListService3/getSigunguAptList3",
+    "https://apis.data.go.kr/1613000/AptListService4/getSigunguAptList4",
+    "https://apis.data.go.kr/1613000/AptListService3/getSigunguAptList",
     "https://apis.data.go.kr/1613000/AptListService2/getSigunguAptList",
     "https://apis.data.go.kr/1611000/AptListService/getSigunguAptList",
 ]
 BASIC_APIS = [
     "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4",
+    "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusDtlInfoV5",
     "https://apis.data.go.kr/1613000/AptBasisInfoServiceV5/getAphusBassInfoV5",
     "https://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusBassInfoV3",
     "https://apis.data.go.kr/1613000/AptBasisInfoService1/getAphusBassInfo",
@@ -41,9 +44,10 @@ def get_items(url, params):
                 body = r.read()
             break
         except urllib.error.HTTPError as e:
-            if e.code in (401, 403, 404, 500):
-                raise RuntimeError(f"HTTP {e.code}")
-            last = e
+            msg = ""
+            try: msg = e.read().decode("utf-8", "replace")[:300].replace("\n", " ")
+            except Exception: pass
+            raise RuntimeError(f"HTTP {e.code} {msg}")
         except Exception as e:   # 일시 오류는 다시
             last = e
         time.sleep(1.5 * (attempt + 1))
@@ -75,12 +79,14 @@ def get_items(url, params):
 
 def pick_api(cands, params, label):
     for u in cands:
-        try:
-            items, _ = get_items(u, params)
-            print(f"[{label}] 사용: {u} ({len(items)}건)")
-            return u
-        except Exception as e:
-            print(f"[{label}] 안 됨: {u} -> {e}")
+        for drop in (False, True):
+            p = {k: v for k, v in params.items() if not (drop and k == "_type")}
+            try:
+                items, _ = get_items(u, p)
+                print(f"[{label}] 사용: {u} ({len(items)}건){' (_type 없이)' if drop else ''}")
+                return u
+            except Exception as e:
+                print(f"[{label}] 안 됨: {u}{' (_type 없이)' if drop else ''} -> {e}")
     return None
 
 
