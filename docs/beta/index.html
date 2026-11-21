@@ -728,7 +728,12 @@ async function capCard(id, btn) {
   const old = btn.textContent; btn.textContent = "저장 중…"; btn.disabled = true;
   try {
     const h2c = await loadH2C();
-    const cv = await h2c(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+    const cv = await h2c(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true,
+      onclone: doc => {   // 접힌 'ⓘ 설명' 내용이 사진에 겹쳐 찍히지 않게 지움
+        doc.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
+        doc.querySelectorAll(".chtip").forEach(t => t.remove());
+        doc.querySelectorAll(".hov").forEach(h => h.remove());
+      } });
     const blob = await new Promise(r => cv.toBlob(r, "image/png"));
     const z = zonesFor(state.sido, state.gu)[state.zone];
     const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : "현황";
