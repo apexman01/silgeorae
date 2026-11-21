@@ -99,8 +99,6 @@
   .tag.pre{background:#fff1e8;color:#c2551f;font-weight:600}
   .legend .tag{font-size:11px;padding:0 5px}
   .pre-txt{color:#c2551f;font-weight:700}
-  .tag.warn{background:#fff4d6;color:#9a6200;font-weight:600}
-  .warn-txt{color:#9a6200!important;font-weight:600}
   .picker.show{display:block}
   .picker .list{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-top:8px;columns:2 260px;column-gap:18px}
   .picker label{display:block;font-size:13.5px;padding:3px 0;break-inside:avoid;cursor:pointer}
@@ -138,9 +136,6 @@
       <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
     <div class="ctl"><label>지표</label>
       <div class="seg" id="segMetric"><button data-v="max" class="on">월 최고가</button><button data-v="avg">월 평균가</button></div></div>
-    <div class="ctl"><label>튀는 거래</label>
-      <div class="seg" id="segOutl"><button data-v="mark" class="on">표시만</button><button data-v="drop">빼고 보기</button></div>
-      <span class="hint">같은 단지·같은 평형 앞뒤 6개월 중앙값보다 30% 넘게 높거나 낮은 거래(비교 거래 4건 이상일 때)</span></div>
 
     <div class="ctl period" id="periodCtl">
       <div class="head">
@@ -197,39 +192,10 @@ const LOW_FLOOR = 3;        // 이 층 이하면 '저층'
 const MAX_PICK = 6;
 const CUSTOM_KEY = "lifezone-custom-v1";
 
-const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, bun: true, ip: true, outl: "mark", picked: [], hidden: new Set(), view: "zone", customPeriod: false };
+const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [], hidden: new Set(), view: "zone", customPeriod: false };
 const INDEX = window.DATA_INDEX || { regions: {}, months: [] };
 let DATA = null, PRESALE = [], CX = [];
-/* 분양권·입주권 각각 켜고 끄기 + 튀는 거래 빼기 */
-function preOn(r) { return r[6] === "입주권" ? state.ip : state.bun; }
-function keepRow(r) { return state.outl !== "drop" || !OUT.has(r); }
-function saleSrc(sale, pre) { return sale.concat(pre.filter(preOn)).filter(keepRow); }
-function srcRows() { return state.type === "sale" ? saleSrc(DATA.sale, PRESALE) : DATA.jeonse; }
-function preLabel() { return ["매매", state.bun && "분양권", state.ip && "입주권"].filter(Boolean).join("+"); }
-
-/* 튀는 거래: 같은 단지·같은 전용(정수)·같은 거래 종류에서 앞뒤 6개월 다른 거래의 중앙값 대비 ±30% 초과 (비교 거래 4건 이상) */
-const OUT = new WeakMap(), OUT_DONE = new WeakSet();
-const OUT_HI = 1.3, OUT_LO = 0.7, OUT_WIN = 6, OUT_MIN = 4;
-function markOutliers(rows) {
-  if (!rows || OUT_DONE.has(rows)) return; OUT_DONE.add(rows);
-  const g = {};
-  rows.forEach(r => { const k = r[0] + "|" + Math.floor(r[1]) + "|" + (r[6] || ""); (g[k] = g[k] || []).push(r); });
-  const mi = ym => Math.floor(ym / 100) * 12 + (ym % 100);
-  Object.values(g).forEach(arr => {
-    if (arr.length <= OUT_MIN) return;
-    arr.forEach(r => {
-      const m = mi(r[2]);
-      const ps = arr.filter(o => o !== r && Math.abs(mi(o[2]) - m) <= OUT_WIN).map(o => o[4]);
-      if (ps.length < OUT_MIN) return;
-      ps.sort((a, b) => a - b);
-      const med = ps.length % 2 ? ps[(ps.length - 1) / 2] : (ps[ps.length / 2 - 1] + ps[ps.length / 2]) / 2;
-      const ratio = r[4] / med;
-      if (ratio > OUT_HI || ratio < OUT_LO) OUT.set(r, { med, pct: (ratio - 1) * 100 });
-    });
-  });
-}
-const outTxt = r => { const o = OUT.get(r); return o ? `⚠ 튀는 거래 ${o.pct > 0 ? "+" : ""}${o.pct.toFixed(0)}% (중앙값 ${eok(o.med)})` : ""; };
-const outSmall = r => OUT.has(r) ? `<small class="warn-txt">${outTxt(r)}</small>` : "";
+function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
 const $ = id => document.getElementById(id);
 const norm = s => String(s).replace(/\s+/g, "").toLowerCase();
 
@@ -242,7 +208,6 @@ function loadGu(sido, gu, done) {
     DATA = window.DATA_GU[gu];
     CX = DATA.complexes.map((c, i) => ({ i, name: c[0], sido: c[1], gu: c[2], dong: c[3], built: c[4] }));
     PRESALE = (DATA.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]);
-    markOutliers(DATA.sale); markOutliers(PRESALE);
     try { localStorage.setItem(GU_KEY, gu); } catch (e) {}
     done();
   };
@@ -371,7 +336,7 @@ function bindSeg(id, key) {
   });
 }
 bindSeg("segType", "type"); bindSeg("segView", "view");
-bindSeg("segOutl", "outl"); bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
+bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
 
 /* ---------- 집계 ---------- */
 /* 거래량 TOP5: 고른 구·기간·거래 종류에서 거래가 가장 많은 '단지+전용면적' 5개 */
@@ -431,7 +396,7 @@ function seriesFor(idxs, rep) {
     const top = rs.reduce((a, b) => (b[4] > a[4] ? b : a));
     const avg = rs.reduce((s, r) => s + r[4], 0) / rs.length;
     const v = state.metric === "max" ? top[4] : avg;
-    return { m, v: v / 10000, n: rs.length, floor: top[5], pre: typeof top[6] === "string" ? top[6] : null, out: state.metric === "max" ? OUT.get(top) : null };
+    return { m, v: v / 10000, n: rs.length, floor: top[5], pre: typeof top[6] === "string" ? top[6] : null };
   });
   return { pts, rows };
 }
@@ -470,9 +435,9 @@ function render() {
   const shown = series.filter(s => !state.hidden.has(s.name));
   const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
-  const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? preLabel() : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
+  const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
   let html = `<h2>${title}</h2>${sub ? `<div class="hint" style="margin:2px 0 4px">${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
-  html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0]) && !preOn(r)) ? ` <span class="tag pre">${preKind(PRESALE.filter(r => s.idxs.has(r[0])))}만 있음 · 위에서 체크하면 보여요</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
+  html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
   if (!vals.length) {
     html += `<div class="empty">${!list.length ? "위에서 단지를 골라주세요." : !shown.length ? "모든 단지를 숨겼어요. 위 단지 버튼을 눌러 다시 켜세요." : "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요."}</div>`;
@@ -481,7 +446,7 @@ function render() {
 
   const months = visMonths();
   html += chartSvg(shown, vals, months, card, title, { notes: state.metric === "max" });
-  html += `<div class="foot">${state.type === "sale" && (state.bun || state.ip) && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권 · 빈 네모 = 입주권(조합원 거래, 착공 전후 초기 입주권은 앞으로 낼 분담금 별도) · " : ""}${state.type === "sale" ? (state.outl === "drop" ? "튀는 거래는 빼고 계산 · " : "주황 ⚠ = 그 달 최고가가 튀는 거래 · ") : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
+  html += `<div class="foot">${state.type === "sale" && state.presale && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권 · 빈 네모 = 입주권(조합원 거래, 착공 전후 초기 입주권은 앞으로 낼 분담금 별도) · " : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
     국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"}${isTop ? " · TOP5 = 기간 안 거래 건수가 많은 단지+전용면적(소수점 버림) 순" : state.area === "rep" ? " · 대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : ` · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}`}</div>`;
   card.innerHTML = html;
   bindLegend();
@@ -524,17 +489,13 @@ function chartSvg(shown, vals, months, card, title, opts) {
       const p = s.pts[i], cx = x(i), cy = y(p.v);
       if (i === best) {
         g += star(cx, cy, 10, s.color);
-        g += `<text x="${cx}" y="${cy - 18}" text-anchor="middle" font-size="15" font-weight="700" fill="${p.out ? "#9a6200" : "#222"}">최고 ${fmtV(p.v)}${p.out ? " ⚠" : ""}</text>`;
+        g += `<text x="${cx}" y="${cy - 18}" text-anchor="middle" font-size="15" font-weight="700" fill="#222">최고 ${fmtV(p.v)}</text>`;
       } else {
         g += p.pre === "입주권"
-          ? `<rect x="${cx - 5.5}" y="${cy - 5.5}" width="11" height="11" fill="#fff" stroke="${s.color}" stroke-width="2.6"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 입주권(분담금 별도) ${p.floor}층</title></rect>`
+          ? `<rect x="${cx - 5.5}" y="${cy - 5.5}" width="11" height="11" fill="#fff" stroke="${s.color}" stroke-width="2.6"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 입주권 ${p.floor}층</title></rect>`
           : p.pre
           ? `<circle cx="${cx}" cy="${cy}" r="5.5" fill="#fff" stroke="${s.color}" stroke-width="2.6"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 ${p.pre} ${p.floor}층</title></circle>`
           : `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${s.color}" stroke="#fff" stroke-width="2"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 ${p.floor}층</title></circle>`;
-      }
-      if (p.out) {
-        g += `<circle cx="${cx}" cy="${cy}" r="10" fill="none" stroke="#e09a00" stroke-width="2"/>`;
-        if (i !== best) g += `<text x="${cx}" y="${cy - 15}" text-anchor="middle" font-size="13" font-weight="700" fill="#9a6200">⚠${p.out.pct > 0 ? "+" : ""}${p.out.pct.toFixed(0)}%</text>`;
       }
       // 회색 주석: 직전보다 떨어졌는데 1건뿐이거나 저층이면 '약한 하락'
       const prev = k > 0 ? s.pts[idx[k - 1]] : null;
@@ -597,7 +558,7 @@ function renderTables(series) {
   let s = `<colgroup><col style="width:22%">${"<col>".repeat(6)}</colgroup>
     <tr><th>단지</th><th>최근 거래</th><th>기간 최고</th><th>최고 대비</th><th>${typeLabel} 건수</th><th>세대수</th><th>준공</th></tr>`;
   const best4 = se => se.rows.length ? Math.max(...se.rows.map(r => r[4])) : -1;
-  const cell = (r) => `<b>${eok(r[4])}</b>${typeof r[6] === "string" ? `<small class="pre-txt">${r[6]}</small>` : ""}<small>${fmtYM(r[2])}.${r[3]} ${r[5]}층</small>${outSmall(r)}`;
+  const cell = (r) => `<b>${eok(r[4])}</b>${typeof r[6] === "string" ? `<small class="pre-txt">${r[6]}</small>` : ""}<small>${fmtYM(r[2])}.${r[3]} ${r[5]}층</small>`;
   [...series].sort((a, b) => best4(b) - best4(a)).forEach(se => {
     const rows = se.rows, off = state.hidden.has(se.name) ? ' class="off"' : "";
     const name = `<td><span class="dot" style="background:${se.color}"></span>${se.label}</td>`;
@@ -617,7 +578,7 @@ function renderTables(series) {
   let t = `<tr><th>계약일</th><th>단지</th><th>전용</th><th>층</th><th>${typeLabel}가</th><th>구분</th></tr>`;
   all.forEach(({ r, se }) => {
     t += `<tr><td>${fmtYM(r[2])}.${r[3]}</td><td style="text-align:left"><span class="dot" style="background:${se.color}"></span>${se.label}</td>
-      <td>${r[1]}㎡</td><td>${r[5]}층</td><td>${eok(r[4])}</td><td>${state.type === "jeonse" ? (r[6] ? "갱신" : "신규") : (typeof r[6] === "string" ? `<span class="tag pre">${r[6]}</span>` : `<span class="tag">매매</span>`)}${OUT.has(r) ? ` <span class="tag warn" title="${outTxt(r)}">⚠튐</span>` : ""}</td></tr>`;
+      <td>${r[1]}㎡</td><td>${r[5]}층</td><td>${eok(r[4])}</td><td>${state.type === "jeonse" ? (r[6] ? "갱신" : "신규") : (typeof r[6] === "string" ? `<span class="tag pre">${r[6]}</span>` : `<span class="tag">매매</span>`)}</td></tr>`;
   });
   $("recent").innerHTML = all.length ? t : `<tr><td class="hint">거래 없음</td></tr>`;
 }
@@ -684,10 +645,8 @@ const GU_PREP = {};
 function prep(gu) {
   if (GU_PREP[gu]) return GU_PREP[gu];
   const d = (window.DATA_GU || {})[gu]; if (!d) return null;
-  GU_PREP[gu] = { d, cx: d.complexes.map((c, i) => ({ i, name: c[0], dong: c[3], built: c[4] })),
-    pre: d.complexes === (DATA && DATA.complexes) ? PRESALE : (d.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]) };
-  markOutliers(GU_PREP[gu].d.sale); markOutliers(GU_PREP[gu].pre);
-  return GU_PREP[gu];
+  return (GU_PREP[gu] = { d, cx: d.complexes.map((c, i) => ({ i, name: c[0], dong: c[3], built: c[4] })),
+    pre: (d.presale || []).map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6] ? "입주권" : "분양권"]) });
 }
 function baseZones(gu) { return (LIFEZONES[state.sido] || {})[gu] || []; }
 function zoneGus() { return Object.keys(INDEX.regions[state.sido] || {}).filter(g => baseZones(g).length).sort(); }
@@ -705,7 +664,7 @@ function zoneRepArea(gu, z) {   // 생활권 대표 평형: 대표 단지 전체
 }
 function zoneRows(gu, z) {
   const P = prep(gu); if (!P || !z) return [];
-  const src = state.type === "sale" ? saleSrc(P.d.sale, P.pre) : P.d.jeonse.filter(r => !r[6]);
+  const src = state.type === "sale" ? (state.presale ? P.d.sale.concat(P.pre) : P.d.sale) : P.d.jeonse.filter(r => !r[6]);
   const [lo, hi] = AREA_BANDS[state.area] || [0, 0];
   const zrep = state.area === "rep" ? zoneRepArea(gu, z) : null;
   const inArea = zrep ? (r => Math.floor(r[1]) === zrep) : (r => r[1] >= lo && r[1] < hi);
@@ -726,7 +685,7 @@ function zoneMonthly(gu, z, months) {
     });
     if (!best) return null;
     const v = state.metric === "max" ? best.r[4] : tops.reduce((s, x) => s + x, 0) / tops.length;
-    return { m, v: v / 10000, n: tops.length, floor: best.r[5], pre: typeof best.r[6] === "string" ? best.r[6] : null, who: best.who, out: state.metric === "max" ? OUT.get(best.r) : null };
+    return { m, v: v / 10000, n: tops.length, floor: best.r[5], pre: typeof best.r[6] === "string" ? best.r[6] : null, who: best.who };
   });
   return { pts, cs };
 }
@@ -775,7 +734,7 @@ function renderCompare() {
     card.innerHTML = html;
     bindLegend();
     $("sumTitle").textContent = "생활권 요약"; $("summary").className = "sum-view";
-    const cell2 = o => `<b>${eok(o.r[4])}</b><small>${o.base}${typeof o.r[6] === "string" ? " · " + o.r[6] : ""}</small><small>${fmtYM(o.r[2])}.${o.r[3]} ${o.r[5]}층</small>${outSmall(o.r)}${state.area === "rep" ? `<small>전용 ${Math.floor(o.r[1])}㎡</small>` : ""}`;
+    const cell2 = o => `<b>${eok(o.r[4])}</b><small>${o.base}</small><small>${fmtYM(o.r[2])}.${o.r[3]} ${o.r[5]}층</small>${state.area === "rep" ? `<small>전용 ${Math.floor(o.r[1])}㎡</small>` : ""}`;
     let s = `<colgroup><col style="width:24%">${"<col>".repeat(5)}</colgroup>
       <tr><th>생활권</th><th>최근 상단</th><th>기간 상단</th><th>상단 대비</th><th>${state.type === "sale" ? "매매" : "전세"} 건수</th><th>대표 단지</th></tr>`;
     series.forEach(se => {
@@ -831,10 +790,10 @@ function renderTop() {
       html += `<div class="barrow${isBase ? " base" : ""}">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneTitle(o.gu, o.z)}</span>
         <span style="background:#f1f3f6;border-radius:4px;height:16px;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${(o.v / max * 100).toFixed(1)}%;background:${col};border-radius:4px"></i></span>
-        <span style="text-align:right">${eok(o.v)}${OUT.has(o.b.r) ? `<span class="warn-txt" title="${outTxt(o.b.r)}"> ⚠</span>` : ""}</span></div>`;
+        <span style="text-align:right">${eok(o.v)}</span></div>`;
     });
     html += `</div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="barToggle">${topS.open ? "접기" : `전체 펼치기 (${sorted.length}개)`}</button><span class="hint">목록은 기준 생활권이 가운데 오게 맞춰져요</span></div>
-      <div class="foot">상단 = 선택한 평형의 기간 안 실제 최고 거래가 (해제·직거래 제외 · ${preLabel()}${state.outl === "drop" ? " · 튀는 거래 제외" : " · ⚠ = 상단이 튀는 거래"})</div>`;
+      <div class="foot">상단 = 선택한 평형의 기간 안 실제 최고 거래가 (해제·직거래 제외)</div>`;
     card.innerHTML = html;
     const box = $("barBox"), br = box.querySelector(".base");
     if (!topS.open && br) box.scrollTop = br.offsetTop - box.offsetTop - box.clientHeight / 2 + br.clientHeight / 2;
@@ -843,7 +802,7 @@ function renderTop() {
     const bi = sorted.indexOf(base);
     const above = sorted.slice(Math.max(0, bi - 4), bi), below = sorted.slice(bi + 1, bi + 5);
     $("sumTitle").textContent = "상단이 비슷한 생활권 (위 4개 · 기준 · 아래 4개)"; $("summary").className = "sum-view sum-top";
-    const c3 = o => `<b>${eok(o.v)}</b><small>${o.b.who}${typeof o.b.r[6] === "string" ? " · " + o.b.r[6] : ""}</small><small>${fmtYM(o.b.r[2])}.${o.b.r[3]} ${o.b.r[5]}층</small>${outSmall(o.b.r)}`;
+    const c3 = o => `<b>${eok(o.v)}</b><small>${o.b.who}</small><small>${fmtYM(o.b.r[2])}.${o.b.r[3]} ${o.b.r[5]}층</small>`;
     let s = `<colgroup><col style="width:3.2em"><col style="width:36%"><col><col style="width:22%"></colgroup>
       <tr><th>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
     const simRow = o => {
