@@ -459,7 +459,7 @@ function render() {
 
   if (!vals.length) {
     html += `<div class="empty">${!list.length ? "위에서 단지를 골라주세요." : !shown.length ? "모든 단지를 숨겼어요. 위 단지 버튼을 눌러 다시 켜세요." : "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요."}</div>`;
-    card.innerHTML = html; bindLegend(); renderTables(series); return;
+    card.innerHTML = html; bindLegend(); renderTables(series); renderJb(isTop ? null : z); return;
   }
 
   const months = visMonths();
@@ -475,15 +475,17 @@ function render() {
 /* ---------- 정비사업 카드 (서울시 정비사업 추진현황) ---------- */
 const JB = window.JB || { rows: {}, stages: [] };
 const JB_SHORT = { "구역지정": "지정", "추진위": "추진위", "조합설립": "조합", "건축심의": "심의", "사업시행": "사시", "관리처분": "관처", "착공": "착공" };
+const dkey = d => String(d || "").replace(/\d+가$/, "");   // '성수동1가'·'한강로3가' → '성수동'·'한강로'
 function jbMatch(z, name) { return (z.jb || []).some(k => k.endsWith("-") ? name.startsWith(k) : name === k); }
 function jbAssign(gu) {   // 구역 → 생활권 번호 (자동: 대표 단지가 있는 동 / 애매하면 lifezones.js의 jb·jbDongs)
   const zones = baseZones(gu);
-  const autoDongs = zones.map(z => { const ds = new Set(); z.complexes.forEach(n => matchIdxs(CX, n).forEach(i => ds.add(CX[i].dong))); return ds; });
+  const autoDongs = zones.map(z => { const ds = new Set(); z.complexes.forEach(n => matchIdxs(CX, n).forEach(i => ds.add(dkey(CX[i].dong)))); return ds; });
   const res = zones.map(() => []), none = [];
   (JB.rows[gu] || []).filter(r => r.new > 0).forEach(r => {
     let zi = zones.findIndex(z => jbMatch(z, r.name));
-    if (zi < 0) zi = zones.findIndex(z => (z.jbDongs || []).includes(r.dong));
-    if (zi < 0) { const hit = autoDongs.map((ds, i) => ds.has(r.dong) ? i : -1).filter(i => i >= 0); if (hit.length === 1) zi = hit[0]; }
+    const rd = dkey(r.dong);
+    if (zi < 0) zi = zones.findIndex(z => (z.jbDongs || []).map(dkey).includes(rd));
+    if (zi < 0) { const hit = autoDongs.map((ds, i) => ds.has(rd) ? i : -1).filter(i => i >= 0); if (hit.length === 1) zi = hit[0]; }
     (zi < 0 ? none : res[zi]).push(r);
   });
   const st = r => JB.stages.indexOf(r.stage);

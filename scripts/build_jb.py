@@ -28,6 +28,7 @@ bad = [(k, v, label(*k)) for k, v in expect.items() if label(*k) != v]
 if bad:
     sys.exit(f"엑셀 칸 구성이 예전과 다름: {bad}")
 
+GUS = "|".join("종로구 중구 용산구 성동구 광진구 동대문구 중랑구 성북구 강북구 도봉구 노원구 은평구 서대문구 마포구 양천구 강서구 구로구 금천구 영등포구 동작구 관악구 서초구 강남구 송파구 강동구".split())
 STAGES = ["구역지정", "추진위", "조합설립", "건축심의", "사업시행", "관리처분", "착공"]
 DATE_COL = {"구역지정": 11, "추진위": 13, "조합설립": 14, "건축심의": 15, "사업시행": 16, "관리처분": 18, "착공": 22}
 d = lambda v: v.strftime("%Y.%m.%d") if hasattr(v, "strftime") else ""
@@ -50,6 +51,9 @@ for r in ws.iter_rows(min_row=5, values_only=True):
     if not dong:  # '서소문58-7'처럼 '동'이 빠진 주소
         m2 = re.match(r"([가-힣]+)", addr)
         dong = (m2.group(1) + "동") if m2 else ""
+    dong = re.sub(r"^(서울특별시|서울시)?\s*(" + GUS + r")(?=[가-힣]+동$)", "", dong)  # '양천구신정동' → '신정동'
+    if not dong.endswith("가"):
+        dong = re.sub(r"^([가-힣]+?)\d*본?동$", r"\1동", dong)  # '자양4동'·'중계본동' → '자양동'·'중계동'
     out.setdefault(str(r[2]).strip(), []).append({
         "code": r[0], "name": str(r[3]).strip(), "addr": addr, "dong": dong,
         "type": str(r[8] or "").strip(), "jc": str(r[7] or "").strip() == "재촉",
