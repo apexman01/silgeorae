@@ -37,6 +37,10 @@
   .jb .lb{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;color:#8a9099;text-align:center}
   .jb .lb span.now{color:#e8663a;font-weight:700}
   .jb .cur{font-size:13px;margin-top:4px}
+  .jbg{margin-top:6px}
+  .jbh{position:sticky;top:0;background:#f4f6f9;border-radius:8px;padding:8px 10px;margin:10px 0 2px;font-weight:700;font-size:15px}
+  .jbh span{color:#8a9099;font-weight:500;font-size:13px;margin-left:4px}
+  .jbh.cur{background:#fff1ea;color:#c2551f}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 12px;margin-bottom:14px}
   .card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.3px}
   .card .unit{color:var(--sub);font-size:14px;margin:2px 0 6px}
@@ -486,26 +490,37 @@ function jbAssign(gu) {   // 구역 → 생활권 번호 (자동: 대표 단지�
   res.forEach(a => a.sort((a, b) => st(b) - st(a) || b.new - a.new));
   return { res, none };
 }
+let JB_ALL = false;   // false = 이 생활권만, true = 구 전체를 생활권별로
+function jbItem(r) {
+  const ym = d => d ? d.slice(2, 7) : "";
+  const kind = r.type.includes("재건축") ? "재건축" : r.type.includes("도시정비형") ? "도시정비형 재개발" : "재개발";
+  const k = JB.stages.indexOf(r.stage);
+  const iju = r.dates["이주시작"] && k >= 5 ? ` · 이주 ${ym(r.dates["이주시작"])}~${r.dates["이주종료"] ? ym(r.dates["이주종료"]) : ""}` : "";
+  return `<div class="jb"><div class="t"><b>${r.name}</b><span class="tag">${kind}</span>${r.jc ? `<span class="tag">재정비촉진</span>` : ""}<span class="hh">${r.new.toLocaleString()}세대${r.old ? ` (기존 ${r.old.toLocaleString()})` : ""}</span></div>
+    <div class="bar">${JB.stages.map((s, i) => `<i class="${i < k ? "on" : i === k ? "now" : ""}"></i>`).join("")}</div>
+    <div class="lb">${JB.stages.map((s, i) => `<span class="${i === k ? "now" : ""}">${JB_SHORT[s] || s}</span>`).join("")}</div>
+    <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
+}
 function renderJb(z) {
   const card = $("jbCard");
   if (!z || z.kind !== "base" || !JB.rows[state.gu]) { card.style.display = "none"; return; }
-  const zi = baseZones(state.gu).findIndex(b => b.name === z.name);
+  const zones = baseZones(state.gu);
+  const zi = zones.findIndex(b => b.name === z.name);
   const { res, none } = jbAssign(state.gu);
-  const list = res[zi] || [];
-  const ym = d => d ? d.slice(2, 7) : "";
-  const kind = r => r.type.includes("재건축") ? "재건축" : r.type.includes("도시정비형") ? "도시정비형 재개발" : "재개발";
-  let html = `<h3>정비사업 (재개발·재건축)</h3>`;
-  html += list.length ? list.map(r => {
-    const k = JB.stages.indexOf(r.stage);
-    const iju = r.dates["이주시작"] && k >= 5 ? ` · 이주 ${ym(r.dates["이주시작"])}~${r.dates["이주종료"] ? ym(r.dates["이주종료"]) : ""}` : "";
-    return `<div class="jb"><div class="t"><b>${r.name}</b><span class="tag">${kind(r)}</span>${r.jc ? `<span class="tag">재정비촉진</span>` : ""}<span class="hh">${r.new.toLocaleString()}세대${r.old ? ` (기존 ${r.old.toLocaleString()})` : ""}</span></div>
-      <div class="bar">${JB.stages.map((s, i) => `<i class="${i < k ? "on" : i === k ? "now" : ""}"></i>`).join("")}</div>
-      <div class="lb">${JB.stages.map((s, i) => `<span class="${i === k ? "now" : ""}">${JB_SHORT[s] || s}</span>`).join("")}</div>
-      <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
-  }).join("") : `<div class="empty">이 생활권에 연결된 진행 중 구역이 없어요.</div>`;
+  const total = res.reduce((a, l) => a + l.length, 0) + none.length;
+  let html = `<h3>정비사업 (재개발·재건축)</h3>
+    <div class="seg" id="segJb" style="margin:4px 0 6px"><button data-v="0" class="${JB_ALL ? "" : "on"}">이 생활권 ${res[zi].length}</button><button data-v="1" class="${JB_ALL ? "on" : ""}">${state.gu} 전체 생활권별 ${total}</button></div>`;
+  if (!JB_ALL) {
+    html += res[zi].length ? res[zi].map(jbItem).join("") : `<div class="empty">이 생활권에 연결된 진행 중 구역이 없어요.</div>`;
+  } else {
+    const groups = zones.map((b, i) => [b.name, res[i], i === zi]);
+    if (none.length) groups.push(["생활권에 못 붙인 구역", none, false]);
+    html += groups.map(([nm, l, cur]) => `<div class="jbg"><div class="jbh${cur ? " cur" : ""}">${nm} <span>${l.length}곳</span></div>${l.length ? l.map(jbItem).join("") : `<div class="hint" style="padding:6px 0 10px">진행 중 구역 없음</div>`}</div>`).join("");
+  }
   html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만(준공·입주 단지는 빠짐) · 날짜 = 그 단계에 처음 들어간 날 · 공급 0세대(업무·상업 위주) 구역 제외<br>
-    생활권 연결 = 대표 단지가 있는 동 기준 자동${none.length ? ` · 이 구에서 생활권에 못 붙인 구역: ${none.map(r => r.name).join(", ")}` : ""}</div>`;
+    생활권 연결 = 대표 단지가 있는 동 기준 자동${!JB_ALL && none.length ? ` · 이 구에서 생활권에 못 붙인 구역: ${none.map(r => r.name).join(", ")}` : ""}</div>`;
   card.innerHTML = html; card.style.display = "";
+  card.querySelectorAll("#segJb button").forEach(b => b.onclick = () => { JB_ALL = b.dataset.v === "1"; renderJb(z); });
 }
 function chartSvg(shown, vals, months, card, title, opts) {
   const narrow = card.clientWidth < 620;
