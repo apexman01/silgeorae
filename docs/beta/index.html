@@ -136,6 +136,10 @@
   .barbox.open{max-height:none}
   .barrow{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;padding:3px 4px;font-size:13.5px;border-radius:6px}
   .barrow.base{font-weight:700;background:#e8f0fe}
+  .barrow.same{background:#fff3d1}
+  .barrow.same > span:first-child{font-weight:600;color:#8a5a00}
+  .samekey{background:#fff3d1;color:#8a5a00;font-weight:600;border-radius:4px;padding:0 5px}
+  tr.same td{background:#fff8e4}
   .baserow td{background:#e8f0fe}
   .replist{margin:8px 0 2px;font-size:12.5px;color:var(--sub);line-height:1.6}
   .replist b{color:var(--ink);font-weight:600}
@@ -929,12 +933,12 @@ function renderTop() {
     const max = Math.max(...withV.map(o => o.v));
     const sorted = withV.slice().sort((a, b) => b.v - a.v);
     let html = `<h2>상단 비교 · ${zoneTitle(base.gu, base.z)} 기준</h2><div class="hint" style="margin:2px 0 4px">${fmtYM(from)}~${fmtYM(to)} · ${cmpUnit().split(" · ")[0]} · ${state.type === "sale" ? "매매" : "전세"} 상단(대표 단지 중 최고 거래가)</div>`;
-    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · <span style="color:#2a6fdb;font-weight:600">파랑</span> 기준보다 높음 · <span style="color:#e5484d;font-weight:600">빨강</span> 기준보다 낮음 (±10% 이내)</div>
+    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · <span style="color:#2a6fdb;font-weight:600">파랑</span> 기준보다 높음 · <span style="color:#e5484d;font-weight:600">빨강</span> 기준보다 낮음 (±10% 이내) · <span class="samekey">${base.gu} 생활권</span></div>
       <div class="barbox${topS.open ? " open" : ""}" id="barBox">`;
     sorted.forEach(o => {
       const isBase = o === base, near = Math.abs(o.v - base.v) / base.v <= 0.10;
       const col = isBase ? "#1d1f23" : near ? (o.v > base.v ? "#2a6fdb" : "#e5484d") : "#c9d3e3";
-      html += `<div class="barrow${isBase ? " base" : ""}">
+      html += `<div class="barrow${isBase ? " base" : o.gu === base.gu ? " same" : ""}">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneTitle(o.gu, o.z)}</span>
         <span style="background:#f1f3f6;border-radius:4px;height:16px;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${(o.v / max * 100).toFixed(1)}%;background:${col};border-radius:4px"></i></span>
         <span style="text-align:right">${eok(o.v)}</span></div>`;
@@ -954,7 +958,7 @@ function renderTop() {
       <tr><th>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
     const simRow = o => {
       const key = o.gu + "|" + o.zi, d = (o.v - base.v) / base.v * 100, on = topS.picked.includes(key);
-      return `<tr class="simrow"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
+      return `<tr class="simrow${o.gu === base.gu ? " same" : ""}"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
     };
     above.forEach(o => { s += simRow(o); });
     if (!above.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 높은 생활권이 없어요</td></tr>`;
