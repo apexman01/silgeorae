@@ -58,6 +58,13 @@
   .legend i::after{content:"";position:absolute;left:7px;top:-3px;width:9px;height:9px;border-radius:50%;background:inherit}
   svg{width:100%;height:auto;display:block}
   .foot{color:var(--mute);font-size:12px;line-height:1.55;margin-top:6px}
+  .cfoot{margin-top:6px;font-size:12.5px;color:var(--sub);line-height:1.5}
+  .cfoot details{display:inline}
+  .cfoot summary{display:inline;cursor:pointer;color:#2a6fdb;list-style:none;margin-left:6px;white-space:nowrap}
+  .cfoot summary::-webkit-details-marker{display:none}
+  .cfoot details[open] summary{color:var(--mute)}
+  .cfoot .fd{display:block;margin:6px 0 2px;padding:8px 10px;background:#f6f7f9;border-radius:8px;font-size:12px;color:var(--sub)}
+  .cfoot .src{display:block;font-size:11px;color:var(--mute);margin-top:2px}
   .empty{padding:50px 0;text-align:center;color:var(--mute)}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
@@ -469,6 +476,13 @@ function niceStep(range) {
   const f = raw / p;
   return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p * (raw < 1 ? 1 : 1);
 }
+function chartFoot(svg, details, src) {   // 그래프 아래: 실제로 나온 기호만 한 줄 + ⓘ 설명(접힘) + 출처 한 줄
+  const k = ["★ 기간 최고"];
+  if (svg.includes("최고가 분양권")) k.push("○ 분양권");
+  if (svg.includes("최고가 입주권")) k.push("□ 입주권");
+  if (svg.includes('class="wk"')) k.push("회색 = 약한 하락");
+  return `<div class="cfoot">${k.join(" · ")}<details><summary>ⓘ 설명</summary><span class="fd">${details.filter(Boolean).join("<br>")}</span></details><span class="src">${src}</span></div>`;
+}
 function fmtV(v) { return (Math.round(v * 10) / 10).toString(); }
 
 function render() {
@@ -509,8 +523,17 @@ function render() {
 
   const months = visMonths();
   html += chartSvg(shown, vals, months, card, title, { notes: state.metric === "max" });
-  html += `<div class="foot">${state.type === "sale" && state.presale && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권 · 빈 네모 = 입주권(조합원 거래, 착공 전후 초기 입주권은 앞으로 낼 분담금 별도) · " : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
-    국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"}${isTop ? " · TOP5 = 기간 안 거래 건수가 많은 단지+전용면적(소수점 버림) 순" : state.area === "rep" ? " · 대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : ` · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}`}</div>`;
+  { const svgNow = html.slice(html.lastIndexOf("<svg"));
+    const ym = `${fmtYM(months[0])}~${fmtYM(months[months.length - 1])}`;
+    html += chartFoot(svgNow, [
+      "★ = 선택한 기간 안 최고가",
+      state.type === "sale" && state.presale && PRESALE.length ? "○ 빈 동그라미 = 그 달 최고가가 분양권" : "",
+      state.type === "sale" && state.presale && PRESALE.length ? "□ 빈 네모 = 입주권(조합원 거래, 착공 전후 초기 입주권은 앞으로 낼 분담금 별도)" : "",
+      `회색 글씨 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달`,
+      "거래 없는 달은 건너뜀",
+      isTop ? "TOP5 = 기간 안 거래 건수가 많은 단지+전용면적(소수점 버림) 순" : state.area === "rep" ? "대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : "",
+      state.type === "sale" ? "" : "전세 = 신규 계약만(갱신 제외, 표에는 포함)"
+    ], `국토부 실거래가 ${ym} · ${state.type === "sale" ? "해제·직거래 제외" : "전세 신규 계약"}${isTop || state.area === "rep" ? "" : ` · ${AREA_BANDS[state.area][1] === 999 ? AREA_BANDS[state.area][0] + "㎡ 이상" : AREA_BANDS[state.area][0] + "~" + AREA_BANDS[state.area][1] + "㎡ 미만"}`}`); }
   card.innerHTML = html;
   bindLegend();
   renderTables(series);
@@ -651,7 +674,7 @@ function chartSvg(shown, vals, months, card, title, opts) {
       // 회색 주석: 직전보다 떨어졌는데 1건뿐이거나 저층이면 '약한 하락'
       const prev = k > 0 ? s.pts[idx[k - 1]] : null;
       if (opts.notes && prev && p.v < prev.v * 0.98 && (p.n === 1 || p.floor <= LOW_FLOOR)) {
-        g += `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13" fill="#9aa0a8">${p.floor}층·${p.n}건</text>`;
+        g += `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13" fill="#9aa0a8" class="wk">${p.floor}층·${p.n}건</text>`;
       }
     });
     const last = idx[idx.length - 1];
@@ -881,7 +904,10 @@ function renderCompare() {
     if (state.area === "rep") {
       html += `<div class="replist">대표 평형 = 생활권 대표 단지 전체에서 거래가 가장 많은 전용면적 (생활권마다 하나)<br>${series.map(s => `<span class="dot" style="background:${s.color}"></span>${s.label.replace(/ (\d+㎡)$/, " <b>$1</b>")}: ${s.cs.filter(c => c.rows.length).map(c => c.base).join(" · ") || "이 평형 거래 없음"}`).join("<br>")}</div>`;
     }
-    html += `<div class="foot">${state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값 · " : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균 · "}점에 손가락을 대면 그 달 상단 단지가 보여요 · ★ = 기간 최고<br>국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약"}</div>`;
+    html += chartFoot(vals.length ? html.slice(html.lastIndexOf("<svg")) : "", [
+      state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값" : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균",
+      "점에 손가락을 대면 그 달 상단 단지가 보여요", "★ = 선택한 기간 안 최고"
+    ], `국토부 실거래가 ${fmtYM(months[0])}~${fmtYM(months[months.length - 1])} · ${state.type === "sale" ? "해제·직거래 제외" : "전세 신규 계약"}`);
     card.innerHTML = html;
     bindLegend();
     $("sumTitle").textContent = "생활권 요약"; $("summary").className = "sum-view";
