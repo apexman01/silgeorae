@@ -127,6 +127,11 @@ def main():
     # 2) 기본정보 (새 단지만)
     cache = json.load(open(CACHE, encoding="utf-8")) if os.path.exists(CACHE) else {}
     todo = [x["code"] for l in lists.values() for x in l if not (cache.get(x["code"]) or {}).get("cnt")]
+    # 사이트 생활권 대표 단지에 연결되는 단지(data/hh_priority.json)부터 받음
+    pri_path = os.path.join(ROOT, "data", "hh_priority.json")
+    pri = set(json.load(open(pri_path))) if os.path.exists(pri_path) else set()
+    todo.sort(key=lambda c: 0 if c in pri else 1)
+    print(f"  그중 생활권 대표 단지 연결분: {sum(1 for c in todo if c in pri)}개 먼저")
     print(f"기본정보 새로 받을 단지: {len(todo)}개 (저장된 것 {len(cache)}개)")
     if todo:
         basic_api = pick_api(BASIC_APIS, {"serviceKey": key, "kaptCode": todo[0], "_type": "json"}, "기본정보", need="kaptdaCnt")
@@ -134,6 +139,13 @@ def main():
             print("기본 정보 API를 쓸 수 없어요(활용신청 확인).")
         else:
             def one(code):
+                for k in range(3):   # 'HTTP 에러(04)'는 잠깐 쉬었다 다시
+                    r = one_try(code)
+                    if not (isinstance(r[1], tuple) and "HTTP_ERROR" in r[1][0]):
+                        return r
+                    time.sleep(2 + 3 * k)
+                return r
+            def one_try(code):
                 try:
                     items, _ = get_items(basic_api, {"serviceKey": key, "kaptCode": code, "_type": "json"})
                     it = items[0] if items else {}
@@ -146,7 +158,7 @@ def main():
                 except Exception as e:
                     return code, (str(e)[:200], None)
             fails, streak, shown = 0, 0, 0
-            with ThreadPoolExecutor(6) as ex:
+            with ThreadPoolExecutor(2) as ex:
                 for n, (code, v) in enumerate(ex.map(one, todo), 1):
                     if isinstance(v, tuple):
                         fails += 1
