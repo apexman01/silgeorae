@@ -311,6 +311,8 @@
   .sheet table.sum-view{min-width:0;width:100%;font-size:11.5px}
   .sheet table.sum-view th{font-size:10.5px}
   .sheet table.sum-view td small{font-size:8.6px;letter-spacing:-.4px}
+  .sheet .sh-jb .jbrow{font-size:13px;padding:6px 2px}
+  .sheet .sh-jb .jbtiles{margin-top:0}
   .sheet .sh-src{font-size:10.5px;color:var(--mute);line-height:1.5;padding-top:8px}
   /* 생활권 선택: 가로 긴 줄로 한 줄에 하나씩 */
   .gi #zoneTabs{flex-direction:column;flex-wrap:nowrap;gap:6px}
@@ -822,13 +824,17 @@ async function shotSave(el, name, btn, fixClone) {   // 화면 요소를 사진�
 function capCard(id, btn) {
   const el = $(id); if (!el) return;
   const z = zonesFor(state.sido, state.gu)[state.zone];
+  if (state.tab === "top" && id === "sumCard") {   // 상단 비교: 기준 생활권 위아래 목록
+    const bz = baseZones(topS.gu)[topS.zi];
+    return shotSave(el, `${topS.gu}_${bz ? bz.name : ""}_상단비교.png`, btn, doc => doc.querySelectorAll("#summary col:first-child").forEach(c => c.remove()));
+  }
   const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : id === "sumCard" ? "단지요약" : "현황";
   return shotSave(el, `${state.gu}_${(CH_ALL && id === "chartCard") || (TR_ALL && id === "trCard") ? "전체생활권" : (z && z.name || "")}_${kind}.png`, btn);
 }
 /* ---------- 임장 기록용 한 장 이미지: 머리말 → 구 현황(선택) → 교통 → 시세 그래프 → 단지별 요약 → 출처 ---------- */
 const ONE_KEY = "lifezone-one-v1";
-const ONE_PARTS = [["gu", "구 현황"], ["tr", "교통"], ["ch", "시세 그래프"], ["sum", "단지별 요약"]];
-function oneOpts() { const o = { gu: false, tr: true, ch: true, sum: true }; try { Object.assign(o, JSON.parse(localStorage.getItem(ONE_KEY)) || {}); } catch (e) {} return o; }
+const ONE_PARTS = [["gu", "구 현황"], ["tr", "교통"], ["ch", "시세 그래프"], ["sum", "단지별 요약"], ["jb", "정비사업"]];
+function oneOpts() { const o = { gu: false, tr: true, ch: true, sum: true, jb: true }; try { Object.assign(o, JSON.parse(localStorage.getItem(ONE_KEY)) || {}); } catch (e) {} return o; }
 function oneClean(node) {   // 화면용 버튼·말풍선·접힌 설명 빼고, id가 겹치지 않게
   node.querySelectorAll("[data-html2canvas-ignore], .chtip, .hov, details, .lhint, .zall, .capline, .src").forEach(x => x.remove());
   node.querySelectorAll("[id]").forEach(x => x.removeAttribute("id"));
@@ -840,7 +846,7 @@ function oneBuild() {
   const o = oneOpts(), z = zonesFor(state.sido, state.gu)[state.zone], isTop = state.view === "top5";
   const ms = visMonths(), last = ms[ms.length - 1], ym = `${fmtYM(ms[0])}~${fmtYM(last)}`;
   const T = window.TRANSIT, hasTr = !isTop && z.kind === "base" && !!(T && T.zones[state.gu + "|" + z.name]);
-  const avail = { gu: !!$("giBody").querySelector(".gst"), tr: hasTr, ch: !!$("chartCard").querySelector("svg, .empty"), sum: $("summary").rows.length > 1 };
+  const avail = { gu: !!$("giBody").querySelector(".gst"), tr: hasTr, ch: !!$("chartCard").querySelector("svg, .empty"), sum: $("summary").rows.length > 1, jb: !isTop && z.kind === "base" && !!(window.JB && JB.rows[state.gu]) };
   $("oneChk").innerHTML = `<span class="fx">머리말·출처는 항상 ·</span>` + ONE_PARTS.map(([k, t]) => {
     const on = avail[k] && o[k];
     return `<label class="${on ? "on" : ""}${avail[k] ? "" : " na"}"><input type="checkbox" data-k="${k}"${on ? " checked" : ""}${avail[k] ? "" : " disabled"}>${t}${avail[k] ? "" : " 없음"}</label>`;
@@ -876,6 +882,20 @@ function oneBuild() {
     const t = oneClean($("summary").cloneNode(true));
     h += sec($("sumTitle").textContent || "단지별 요약", t.outerHTML);
     if (/\d/.test(t.textContent)) src.push("세대수 공동주택관리정보시스템(K-apt)");
+  }
+  if (avail.jb && o.jb) {   // 정비사업: 이 생활권에 연결된 구역 전부 (화면 카드는 6개까지만)
+    const zi0 = baseZones(state.gu).findIndex(b => b.name === z.name), l = jbAssign(state.gu).res[zi0] || [];
+    const LI = JB.stages.indexOf("관리처분"), si = r => JB.stages.indexOf(r.stage), kind = r => r.type.includes("재건축") ? "재건축" : "재개발";
+    let j = "";
+    if (!l.length) j = `<div class="hint">이 생활권에 연결된 진행 중 구역이 없어요.</div>`;
+    else {
+      const cnt = JB.stages.map((st, i) => [st, l.filter(r => si(r) === i).length, i >= LI]).filter(x => x[1]);
+      j = `<div class="jbtiles"><div><small>진행 구역</small><b>${l.length}</b>개</div><div><small>공급 예정</small><b>${l.reduce((t, r) => t + (r.new || 0), 0).toLocaleString()}</b>세대</div><div><small>관리처분 이후</small><b>${l.filter(r => si(r) >= LI).length}</b>개</div></div>`
+        + `<div class="jbmini">${cnt.map(([st, n, lt]) => `<span class="${lt ? "late" : ""}">${st} ${n}</span>`).join("")}</div>`
+        + [...l].sort((a, b) => si(b) - si(a)).map(r => `<div class="jbrow"><b>${r.name}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${(r.new || 0).toLocaleString()}세대</span></div>`).join("");
+    }
+    h += sec("정비사업 (재개발·재건축)", j, "sh-jb");
+    src.push(`정비사업 ${JB.src}${JB.asof ? ` ${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말` : ""}`);
   }
   if (!isTop && z.kind === "base") src.push("생활권 구분 훨훨 강의자료");
   h += `<div class="sh-src">출처 ${src.join(" · ")} · 참고용 · apexman01.github.io/silgeorae · 만든이 비상</div>`;
@@ -1455,17 +1475,17 @@ function renderTop() {
     $("sumTitle").textContent = "상단이 비슷한 생활권 (위 4개 · 기준 · 아래 4개)"; $("summary").className = "sum-view sum-top";
     const c3 = o => `<b>${eok(o.v)}</b><small>${o.b.who}</small><small>${fmtYM(o.b.r[2])}.${o.b.r[3]} ${o.b.r[5]}층</small>`;
     let s = `<colgroup><col style="width:3.2em"><col style="width:36%"><col><col style="width:22%"></colgroup>
-      <tr><th>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
+      <tr><th data-html2canvas-ignore>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
     const simRow = o => {
       const key = o.gu + "|" + o.zi, d = (o.v - base.v) / base.v * 100, on = topS.picked.includes(key);
-      return `<tr class="simrow${o.gu === base.gu ? " same" : ""}"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
+      return `<tr class="simrow${o.gu === base.gu ? " same" : ""}"><td data-html2canvas-ignore><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
     };
     above.forEach(o => { s += simRow(o); });
     if (!above.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 높은 생활권이 없어요</td></tr>`;
-    s += `<tr class="simrow baserow"><td>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td>${c3(base)}</td><td>-</td></tr>`;
+    s += `<tr class="simrow baserow"><td data-html2canvas-ignore>기준</td><td><b>${zoneTitle(base.gu, base.z)}</b></td><td>${c3(base)}</td><td>-</td></tr>`;
     below.forEach(o => { s += simRow(o); });
     if (!below.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 낮은 생활권이 없어요</td></tr>`;
-    s += `<tr><td colspan="4" style="text-align:left;white-space:normal"><button class="btn primary" id="toCmp" type="button">체크한 생활권과 그래프로 비교 (최대 2개)</button></td></tr>`;
+    s += `<tr data-html2canvas-ignore><td colspan="4" style="text-align:left;white-space:normal"><button class="btn primary" id="toCmp" type="button">체크한 생활권과 그래프로 비교 (최대 2개)</button></td></tr>`;
     $("summary").innerHTML = s;
     $("summary").querySelectorAll("input[data-k]").forEach(cb => cb.onchange = () => {
       const k = cb.dataset.k;
