@@ -25,6 +25,26 @@
   .seg button{font:inherit;font-size:14px;border:0;background:#fff;padding:8px 13px;cursor:pointer;color:var(--sub)}
   .seg button+button{border-left:1px solid #d5d9de}
   .seg button.on{background:var(--ink);color:#fff}
+  .jb{border-top:1px solid var(--line);padding:12px 0 10px}
+  .jb:first-of-type{border-top:0}
+  .jb .t{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+  .jb .t b{font-size:16px}
+  .jb .hh{color:var(--sub,#6b717a);font-size:13px}
+  .jb .bar{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:8px 0 3px}
+  .jb .bar i{height:8px;border-radius:3px;background:#e6e8ec}
+  .jb .bar i.on{background:#2a6fdb}
+  .jb .bar i.now{background:#e8663a}
+  .jb .lb{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:11px;color:#8a9099;text-align:center}
+  .jb .lb span.now{color:#e8663a;font-weight:700}
+  .jb .cur{font-size:13px;margin-top:4px}
+  .jbg{margin-top:6px}
+  .jbh{position:sticky;top:0;z-index:1;background:#d0606e;color:#fff;border-radius:8px;padding:9px 12px;margin:22px 0 4px;font-weight:700;font-size:15.5px}
+  .jbg:first-child .jbh, .jbsum + .jbh{margin-top:10px}
+  .jbh span{color:#ffe2e5;font-weight:500;font-size:13px;margin-left:6px}
+  .jbh.cur{background:#a3303f}
+  .jbh.cur span{color:#ffd6db}
+  .jbh.zero{background:#e7b9bd;color:#7a3940}
+  .jbh.zero span{color:#8f5359}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 12px;margin-bottom:14px}
   .card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.3px}
   .card .unit{color:var(--sub);font-size:14px;margin:2px 0 6px}
@@ -38,6 +58,110 @@
   .legend i::after{content:"";position:absolute;left:7px;top:-3px;width:9px;height:9px;border-radius:50%;background:inherit}
   svg{width:100%;height:auto;display:block}
   .foot{color:var(--mute);font-size:12px;line-height:1.55;margin-top:6px}
+  .chwrap{position:relative}
+  .chwrap svg{touch-action:pan-y}
+  .chtip{display:none;position:absolute;z-index:3;min-width:150px;max-width:62%;background:rgba(255,255,255,.96);border:1px solid #d5d9de;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.12);padding:7px 10px;font-size:12.5px;pointer-events:none}
+  .chtip .tm{font-weight:700;margin-bottom:3px}
+  .chtip .tr{display:flex;align-items:center;gap:6px;margin-top:3px}
+  .chtip .tr i{width:9px;height:9px;border-radius:50%;flex:none}
+  .chtip .tl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chtip .tr b{white-space:nowrap}
+  .chtip .ts{font-size:11px;color:var(--mute);margin-left:15px}
+  .chtip .ts:empty{display:none}
+  .hc{border-top-left-radius:0}
+  .hc ~ .controls{margin-top:0}
+  #jbHead .gzt button.on{background:#d0606e;border-color:#d0606e}
+  #jbHead .rg{color:#a3303f;background:#fbe4e6}
+  body:not([data-tab="top"]) .tt-only, body:not([data-tab="cmp"]) .ct-only, body:not([data-tab="jb"]) .jt-only{display:none!important}
+  #jbScope{display:flex;width:max-content;max-width:100%}
+  @media(max-width:520px){
+    .slot{width:100%;box-sizing:border-box}
+    .slot select{flex:1 1 0}
+    .slot .sGu{width:auto;flex:0 0 7em}
+    .slot .sZone{width:auto}
+    #segWin, #jbScope{display:flex;width:100%}
+    #segWin button, #jbScope button{flex:1 1 auto;padding:8px 4px}
+  }
+  .gih{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;font-size:18px}
+  .gih select{font-size:17px;font-weight:700;padding:6px 30px 6px 10px}
+  .gih .rg{margin-left:auto;color:#1f56b3;background:#eef3fb;font-size:12.5px;border-radius:999px;padding:4px 10px;font-weight:600}
+  .gih .rg:empty{display:none}
+  .gi .gst{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .gi .gst div{border-radius:10px;padding:6px 6px;text-align:center;border:1.5px solid}
+  .gi .gst div.t1{background:#fdeeef;border-color:#c4505f;color:#9b2c3a}
+  .gi .gst div.tp{background:#eef3fb;border-color:#3f6fb8;color:#173a6e}
+  .gi .gst div.tr{background:#fdf0e6;border-color:#e0803f;color:#9a4a12}
+  .gi .gst div.t4{background:#e9f6f1;border-color:#2f8a6c;color:#0f5a47}
+  .gi .gst small{display:block;font-size:11px;white-space:nowrap;letter-spacing:-.3px;opacity:.85}
+  .gi .gst b{display:block;font-size:17px;white-space:nowrap}
+  .gi .gsrc{font-size:12.5px;margin:6px 1px 0;line-height:1.5}
+  .gi .gsrc summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;list-style:none}
+  .gi .gsrc .gs1{color:var(--mute);font-size:12px}
+  .gi .gsrc .gs2{color:#1f56b3;white-space:nowrap;font-size:11px}
+  .gi .gsrc[open] .gs2{color:var(--mute)}
+  .gi .gsrc summary::-webkit-details-marker{display:none}
+  .gi .gsrc > div{margin-top:6px;padding:8px 11px;background:#f6f7f9;border-radius:8px;color:var(--sub);font-size:12.5px}
+  .gi .gsrc p{margin:2px 0}
+  .gi .gsrc p b{color:var(--ink);font-weight:600;margin-right:6px}
+  .gi .ghd{margin:10px 0 0;background:#f5f6f8;border:1px solid #dfe3e8;border-radius:10px;padding:10px 12px;font-size:14.5px;font-weight:500;line-height:1.5}
+  .gi .ghd b{font-weight:800}
+  .gi .ghd span{display:block;color:var(--sub);font-size:12.5px;font-weight:400;margin-top:8px;padding-top:7px;border-top:1px solid #1d1f23}
+  .ch{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .ch h3{margin:0;font-size:17px}
+  .cbtn{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .mini{font:inherit;font-size:12.5px;border:1px solid #cfd4db;background:#fff;color:var(--ink);border-radius:999px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+  .capline{text-align:right;margin-top:10px}
+  .capt{font:inherit;font-size:10.5px;color:var(--ink);background:none;border:0;padding:4px 2px;cursor:pointer}
+  .capt:hover{text-decoration:underline}
+  .capt.busy{animation:capspin 1s linear infinite}
+  .capb{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:0;background:none;color:#9aa0a8;cursor:pointer;padding:0;flex:none;border-radius:6px}
+  .capb:hover,.capb:active{color:#1f56b3;background:#eef3fb}
+  .capb.busy{animation:capspin 1s linear infinite;color:#1f56b3}
+  @keyframes capspin{50%{opacity:.35}}
+  .gih .capb{margin-left:4px}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1d1f23;color:#fff;font-size:14px;padding:10px 16px;border-radius:999px;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.2);opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .mini.on{background:#1f56b3;border-color:#1f56b3;color:#fff}
+  .ztr + .ztr{margin-top:8px}
+  .ch h2{margin:0}
+  .zall{border-top:2px solid #1d1f23;margin-top:22px;padding-top:14px}
+  .zall h3{margin:0;font-size:19px}
+  .legend.sm{gap:6px 10px;font-size:13px}
+  .legend.sm span{display:inline-flex;align-items:center;gap:5px}
+  .legend.sm i{width:16px}
+  .ztr.cur{border-color:#1f56b3;box-shadow:0 0 0 1px #1f56b3 inset}
+  .ztr{margin-top:0;border:1px solid #dfe3e8;border-radius:10px;padding:10px 12px}
+  .ztr .zh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--sub);font-weight:600}
+  .ztr .zh span{font-weight:400;color:var(--mute);font-size:11.5px}
+  .ztr .ln{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 2px}
+  .ztr .ln i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 8px;border-radius:999px;color:#fff;font-size:12.5px;font-weight:700;box-sizing:border-box}
+  .ztr .ln i.n{padding:0;width:24px}
+  .ztr .ln i.pl{background:#aab0b9!important}
+  .ztr .tm{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:8px}
+  .ztr .tm small.ab{font-size:10px;color:var(--mute);letter-spacing:.3px}
+  .ztr .tm div{background:#f6f7f9;border-radius:8px;padding:6px 4px;text-align:center}
+  .ztr .tm small{display:block;font-size:11px;color:var(--sub)}
+  .ztr .tm b{font-size:16px}
+  .ztr .tm b em{font-style:normal;font-size:11.5px;font-weight:500;color:var(--sub);margin-left:1px}
+  .ztr .nt, #zoneTransit > .nt{font-size:11px;color:var(--mute);margin-top:6px}
+  .gi .gzl{margin:14px 0 6px;font-size:12px;color:var(--sub);font-weight:600}
+  .gi .gzl span{font-weight:400;color:var(--mute)}
+  .gi .gzt{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 2px}
+  .gi .gzt button{flex:none;font:inherit;font-size:14px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:7px 13px;cursor:pointer;color:var(--ink)}
+  .gi .gzt button.on{background:#1f56b3;border-color:#1f56b3;color:#fff;font-weight:600}
+  .gi .gzt button.add{color:var(--sub);border-style:dashed}
+  .gi .gzt.dim{opacity:.4;pointer-events:none}
+  .znote{font-size:15px;color:#3d434b;margin:3px 0 4px;line-height:1.45}
+  .seg button{white-space:nowrap}
+  @media(max-width:520px){.seg button{padding:8px 10px;font-size:13.5px}}
+  @media(max-width:520px){.gi .gst{gap:6px}.gi .gst b{font-size:15px}.gi .gst div{padding:6px 6px}.gi .gst small{font-size:10.5px}}
+  .cfoot{margin-top:6px;font-size:12.5px;color:var(--sub);line-height:1.5}
+  .cfoot details{display:inline}
+  .cfoot summary{display:inline;cursor:pointer;color:#2a6fdb;list-style:none;margin-left:6px;white-space:nowrap}
+  .cfoot summary::-webkit-details-marker{display:none}
+  .cfoot details[open] summary{color:var(--mute)}
+  .cfoot .fd{display:block;margin:6px 0 2px;padding:8px 10px;background:#f6f7f9;border-radius:8px;font-size:12px;color:var(--sub)}
+  .cfoot .src{display:block;font-size:11px;color:var(--mute);margin-top:2px}
   .empty{padding:50px 0;text-align:center;color:var(--mute)}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
@@ -50,6 +174,20 @@
   .picker{display:none;margin-top:4px;width:100%}
   .period{width:100%;border-top:1px solid var(--line);padding-top:12px;margin-top:2px}
   .period .head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+  .row3{display:contents}
+  @media(max-width:520px){
+    .row3{display:grid;grid-template-columns:1.65fr .85fr 1.3fr;gap:7px;width:100%}
+    body:not([data-tab="view"]) .row3{grid-template-columns:1fr 1.25fr}
+    .row3 .ctl{min-width:0}
+    .row3 .seg{display:flex;width:100%}
+    .row3 .seg button{flex:1 1 0;padding:8px 1px;font-size:13px;min-width:0;letter-spacing:-.3px}
+    #segView button[data-v="top5"]{font-size:11.5px;letter-spacing:-.5px;flex-grow:1.3}
+    #segMetric button{font-size:12px;letter-spacing:-.5px}
+    .c-area{width:100%}
+    #segArea, .period #segPeriod{display:flex;width:100%}
+    #segArea button, .period #segPeriod button{flex:1 1 auto;padding:8px 4px}
+    .period .head > label{width:100%}
+  }
   .period .range-txt{font-size:15px;font-weight:700;margin-left:auto}
   .period .range-txt small{font-weight:400;color:var(--sub);margin-left:6px}
   .dual{position:relative;height:40px;margin:10px 12px 0}
@@ -64,8 +202,34 @@
   .tabs{display:flex;gap:6px;margin:16px 0 0;flex-wrap:wrap}
   .tabs button{font:inherit;font-size:15px;font-weight:600;padding:10px 16px;border:1px solid #d5d9de;border-bottom:none;border-radius:10px 10px 0 0;background:#eef0f3;color:var(--sub);cursor:pointer;min-height:44px}
   .tabs button.on{background:var(--card);color:var(--ink)}
+  @media(max-width:520px){.tabs{gap:3px;flex-wrap:nowrap}.tabs button{font-size:13.5px;padding:9px 8px;flex:1 1 0;white-space:nowrap}}
   .tabs + .controls{margin-top:0;border-top-left-radius:0}
-  body[data-tab="cmp"] .v-only, body[data-tab="top"] .v-only{display:none!important}
+  body[data-tab="cmp"] .v-only, body[data-tab="top"] .v-only, body[data-tab="jb"] .v-only{display:none!important}
+  body:not([data-tab="jb"]) .j-only{display:none!important}
+  body[data-tab="jb"] .controls > .ctl:not(.j-only), body[data-tab="jb"] .nj, body[data-tab="jb"] .row3{display:none!important}
+  .jbsum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--sub);margin:6px 0 4px}
+  .jbsum b{color:var(--ink)}
+  .jb .go{font:inherit;font-size:12.5px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:3px 10px;margin-left:6px;cursor:pointer;color:var(--accent)}
+  #jbCard{background:#fff7f7;border:1px solid #efc4c7;border-left:5px solid #d0606e}
+  #jbCard h3{color:#8e2a37}
+  #jbCard .jb{border-top-color:#f3d7d9}
+  .jbtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 10px}
+  .jbtiles div{background:#fff;border:1px solid #f0cfd2;border-radius:10px;padding:8px 9px}
+  .jbtiles small{display:block;font-size:12px;color:var(--sub)}
+  .jbtiles div{white-space:nowrap;font-size:12.5px}
+  .jbtiles b{font-size:18px;color:#a3303f;margin-right:1px}
+  .jbmini{display:flex;flex-wrap:wrap;gap:4px 6px;margin:0 0 8px;font-size:12.5px}
+  .jbmini span{background:#fbe4e6;color:#8e2a37;border-radius:999px;padding:3px 9px}
+  .jbmini span.late{background:#d0606e;color:#fff}
+  .jbrow{display:flex;align-items:center;gap:8px;padding:8px 2px;border-top:1px solid #f3d7d9;font-size:14px}
+  .jbrow b{font-weight:600}
+  .jbrow .kd{font-size:11.5px;color:var(--sub);white-space:nowrap}
+  .jbrow b{min-width:0;word-break:keep-all;overflow-wrap:anywhere}
+  .jbrow .st{margin-left:auto;font-size:12px;border-radius:6px;padding:2px 7px;background:#f1f2f4;color:#4b5058;white-space:nowrap}
+  .jbrow .st.late{background:#d0606e;color:#fff}
+  .jbrow .n{font-size:12.5px;color:var(--sub);white-space:nowrap;min-width:62px;text-align:right}
+  .jbmore{font-size:12.5px;color:var(--sub);padding:6px 2px 0}
+  #jbGo{width:100%;margin-top:10px;background:#d0606e;border-color:#d0606e;color:#fff}
   body:not([data-tab="cmp"]) .c-only{display:none!important}
   body:not([data-tab="top"]) .t-only{display:none!important}
   body:not([data-tab="view"]) .vt-only{display:none!important}
@@ -90,9 +254,14 @@
   .barbox.open{max-height:none}
   .barrow{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;padding:3px 4px;font-size:13.5px;border-radius:6px}
   .barrow.base{font-weight:700;background:#e8f0fe}
+  .barrow.same{background:#fff3d1}
+  .barrow.same > span:first-child{font-weight:600;color:#8a5a00}
+  .samekey{background:#fff3d1;color:#8a5a00;font-weight:600;border-radius:4px;padding:0 5px}
+  tr.same td{background:#fff8e4}
   .baserow td{background:#e8f0fe}
   .replist{margin:8px 0 2px;font-size:12.5px;color:var(--sub);line-height:1.6}
   .replist b{color:var(--ink);font-weight:600}
+  #segJb small{font-size:12px;opacity:.75;margin-left:3px}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
@@ -118,29 +287,59 @@
     <p id="dataInfo"></p>
   </header>
 
-  <div class="tabs" id="tabs"><button data-t="view" class="on">생활권 보기</button><button data-t="top">상단 비교</button><button data-t="cmp">생활권 비교</button></div>
+  <div class="tabs" id="tabs"><button data-t="view" class="on">생활권 보기</button><button data-t="top">상단 비교</button><button data-t="cmp">생활권 비교</button><button data-t="jb">정비사업</button></div>
+  <div class="card vt-only gi hc" id="guInfo">
+    <div class="gih"><select id="selSido" aria-label="시·도"></select><select id="selGu" aria-label="구"></select><b>현황</b><span class="rg" id="giRegion"></span><select id="selZone" hidden></select></div>
+    <div id="giBody"></div>
+    <div class="gzl" id="zoneLabel">생활권 선택</div>
+    <div class="gzt" id="zoneTabs"></div>
+    <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="guInfo">이미지로 저장 ↓</button></div>
+  </div>
+  <div class="card vt-only" id="trCard" style="display:none">
+    <div class="ch"><h3>교통</h3><span class="cbtn" data-html2canvas-ignore><button type="button" class="mini" id="trAll">전체 생활권 펼치기</button></span></div>
+    <div id="zoneTransit"></div>
+    <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="trCard">이미지로 저장 ↓</button></div>
+  </div>
+  <div class="card tt-only gi hc" id="topHead">
+    <div class="gih"><select id="topGu" aria-label="구"></select><b>기준 생활권</b><span class="rg">상단 비교</span></div>
+    <div class="gzl" style="margin-top:0">이 생활권과 상단(최고가)이 비슷한 곳을 찾아요</div>
+    <div class="gzt" id="topTabs"></div><select id="topZone" hidden></select>
+    <div class="gzl">상단 기간</div>
+    <div class="seg" id="segWin"><button data-v="3">최근 3개월</button><button data-v="6" class="on">6개월</button><button data-v="12">12개월</button><button data-v="custom">직접 선택</button></div>
+  </div>
+  <div class="card ct-only gi hc" id="cmpHead">
+    <div class="gih"><b>비교할 생활권</b><span class="rg">최대 3개</span></div>
+    <div class="slots" id="slots"></div>
+  </div>
+  <div class="card jt-only gi hc" id="jbHead">
+    <div class="gih"><select id="jbGu" aria-label="구"></select><b id="jbHeadT">정비사업</b><span class="rg">재개발·재건축</span></div>
+    <div class="gzl" style="margin-top:0">범위</div>
+    <div class="seg" id="jbScope"><button data-v="zone">선택 생활권</button><button data-v="gu" class="on">구 전체</button><button data-v="seoul">서울 전체</button></div>
+    <div class="gzl" id="jbZoneLbl">생활권 선택</div>
+    <div class="gzt" id="jbTabs"></div><select id="jbZone" hidden></select>
+  </div>
   <div class="controls">
-    <div class="ctl c-only" style="width:100%"><label>비교할 생활권 (최대 3개)</label><div class="slots" id="slots"></div></div>
-    <div class="ctl t-only" style="width:100%"><label>기준 생활권</label>
-      <div class="row"><select id="topGu"></select><select id="topZone"></select>
-        <div class="seg" id="segWin"><button data-v="3">최근 3개월</button><button data-v="6" class="on">6개월</button><button data-v="12">12개월</button><button data-v="custom">직접 선택</button></div></div>
-      <span class="hint">상단 = 생활권 대표 단지들 중 기간 안 최고 거래가 · 최근 N개월은 가장 최근 달까지 · 직접 선택을 누르면 아래에 기간 슬라이더가 나와요</span></div>
-    <div class="ctl v-only"><label>시·도</label><select id="selSido"></select></div>
-    <div class="ctl v-only"><label>구</label><select id="selGu"></select></div>
-    <div class="ctl v-only"><label>생활권</label><select id="selZone"></select></div>
+    <div class="ctl j-only"><label>단계</label>
+      <div class="seg" id="jbStage"><button data-v="all" class="on">전체</button><button data-v="사업시행">사업시행 이후</button><button data-v="관리처분">관리처분 이후</button></div></div>
+    <div class="ctl j-only"><label>종류</label>
+      <div class="seg" id="jbType"><button data-v="all" class="on">전체</button><button data-v="재개발">재개발</button><button data-v="재건축">재건축</button></div></div>
+    <div class="ctl j-only"><label>정렬</label>
+      <div class="seg" id="jbSort"><button data-v="stage" class="on">단계 순</button><button data-v="hh">세대수 순</button></div></div>
+    <div class="row3">
     <div class="ctl v-only"><label>보기</label>
       <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">거래량 TOP5</button></div></div>
     <div class="ctl"><label>거래</label>
-      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><label class="chk" id="preWrap"><input type="checkbox" id="chkPre" checked>분양권·입주권 포함</label><span class="hint" style="display:block;margin-top:4px">신축 입주 전·재개발 조합원 거래. 그래프에서는 빈 동그라미</span></div></div>
-    <div class="ctl"><label>전용면적</label>
-      <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
+      <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><span id="preWrap"></span></div></div>
     <div class="ctl"><label>지표</label>
       <div class="seg" id="segMetric"><button data-v="max" class="on">월 최고가</button><button data-v="avg">월 평균가</button></div></div>
+    </div>
+    <div class="ctl c-area"><label>전용면적</label>
+      <div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="74">74㎡</button><button data-v="84" class="on">84㎡</button><button data-v="big">100㎡+</button><button data-v="rep">대표 평형</button></div></div>
 
     <div class="ctl period" id="periodCtl">
       <div class="head">
         <label>기간</label>
-        <div class="seg" id="segPeriod"><button data-v="12" class="on">12개월</button><button data-v="24">24개월</button><button data-v="36">36개월</button><button data-v="60">5년</button><button data-v="all">전체</button><button data-v="custom">직접 선택</button></div>
+        <div class="seg" id="segPeriod"><button data-v="12" class="on">12개월</button><button data-v="24">24개월</button><button data-v="36">36개월</button><button data-v="all">전체</button><button data-v="custom">직접 선택</button></div>
         <div class="range-txt" id="rangeTxt"></div>
       </div>
       <div id="sliderWrap"><div class="dual">
@@ -165,10 +364,12 @@
 
   <div class="card" id="chartCard"></div>
 
-  <div class="card">
+  <div class="card nj">
     <h3 id="sumTitle">단지별 요약</h3>
     <div class="scroll"><table id="summary"></table></div>
   </div>
+
+  <div class="card vt-only" id="jbCard" style="display:none"></div>
 
   <div class="card vt-only">
     <h3>최근 거래</h3>
@@ -181,7 +382,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="data/index.js?v=' + _v + '"><\/script><script src="lifezones.js?v=' + _v + '"><\/script>');
+  document.write('<script src="data/index.js?v=' + _v + '"><\/script><script src="lifezones.js?v=' + _v + '"><\/script><script src="data/jb.js?v=' + _v + '"><\/script><script src="data/hh.js?v=' + _v + '"><\/script><script src="guinfo.js?v=' + _v + '"><\/script><script src="data/gustats.js?v=' + _v + '"><\/script><script src="transit.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -244,7 +445,7 @@ function fillSelect(sel, items, val) {
 function initSido() {
   const sidos = Object.keys(INDEX.regions);
   state.sido = sidos[0];
-  fillSelect($("selSido"), sidos, 0);
+  fillSelect($("selSido"), sidos, 0); $("selSido").style.display = sidos.length > 1 ? "" : "none";
   $("selSido").onchange = e => { state.sido = sidos[+e.target.value]; initGu(); };
   initGu();
 }
@@ -263,6 +464,58 @@ function initZone(keep) {
   fillSelect($("selZone"), zs.map(z => (z.kind === "custom" ? "★ " : "") + z.name), state.zone);
   $("selZone").onchange = e => { state.zone = +e.target.value; onZoneChange(); };
   onZoneChange();
+}
+function shiftYm(ym, k) { let y = +String(ym).slice(0, 4), m = +String(ym).slice(4, 6) + k; while (m <= 0) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}${String(m).padStart(2, "0")}`; }
+let TR_ALL = false;
+function transitBox(gu, zz, cur) {
+  const T = window.TRANSIT, d = T && T.zones[gu + "|" + zz.name];
+  if (!d) return "";
+  const badge = (l, pl) => { const short = /^\d$/.test(l); return `<i class="${short ? "n" : ""}${pl ? " pl" : ""}" style="background:${T.colors[l] || "#888"}" title="${l}${pl ? " (예정)" : ""}">${l}${pl ? " 예정" : ""}</i>`; };
+  return `<div class="ztr${cur ? " cur" : ""}"><div class="zh">${zz.name}<span>${d.st}</span></div>
+    <div class="ln">${d.lines.map(l => badge(l)).join("")}${(d.plan || []).map(([l]) => badge(l, true)).join("")}</div>
+    <div class="tm">${(T.dest || []).map(([nm, ab], i) => `<div><small>${nm}</small><b>${d.t[i]}<em>분</em></b><small class="ab">${ab}</small></div>`).join("")}</div>
+    ${(d.plan || []).length ? `<div class="nt">회색 = 예정 노선: ${d.plan.map(([l, st]) => `${l}(${st})`).join(", ")}</div>` : ""}</div>`;
+}
+function renderTransit(z) {   // 생활권 교통 카드: 선택 생활권(또는 전체 펼치기) — 노선 뱃지(예정은 회색) + 주요 업무지구까지 시간
+  const card = $("trCard"), T = window.TRANSIT;
+  const zs = baseZones(state.gu).filter(zz => T && T.zones[state.gu + "|" + zz.name]);
+  if (!zs.length || state.view === "top5") { card.style.display = "none"; return; }
+  const curName = z && z.kind === "base" ? z.name : null;
+  const list = TR_ALL ? zs : zs.filter(zz => zz.name === curName);
+  $("zoneTransit").innerHTML = (list.length ? list.map(zz => transitBox(state.gu, zz, TR_ALL && zz.name === curName)).join("") : `<div class="hint">직접 고른 단지는 교통 정보가 없어요. '전체 생활권 펼치기'로 이 구의 생활권 교통을 볼 수 있어요.</div>`)
+    + `<div class="nt" style="margin-top:8px">기준 역에서 각 업무지구까지 지하철 대략 시간(환승 포함, 걷는 시간 제외)</div>`;
+  const b = $("trAll"); b.classList.toggle("on", TR_ALL); b.textContent = TR_ALL ? "선택 생활권만" : "전체 생활권 펼치기";
+  card.style.display = "";
+}
+$("trAll").onclick = () => { TR_ALL = !TR_ALL; renderTransit(zonesFor(state.sido, state.gu)[state.zone]); };
+function shiftYm(ym, k) { let y = +String(ym).slice(0, 4), m = +String(ym).slice(4, 6) + k; while (m <= 0) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}${String(m).padStart(2, "0")}`; }
+function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선택 + 구 현황(강의자료) + 생활권 탭
+  const G = (window.GUINFO || {})[state.gu];
+  $("giRegion").textContent = (G && G.region) || "";
+  const S = window.GUSTATS || {}, st = (S.gu || {})[state.gu], pp = (S.pop || {})[state.gu];
+  const ymS = ym => `${String(ym).slice(2, 4)}.${+String(ym).slice(4, 6)}`;
+  const tiles = [], e2 = v => (v / 10000).toFixed(1).replace(/\.0$/, "");
+  if (st) {
+    tiles.push(["서울 순위", `${st.rank}위`, "t1"]);
+    tiles.push(["84㎡ 최고가", `${e2(st.max)}억`, "tp"]);
+    if (st.chg != null) tiles.push(["1년 상승률", `${st.chg > 0 ? "+" : ""}${st.chg}%`, "tr"]);
+  }
+  if (pp) tiles.push([`인구 (${ymS(pp[1])})`, `${(pp[0] / 10000).toFixed(1)}만`, "t4"]);
+  else if (G && G.stats && G.stats[0]) tiles.push([G.stats[0][0], G.stats[0][1].replace(/\s*명$/, ""), "t4"]);
+  $("giBody").innerHTML = (tiles.length ? `<div class="gst">${tiles.map(([k, v, c, bc]) => `<div class="${c}"><small>${k}</small><b class="${bc || ""}">${v}</b></div>`).join("")}</div>` : "")
+    + (st ? `<details class="gsrc"><summary><span class="gs1">${ymS(S.from)}~${ymS(S.to)} 84㎡ 매매 ${st.n}건 기준</span><span class="gs2">ⓘ 숫자 기준</span></summary><div>
+        <p><b>서울 순위</b> 84㎡ 최고가가 높은 순서 · 서울 ${S.total}개 구 중</p>
+        <p><b>84㎡ 최고가</b> 최근 6개월(${ymS(S.from)}~${ymS(S.to)}) 전용 80~90㎡ 매매 ${st.n}건 중 가장 비싼 거래</p>
+        <p><b>1년 상승률</b> 중위가격(거래를 가격 순으로 세운 한가운데 값)을 1년 전 같은 6개월(${ymS(shiftYm(S.from,-12))}~${ymS(shiftYm(S.to,-12))})과 비교</p></div></details>` : "")
+    + (G && G.head ? `<div class="ghd">${(h => h.length > 1 ? `${h[0]}<br><b>${h.slice(1).join(" — ")}</b>` : `<b>${h[0]}</b>`)(G.head.split(/\s*—\s*/))}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : "");
+  const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
+  $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span>`;
+  bar.innerHTML = zs.map((x, i) => `<button type="button" data-i="${i}" class="${i === state.zone ? "on" : ""}${x.kind === "pick" ? " add" : ""}">${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</button>`).join("");
+  bar.classList.toggle("dim", state.view === "top5");
+  bar.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const i = +b.dataset.i; if (i === state.zone) return;
+    state.zone = i; $("selZone").value = i; onZoneChange();
+  });
 }
 function onZoneChange() {
   const z = zonesFor(state.sido, state.gu)[state.zone];
@@ -336,7 +589,7 @@ function bindSeg(id, key) {
   });
 }
 bindSeg("segType", "type"); bindSeg("segView", "view");
-$("chkPre").onchange = e => { state.presale = e.target.checked; render(); }; bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
+bindSeg("segArea", "area"); bindSeg("segMetric", "metric");
 
 /* ---------- 집계 ---------- */
 /* 거래량 TOP5: 고른 구·기간·거래 종류에서 거래가 가장 많은 '단지+전용면적' 5개 */
@@ -360,7 +613,9 @@ function top5Complexes() {
 function currentComplexes() {
   if (state.view === "top5") return top5Complexes();
   const z = zonesFor(state.sido, state.gu)[state.zone];
-  const names = (z.kind === "base") ? z.complexes : state.picked;
+  return complexesOf(z, (z.kind === "base") ? z.complexes : state.picked);
+}
+function complexesOf(z, names) {
   return names.map(n => {
     // "이름1|이름2"처럼 적으면 여러 이름을 한 단지로 합침. 띄어쓰기 차이는 자동으로 합침
     // "이름@동"처럼 적으면 그 동의 단지만 (같은 이름이 여러 동에 있을 때)
@@ -407,11 +662,19 @@ function niceStep(range) {
   const f = raw / p;
   return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p * (raw < 1 ? 1 : 1);
 }
+function chartFoot(svg, details, src) {   // 그래프 아래: 실제로 나온 기호만 한 줄 + ⓘ 설명(접힘) + 출처 한 줄
+  const k = ["★ 기간 최고"];
+  if (svg.includes("최고가 분양권")) k.push("○ 분양권");
+  if (svg.includes("최고가 입주권")) k.push("□ 입주권");
+  if (svg.includes('class="wk"')) k.push("회색 = 약한 하락");
+  return `<div class="cfoot">${k.join(" · ")}<details><summary>ⓘ 설명</summary><span class="fd">${details.filter(Boolean).join("<br>")}</span></details><span class="src">${src}</span></div>`;
+}
 function fmtV(v) { return (Math.round(v * 10) / 10).toString(); }
 
 function render() {
   if (state.tab === "cmp") return renderCompare();
   if (state.tab === "top") return renderTop();
+  if (state.tab === "jb") return renderJbTab();
   if (!DATA) return;
   $("preWrap").style.display = state.type === "sale" && PRESALE.length ? "" : "none";
   const z = zonesFor(state.sido, state.gu)[state.zone];
@@ -419,6 +682,7 @@ function render() {
   $("selZone").disabled = topMode;
   $("picker").classList.toggle("show", !topMode && (z.kind === "pick" || z.kind === "custom"));
   $("segArea").style.opacity = topMode ? .4 : 1; $("segArea").title = topMode ? "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요" : "";
+  renderGuInfo(z); renderTransit(z);
   const list = currentComplexes();
   const card = $("chartCard");
   const typeLabel = state.type === "sale" ? "실거래가" : "전세가";
@@ -436,21 +700,179 @@ function render() {
   const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
   const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
-  let html = `<h2>${title}</h2>${sub ? `<div class="hint" style="margin:2px 0 4px">${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
+  const capBtns = `<span class="cbtn" data-html2canvas-ignore>${isTop ? "" : `<button type="button" class="mini${CH_ALL ? " on" : ""}" id="chAll">${CH_ALL ? "선택 생활권만" : "전체 생활권 펼치기"}</button>`}</span>`;
+  let html = `<div class="ch"><h2>${title}</h2>${capBtns}</div>${sub ? `<div class="${isTop ? "hint" : "znote"}"${isTop ? ' style="margin:2px 0 4px"' : ""}>${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
   html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
   if (!vals.length) {
     html += `<div class="empty">${!list.length ? "위에서 단지를 골라주세요." : !shown.length ? "모든 단지를 숨겼어요. 위 단지 버튼을 눌러 다시 켜세요." : "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요."}</div>`;
-    card.innerHTML = html; bindLegend(); renderTables(series); return;
+    card.innerHTML = html; bindLegend(); renderTables(series); renderJb(isTop ? null : z); return;
   }
 
   const months = visMonths();
   html += chartSvg(shown, vals, months, card, title, { notes: state.metric === "max" });
-  html += `<div class="foot">${state.type === "sale" && state.presale && PRESALE.length ? "빈 동그라미 = 그 달 최고가가 분양권·입주권 거래 · " : ""}회색 주석 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달 · 거래 없는 달은 건너뜀 · ★ = 기간 최고<br>
-    국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약(갱신 제외, 표에는 포함)"}${isTop ? " · TOP5 = 기간 안 거래 건수가 많은 단지+전용면적(소수점 버림) 순" : state.area === "rep" ? " · 대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : ` · 면적 ${AREA_BANDS[state.area][0]}~${AREA_BANDS[state.area][1] === 999 ? "" : AREA_BANDS[state.area][1] + "㎡ 미만"}`}</div>`;
+  { const svgNow = html.slice(html.lastIndexOf("<svg"));
+    const ym = `${fmtYM(months[0])}~${fmtYM(months[months.length - 1])}`;
+    html += chartFoot(svgNow, [
+      "★ = 선택한 기간 안 최고가",
+      state.type === "sale" && state.presale && PRESALE.length ? "○ 빈 동그라미 = 그 달 최고가가 분양권" : "",
+      state.type === "sale" && state.presale && PRESALE.length ? "□ 빈 네모 = 입주권(조합원 거래, 착공 전후 초기 입주권은 앞으로 낼 분담금 별도)" : "",
+      `회색 글씨 = 직전 달보다 2% 넘게 떨어졌지만 거래 1건이거나 저층(${LOW_FLOOR}층 이하)이라 하락 신호가 약한 달`,
+      "거래 없는 달은 건너뜀",
+      isTop ? "TOP5 = 기간 안 거래 건수가 많은 단지+전용면적(소수점 버림) 순" : state.area === "rep" ? "대표 평형 = 단지마다 거래가 가장 많은 전용면적(단지명 옆 표시)" : "",
+      state.type === "sale" ? "" : "전세 = 신규 계약만(갱신 제외, 표에는 포함)"
+    ], `국토부 실거래가 ${ym} · ${state.type === "sale" ? "해제·직거래 제외" : "전세 신규 계약"}${isTop || state.area === "rep" ? "" : ` · ${AREA_BANDS[state.area][1] === 999 ? AREA_BANDS[state.area][0] + "㎡ 이상" : AREA_BANDS[state.area][0] + "~" + AREA_BANDS[state.area][1] + "㎡ 미만"}`}`); }
+  if (CH_ALL && !isTop) html += allZoneCharts(z, months, card);
+  html += `<div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="chartCard">이미지로 저장 ↓</button></div>`;
   card.innerHTML = html;
   bindLegend();
   renderTables(series);
+  renderJb(isTop ? null : z);
+}
+let CH_ALL = false;
+/* ---------- 카드 사진으로 저장 (갤럭시·PC: 바로 내려받기 → 갤러리 Download 앨범, 아이폰: 공유창 → 이미지 저장) ---------- */
+let H2C = null;
+function loadH2C() {
+  if (window.html2canvas) return Promise.resolve(window.html2canvas);
+  return H2C || (H2C = new Promise((ok, no) => { const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; sc.onload = () => ok(window.html2canvas); sc.onerror = no; document.head.appendChild(sc); }));
+}
+async function capCard(id, btn) {
+  const el = $(id); if (!el) return;
+  if (btn.classList.contains("busy")) return; btn.classList.add("busy");
+  try {
+    const h2c = await loadH2C();
+    const cv = await h2c(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true,
+      onclone: doc => {   // 접힌 'ⓘ 설명' 내용이 사진에 겹쳐 찍히지 않게 지움
+        doc.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
+        doc.querySelectorAll(".chtip").forEach(t => t.remove());
+        doc.querySelectorAll(".hov").forEach(h => h.remove());
+      } });
+    const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+    const z = zonesFor(state.sido, state.gu)[state.zone];
+    const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : "현황";
+    const name = `${state.gu}_${(CH_ALL && id === "chartCard") || (TR_ALL && id === "trCard") ? "전체생활권" : (z && z.name || "")}_${kind}.png`.replace(/[\/:*?"<>|·]/g, "");
+    const file = new File([blob], name, { type: "image/png" });
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);   // 아이폰은 공유창의 '이미지 저장', 갤럭시·PC는 바로 내려받기(갤러리 Download 앨범)
+    if (ios && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name }); toast("사진을 공유창으로 보냈어요");
+    } else {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      toast("사진으로 저장했어요 · 갤러리 Download 앨범");
+    }
+  } catch (e) { if (!(e && e.name === "AbortError")) alert("사진 저장에 실패했어요. 다시 한 번 눌러주세요."); }
+  btn.classList.remove("busy");
+}
+function toast(msg) {
+  let t = document.querySelector(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200);
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".cap"); if (b) capCard(b.dataset.cap, b); });
+function allZoneCharts(cur, months, card) {   // 전체 생활권 펼치기: 이 구의 다른 생활권 그래프를 아래로 이어서
+  return baseZones(state.gu).filter(zz => zz.name !== cur.name).map(zz => {
+    const zb = { ...zz, kind: "base" };
+    const ser = complexesOf(zb, zz.complexes).map((c, k) => {
+      const rep = state.area === "rep" && c.cx ? repArea(c, zb) : null;
+      return { ...c, rep, label: rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
+        ...(c.cx && (state.area !== "rep" || rep) ? seriesFor(c.idxs, rep) : { pts: [], rows: [] }) };
+    });
+    const vals = ser.flatMap(x => x.pts.filter(Boolean).map(p => p.v));
+    return `<div class="zall"><h3>${zz.name}</h3>${zz.note ? `<div class="znote">${zz.note}</div>` : ""}
+      <div class="legend sm">${ser.map(x => `<span><i style="background:${x.color}"></i>${x.label}</span>`).join("")}</div>
+      ${vals.length ? chartSvg(ser.filter(x => x.pts.some(Boolean)), vals, months, card, zz.name, { notes: state.metric === "max" }) : `<div class="hint" style="padding:16px 0">이 조건에 맞는 거래가 없어요.</div>`}</div>`;
+  }).join("");
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("#chAll");
+  if (b) { CH_ALL = !CH_ALL; render(); }
+});
+
+/* ---------- 정비사업 카드 (서울시 정비사업 추진현황) ---------- */
+const JB = window.JB || { rows: {}, stages: [] };
+const JB_SHORT = { "구역지정": "지정", "추진위": "추진위", "조합설립": "조합", "건축심의": "심의", "사업시행": "사시", "관리처분": "관처", "착공": "착공" };
+const dkey = d => String(d || "").replace(/\d+가$/, "");   // '성수동1가'·'한강로3가' → '성수동'·'한강로'
+function jbMatch(z, name) { return (z.jb || []).some(k => k.endsWith("-") ? name.startsWith(k) : name === k); }
+function jbAssign(gu, cx) {   // 구역 → 생활권 번호 (자동: 대표 단지가 있는 동 / 애매하면 lifezones.js의 jb·jbDongs)
+  cx = cx || CX;
+  const zones = baseZones(gu);
+  const autoDongs = zones.map(z => { const ds = new Set(); z.complexes.forEach(n => matchIdxs(cx, n).forEach(i => ds.add(dkey(cx[i].dong)))); return ds; });
+  const res = zones.map(() => []), none = [];
+  (JB.rows[gu] || []).filter(r => r.new > 0).forEach(r => {
+    let zi = zones.findIndex(z => jbMatch(z, r.name));
+    const rd = dkey(r.dong);
+    if (zi < 0) zi = zones.findIndex(z => (z.jbDongs || []).map(dkey).includes(rd));
+    if (zi < 0) { const hit = autoDongs.map((ds, i) => ds.has(rd) ? i : -1).filter(i => i >= 0); if (hit.length === 1) zi = hit[0]; }
+    (zi < 0 ? none : res[zi]).push(r);
+  });
+  const st = r => JB.stages.indexOf(r.stage);
+  res.forEach(a => a.sort((a, b) => st(b) - st(a) || b.new - a.new));
+  return { res, none };
+}
+let JB_ALL = false;   // false = 이 생활권만, true = 구 전체를 생활권별로
+function jbItem(r) {
+  const ym = d => d ? d.slice(2, 7) : "";
+  const kind = r.type.includes("재건축") ? "재건축" : r.type.includes("도시정비형") ? "도시정비형 재개발" : "재개발";
+  const k = JB.stages.indexOf(r.stage);
+  const iju = r.dates["이주시작"] && k >= 5 ? ` · 이주 ${ym(r.dates["이주시작"])}~${r.dates["이주종료"] ? ym(r.dates["이주종료"]) : ""}` : "";
+  return `<div class="jb"><div class="t"><b>${r.name}</b><span class="tag">${kind}</span>${r.jc ? `<span class="tag">재정비촉진</span>` : ""}<span class="hh">${r.new.toLocaleString()}세대${r.old ? ` (기존 ${r.old.toLocaleString()})` : ""}</span></div>
+    <div class="bar">${JB.stages.map((s, i) => `<i class="${i < k ? "on" : i === k ? "now" : ""}"></i>`).join("")}</div>
+    <div class="lb">${JB.stages.map((s, i) => `<span class="${i === k ? "now" : ""}">${JB_SHORT[s] || s}</span>`).join("")}</div>
+    <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
+}
+let JB_LATE = false;   // true = 관리처분 이후(관리처분·착공)만
+const JB_COMPACT = true;   // 생활권 보기에서는 정비사업 요약 카드 + 정비사업 탭으로 연결 (25개 구 모두)
+function renderJb(z) {
+  const card = $("jbCard");
+  if (!z || z.kind !== "base" || !JB.rows[state.gu]) { card.style.display = "none"; return; }
+  if (JB_COMPACT) {
+    const zi0 = baseZones(state.gu).findIndex(b => b.name === z.name);
+    const l = jbAssign(state.gu).res[zi0] || [];
+    const LI = JB.stages.indexOf("관리처분"), si = r => JB.stages.indexOf(r.stage);
+    const late = l.filter(r => si(r) >= LI).length;
+    const hh = l.reduce((t, r) => t + (r.new || 0), 0);
+    const cnt = JB.stages.map((s, i) => [s, l.filter(r => si(r) === i).length, i >= LI]).filter(x => x[1]);
+    const kind = r => r.type.includes("재건축") ? "재건축" : "재개발";
+    const MAX = 6;
+    let h = `<h3>${z.name} 정비사업 (재개발·재건축)</h3>`;
+    if (!l.length) h += `<div class="hint" style="padding:4px 0 2px">이 생활권에 연결된 진행 중 구역이 없어요.</div>`;
+    else {
+      h += `<div class="jbtiles"><div><small>진행 구역</small><b>${l.length}</b>개</div><div><small>공급 예정</small><b>${hh.toLocaleString()}</b>세대</div><div><small>관리처분 이후</small><b>${late}</b>개</div></div>`;
+      h += `<div class="jbmini">${cnt.map(([s, n, lt]) => `<span class="${lt ? "late" : ""}">${s} ${n}</span>`).join("")}</div>`;
+      h += l.slice(0, MAX).map(r => `<div class="jbrow"><b>${r.name}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${r.new.toLocaleString()}세대</span></div>`).join("");
+      if (l.length > MAX) h += `<div class="jbmore">외 ${l.length - MAX}개 구역은 정비사업 탭에서</div>`;
+    }
+    h += `<button class="btn primary" type="button" id="jbGo">정비사업 탭에서 자세히 보기 (단계·이주 일정)</button>`;
+    card.innerHTML = h;
+    card.style.display = "";
+    $("jbGo").onclick = () => { jbS.gu = state.gu; jbS.zi = Math.max(0, zi0); jbS.scope = "zone"; setTab("jb"); };
+    return;
+  }
+  const zones = baseZones(state.gu);
+  const zi = zones.findIndex(b => b.name === z.name);
+  const a = jbAssign(state.gu);
+  const lateIdx = JB.stages.indexOf("관리처분");
+  const keep = l => JB_LATE ? l.filter(r => JB.stages.indexOf(r.stage) >= lateIdx) : l;
+  const res = a.res.map(keep), none = keep(a.none);
+  const total = res.reduce((s, l) => s + l.length, 0) + none.length;
+  let html = `<h3>${state.gu} 정비사업 (재개발·재건축)</h3>
+    <div class="row" style="margin:4px 0 6px">
+      <div class="seg" id="segJb"><button data-v="0" class="${JB_ALL ? "" : "on"}">선택 생활권 <small>${res[zi].length}개 구역</small></button><button data-v="1" class="${JB_ALL ? "on" : ""}">전체 생활권별 <small>${total}개 구역</small></button></div>
+      <label class="chk" style="margin-left:0"><input type="checkbox" id="chkJbLate" ${JB_LATE ? "checked" : ""}>관리처분 이후만</label>
+    </div>`;
+  const emptyMsg = JB_LATE ? "관리처분 이후 단계 구역이 없어요." : "이 생활권에 연결된 진행 중 구역이 없어요.";
+  if (!JB_ALL) {
+    html += res[zi].length ? res[zi].map(jbItem).join("") : `<div class="empty">${emptyMsg}</div>`;
+  } else {
+    const groups = zones.map((b, i) => [b.name, res[i], i === zi]);
+    if (none.length) groups.push(["생활권에 못 붙인 구역", none, false]);
+    html += groups.map(([nm, l, cur]) => `<div class="jbg"><div class="jbh${cur ? " cur" : ""}">${nm} <span>${l.length}개 구역</span></div>${l.length ? l.map(jbItem).join("") : `<div class="hint" style="padding:6px 0 10px">${JB_LATE ? "관리처분 이후 구역 없음" : "진행 중 구역 없음"}</div>`}</div>`).join("");
+  }
+  html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만(준공·입주 단지는 빠짐) · 날짜 = 그 단계에 처음 들어간 날 · 공급 0세대(업무·상업 위주) 구역 제외${JB_LATE ? " · 관리처분 이후 = 관리처분인가·착공 단계" : ""}<br>
+    생활권 연결 = 대표 단지가 있는 동 기준 자동${!JB_ALL && none.length ? ` · 이 구에서 생활권에 못 붙인 구역: ${none.map(r => r.name).join(", ")}` : ""}</div>`;
+  card.innerHTML = html; card.style.display = "";
+  card.querySelectorAll("#segJb button").forEach(b => b.onclick = () => { JB_ALL = b.dataset.v === "1"; renderJb(z); });
+  $("chkJbLate").onchange = e => { JB_LATE = e.target.checked; renderJb(z); };
 }
 function chartSvg(shown, vals, months, card, title, opts) {
   const narrow = card.clientWidth < 620;
@@ -491,14 +913,16 @@ function chartSvg(shown, vals, months, card, title, opts) {
         g += star(cx, cy, 10, s.color);
         g += `<text x="${cx}" y="${cy - 18}" text-anchor="middle" font-size="15" font-weight="700" fill="#222">최고 ${fmtV(p.v)}</text>`;
       } else {
-        g += p.pre
+        g += p.pre === "입주권"
+          ? `<rect x="${cx - 5.5}" y="${cy - 5.5}" width="11" height="11" fill="#fff" stroke="${s.color}" stroke-width="2.6"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 입주권 ${p.floor}층</title></rect>`
+          : p.pre
           ? `<circle cx="${cx}" cy="${cy}" r="5.5" fill="#fff" stroke="${s.color}" stroke-width="2.6"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 ${p.pre} ${p.floor}층</title></circle>`
           : `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${s.color}" stroke="#fff" stroke-width="2"><title>${fmtYM(p.m)} · ${fmtV(p.v)}억 · ${p.who ? p.who + " · " : ""}${p.n}건 · 최고가 ${p.floor}층</title></circle>`;
       }
       // 회색 주석: 직전보다 떨어졌는데 1건뿐이거나 저층이면 '약한 하락'
       const prev = k > 0 ? s.pts[idx[k - 1]] : null;
       if (opts.notes && prev && p.v < prev.v * 0.98 && (p.n === 1 || p.floor <= LOW_FLOOR)) {
-        g += `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13" fill="#9aa0a8">${p.floor}층·${p.n}건</text>`;
+        g += `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13" fill="#9aa0a8" class="wk">${p.floor}층·${p.n}건</text>`;
       }
     });
     const last = idx[idx.length - 1];
@@ -510,8 +934,42 @@ function chartSvg(shown, vals, months, card, title, opts) {
     if (Math.abs(endLabels[i].x - endLabels[i - 1].x) < 50 && endLabels[i].y - endLabels[i - 1].y < 18) endLabels[i].y = endLabels[i - 1].y + 18;
   endLabels.forEach(l => { g += `<text x="${l.x}" y="${l.y}" font-size="16" fill="${l.c}">${l.t}</text>`; });
 
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} 그래프">${g}</svg>`;
+  const cid = ++CH_SEQ;
+  CHARTS[cid] = { W, H, T, B, months, x, y, ser: shown.map(s => ({ label: s.label, color: s.color, pts: s.pts })) };
+  g += `<g class="hov" style="display:none;pointer-events:none"><line y1="${T - 10}" y2="${H - B}" stroke="#8a9099" stroke-width="1.5" stroke-dasharray="4 4"/></g>`;
+  return `<div class="chwrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title} 그래프" data-ch="${cid}">${g}</svg><div class="chtip"></div></div>`;
 }
+// 그래프 위에서 마우스/손가락을 따라다니는 세로선 + 그 달 가격 상자
+const CHARTS = {}; let CH_SEQ = 0;
+function chHover(svg, clientX) {
+  const C = CHARTS[svg.dataset.ch]; if (!C) return;
+  const rc = svg.getBoundingClientRect(), sx = (clientX - rc.left) / rc.width * C.W;
+  let bi = -1, bd = 1e9;
+  C.months.forEach((m, i) => { if (!C.ser.some(s => s.pts[i])) return; const d = Math.abs(C.x(i) - sx); if (d < bd) { bd = d; bi = i; } });
+  if (bi < 0) return chHide(svg);
+  const hov = svg.querySelector(".hov"), X = C.x(bi);
+  hov.style.display = "";
+  hov.querySelector("line").setAttribute("x1", X); hov.querySelector("line").setAttribute("x2", X);
+  hov.querySelectorAll("circle").forEach(c => c.remove());
+  const rows = C.ser.map(s => ({ s, p: s.pts[bi] })).filter(o => o.p).sort((a, b) => b.p.v - a.p.v);
+  rows.forEach(o => { const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", X); c.setAttribute("cy", C.y(o.p.v)); c.setAttribute("r", 8); c.setAttribute("fill", "none"); c.setAttribute("stroke", o.s.color); c.setAttribute("stroke-width", 3); hov.appendChild(c); });
+  const m = String(C.months[bi]);
+  const tip = svg.parentNode.querySelector(".chtip");
+  tip.innerHTML = `<div class="tm">${m.slice(0, 4)}년 ${+m.slice(4)}월</div>` + rows.map(o => `<div class="tr"><i style="background:${o.s.color}"></i><span class="tl">${o.s.label}</span><b>${fmtV(o.p.v)}억</b></div><div class="ts">${[o.p.who && o.p.who !== o.s.label ? o.p.who : "", o.p.floor ? o.p.floor + "층" : "", o.p.n ? o.p.n + "건" : "", o.p.pre || ""].filter(Boolean).join(" · ")}</div>`).join("");
+  tip.style.display = "block";
+  const px = X / C.W * rc.width, tw = tip.offsetWidth;
+  tip.style.left = (px > rc.width / 2 ? Math.max(0, px - tw - 12) : Math.min(rc.width - tw, px + 12)) + "px";
+  tip.style.top = "4px";
+}
+function chHide(svg) { const h = svg.querySelector(".hov"); if (h) h.style.display = "none"; const t = svg.parentNode.querySelector(".chtip"); if (t) t.style.display = "none"; }
+document.addEventListener("pointermove", e => { const svg = e.target.closest && e.target.closest("svg[data-ch]"); if (svg) chHover(svg, e.clientX); });
+document.addEventListener("pointerdown", e => {
+  const svg = e.target.closest && e.target.closest("svg[data-ch]");
+  document.querySelectorAll("svg[data-ch]").forEach(o => { if (o !== svg) chHide(o); });
+  if (svg) chHover(svg, e.clientX);
+});
+document.addEventListener("pointerout", e => { if (e.pointerType === "mouse" && e.target.closest && e.target.closest("svg[data-ch]") && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("svg[data-ch]"))) chHide(e.target.closest("svg[data-ch]")); });
 function bindLegend() {
   $("chartCard").querySelectorAll(".legend button").forEach(b => b.onclick = () => {
     const n = b.dataset.n;
@@ -539,7 +997,43 @@ function hhOf(se) {
       if (!v && k.split("|").some(p => norm(p.split("@")[0]) === nm)) v = n;
     }));
   }
+  if (!v && se.idxs) {   // K-apt(공동주택관리정보시스템) 세대수로 채우기
+    const seen = new Set(); let sum = 0;
+    se.idxs.forEach(i => { const c = CX[i]; const k = c && kaptFind(state.gu, c.name, c.dong); if (k && !seen.has(k)) { seen.add(k); sum += k[2]; } });
+    if (sum) v = sum;
+  }
   return v ? Number(v).toLocaleString("ko-KR") : "-";
+}
+function kclean(s, gu, dong) {   // 단지명 비교용: 공백·아파트·임대·차/단지 표기 차이 등을 없앰
+  let t = String(s || "").toLowerCase().replace(/[\s()·.,'’\-_&\[\]]/g, "")
+    .replace(/에스케이/g, "sk").replace(/ipark/g, "아이파크").replace(/이편한세상|e-편한세상/g, "e편한세상").replace(/엘지/g, "lg")
+    .replace(/아파트|apt|임대|분양|신시가지|서울|총세대기준/g, "").replace(/제(\d)/g, "$1").replace(/(\d+)(단지|차)/g, "$1");
+  const stems = [String(dong || "").replace(/\d+가$/, "").replace(/동$/, ""), String(gu || "").replace(/구$/, "")].filter(x => x.length >= 2);
+  for (const st of stems) if (t.startsWith(st) && t.length - st.length >= 2) t = t.slice(st.length);
+  return t;
+}
+const KAPT_MEMO = {};
+function kaptFind(gu, name, dong) {   // 실거래 단지명 → K-apt 단지 [이름, 동, 세대수, 사용승인년]
+  const key = gu + "|" + name + "|" + dong;
+  if (key in KAPT_MEMO) return KAPT_MEMO[key];
+  const L = (window.HH || {})[gu] || [];
+  const d = dkey(dong), n = kclean(name, gu, dong);
+  const same = L.filter(r => dkey(r[1]) === d);
+  const rent = r => /임대/.test(r[0]) ? 1 : 0;
+  const pickBest = c => c.sort((a, b) => rent(a) - rent(b) || Math.abs(kclean(a[0], gu, a[1]).length - n.length) - Math.abs(kclean(b[0], gu, b[1]).length - n.length))[0];
+  let c = same.filter(r => kclean(r[0], gu, r[1]) === n);
+  if (!c.length) { const all = L.filter(r => kclean(r[0], gu, r[1]) === n); if (all.length === 1) c = all; }
+  if (!c.length && n.length >= 3) {
+    const dg = t => (t.match(/\d+/g) || []).join(",");
+    c = (same.length ? same : L).filter(r => { const k = kclean(r[0], gu, r[1]);
+      return k.length >= 3 && (k.includes(n) || n.includes(k)) && dg(k) === dg(n) && Math.min(k.length, n.length) / Math.max(k.length, n.length) >= 0.6; });
+  }
+  if (!c.length && /\d$/.test(n)) {   // '선수기자촌1단지'처럼 K-apt엔 단지를 합친 이름 하나만 있는 경우
+    const nb = n.replace(/\d+$/, "");
+    c = same.filter(r => { const k = kclean(r[0], gu, r[1]); return !/\d/.test(k) && k === nb && nb.length >= 2; });
+  }
+  const hit = c.length ? pickBest(c) : null;
+  return (KAPT_MEMO[key] = hit);
 }
 function preKind(rows) {   // 이 단지 거래 중 분양권·입주권 종류 (예: "입주권", "분양권·입주권")
   const k = [...new Set(rows.filter(r => typeof r[6] === "string").map(r => r[6]))].sort();
@@ -728,7 +1222,10 @@ function renderCompare() {
     if (state.area === "rep") {
       html += `<div class="replist">대표 평형 = 생활권 대표 단지 전체에서 거래가 가장 많은 전용면적 (생활권마다 하나)<br>${series.map(s => `<span class="dot" style="background:${s.color}"></span>${s.label.replace(/ (\d+㎡)$/, " <b>$1</b>")}: ${s.cs.filter(c => c.rows.length).map(c => c.base).join(" · ") || "이 평형 거래 없음"}`).join("<br>")}</div>`;
     }
-    html += `<div class="foot">${state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값 · " : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균 · "}점에 손가락을 대면 그 달 상단 단지가 보여요 · ★ = 기간 최고<br>국토부 실거래가(${fmtYM(months[0])}~${fmtYM(months[months.length - 1])})${state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 신규 계약"}</div>`;
+    html += chartFoot(vals.length ? html.slice(html.lastIndexOf("<svg")) : "", [
+      state.metric === "max" ? "상단 = 그 달 대표 단지들 거래 중 가장 높은 값" : "평균 = 그 달 거래가 있는 대표 단지들 최고가의 평균",
+      "점에 손가락을 대면 그 달 상단 단지가 보여요", "★ = 선택한 기간 안 최고"
+    ], `국토부 실거래가 ${fmtYM(months[0])}~${fmtYM(months[months.length - 1])} · ${state.type === "sale" ? "해제·직거래 제외" : "전세 신규 계약"}`);
     card.innerHTML = html;
     bindLegend();
     $("sumTitle").textContent = "생활권 요약"; $("summary").className = "sum-view";
@@ -763,6 +1260,9 @@ function renderTopSel() {
   $("topZone").innerHTML = baseZones(topS.gu).map((z, i) => `<option value="${i}" ${i === topS.zi ? "selected" : ""}>${z.name}</option>`).join("");
   $("topGu").onchange = e => { topS.gu = e.target.value; topS.zi = 0; topS.picked = []; renderTopSel(); render(); };
   $("topZone").onchange = e => { topS.zi = +e.target.value; topS.picked = []; render(); };
+  const bar = $("topTabs");
+  bar.innerHTML = baseZones(topS.gu).map((z, i) => `<button type="button" data-i="${i}" class="${i === topS.zi ? "on" : ""}">${z.name}</button>`).join("");
+  bar.querySelectorAll("button").forEach(b => b.onclick = () => { const i = +b.dataset.i; if (i === topS.zi) return; topS.zi = i; topS.picked = []; renderTopSel(); render(); });
 }
 function renderTop() {
   $("segArea").style.opacity = 1; $("preWrap").style.display = state.type === "sale" ? "" : "none";
@@ -780,12 +1280,12 @@ function renderTop() {
     const max = Math.max(...withV.map(o => o.v));
     const sorted = withV.slice().sort((a, b) => b.v - a.v);
     let html = `<h2>상단 비교 · ${zoneTitle(base.gu, base.z)} 기준</h2><div class="hint" style="margin:2px 0 4px">${fmtYM(from)}~${fmtYM(to)} · ${cmpUnit().split(" · ")[0]} · ${state.type === "sale" ? "매매" : "전세"} 상단(대표 단지 중 최고 거래가)</div>`;
-    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · <span style="color:#2a6fdb;font-weight:600">파랑</span> 기준보다 높음 · <span style="color:#e5484d;font-weight:600">빨강</span> 기준보다 낮음 (±10% 이내)</div>
+    html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · <span style="color:#2a6fdb;font-weight:600">파랑</span> 기준보다 높음 · <span style="color:#e5484d;font-weight:600">빨강</span> 기준보다 낮음 (±10% 이내) · <span class="samekey">${base.gu} 생활권</span></div>
       <div class="barbox${topS.open ? " open" : ""}" id="barBox">`;
     sorted.forEach(o => {
       const isBase = o === base, near = Math.abs(o.v - base.v) / base.v <= 0.10;
       const col = isBase ? "#1d1f23" : near ? (o.v > base.v ? "#2a6fdb" : "#e5484d") : "#c9d3e3";
-      html += `<div class="barrow${isBase ? " base" : ""}">
+      html += `<div class="barrow${isBase ? " base" : o.gu === base.gu ? " same" : ""}">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneTitle(o.gu, o.z)}</span>
         <span style="background:#f1f3f6;border-radius:4px;height:16px;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${(o.v / max * 100).toFixed(1)}%;background:${col};border-radius:4px"></i></span>
         <span style="text-align:right">${eok(o.v)}</span></div>`;
@@ -805,7 +1305,7 @@ function renderTop() {
       <tr><th>비교</th><th>생활권</th><th>상단</th><th>기준 대비</th></tr>`;
     const simRow = o => {
       const key = o.gu + "|" + o.zi, d = (o.v - base.v) / base.v * 100, on = topS.picked.includes(key);
-      return `<tr class="simrow"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
+      return `<tr class="simrow${o.gu === base.gu ? " same" : ""}"><td><input type="checkbox" data-k="${key}" ${on ? "checked" : ""} aria-label="비교에 넣기"></td><td>${zoneTitle(o.gu, o.z)}</td><td>${c3(o)}</td><td class="${d < 0 ? "down" : "up"}">${d > 0 ? "+" : ""}${d.toFixed(1)}%</td></tr>`;
     };
     above.forEach(o => { s += simRow(o); });
     if (!above.length) s += `<tr class="simrow"><td colspan="4" class="hint">기준보다 상단이 높은 생활권이 없어요</td></tr>`;
@@ -846,8 +1346,99 @@ function setTab(tb) {
     renderSlots();
   }
   if (tb === "top") renderTopSel();
+  if (tb === "jb") renderJbSel();
   showPeriod();
   render();
+}
+
+/* ================= 정비사업 탭 ================= */
+const jbS = { scope: "gu", gu: null, zi: 0, stage: "all", type: "all", sort: "stage" };
+function jbGus() { return Object.keys(JB.rows).filter(g => baseZones(g).length).sort(); }
+function renderJbSel() {
+  const gus = jbGus();
+  if (!jbS.gu || !gus.includes(jbS.gu)) jbS.gu = gus.includes(state.gu) ? state.gu : gus[0];
+  $("jbGu").innerHTML = gus.map(g => `<option ${g === jbS.gu ? "selected" : ""}>${g}</option>`).join("");
+  $("jbZone").innerHTML = baseZones(jbS.gu).map((z, i) => `<option value="${i}" ${i === jbS.zi ? "selected" : ""}>${z.name}</option>`).join("");
+  $("jbGu").style.display = jbS.scope === "seoul" ? "none" : "";
+  $("jbHeadT").textContent = jbS.scope === "seoul" ? "서울 전체 정비사업" : "정비사업";
+  const zon = jbS.scope === "zone", bar = $("jbTabs");
+  $("jbZoneLbl").style.display = bar.style.display = zon ? "" : "none";
+  bar.innerHTML = baseZones(jbS.gu).map((z, i) => `<button type="button" data-i="${i}" class="${i === jbS.zi ? "on" : ""}">${z.name}</button>`).join("");
+  bar.querySelectorAll("button").forEach(b => b.onclick = () => { const i = +b.dataset.i; if (i === jbS.zi) return; jbS.zi = i; renderJbSel(); render(); });
+  $("jbScope").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === jbS.scope));
+}
+$("jbGu").onchange = e => { jbS.gu = e.target.value; jbS.zi = 0; renderJbSel(); render(); };
+$("jbZone").onchange = e => { jbS.zi = +e.target.value; render(); };
+[["jbScope", "scope"], ["jbStage", "stage"], ["jbType", "type"], ["jbSort", "sort"]].forEach(([id, k]) => {
+  $(id).querySelectorAll("button").forEach(b => b.onclick = () => {
+    $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); jbS[k] = b.dataset.v;
+    if (k === "scope") renderJbSel(); render();
+  });
+});
+function jbKind(r) { return r.type.includes("재건축") ? "재건축" : "재개발"; }
+function jbFilter(l) {
+  const si = JB.stages.indexOf(jbS.stage);
+  return l.filter(r => (jbS.stage === "all" || JB.stages.indexOf(r.stage) >= si) && (jbS.type === "all" || jbKind(r) === jbS.type));
+}
+function jbSortL(l) {
+  const st = r => JB.stages.indexOf(r.stage);
+  return l.slice().sort(jbS.sort === "hh" ? (a, b) => b.new - a.new : (a, b) => st(b) - st(a) || b.new - a.new);
+}
+function jbItemLink(r, gu, zi, zname) {
+  const h = jbItem(r);
+  const tag = zname ? `<button class="go" type="button" data-gu="${gu}" data-zi="${zi}">${zname} 시세 보기</button>` : "";
+  return h.replace('<div class="cur">', `<div class="cur">`).replace(/<\/div><\/div>$/, `${tag}</div></div>`);
+}
+let jbTok = 0;   // 늦게 끝난 이전 불러오기(예: 서울 전체)가 지금 화면을 덮어쓰지 않게
+function renderJbTab() {
+  const card = $("chartCard");
+  const gus = jbS.scope === "seoul" ? jbGus() : [jbS.gu];
+  const tok = ++jbTok, want = jbS.scope + "|" + jbS.gu;
+  card.innerHTML = `<div class="empty">자료 불러오는 중…</div>`;
+  ensureAll(gus, () => {
+    if (tok !== jbTok || state.tab !== "jb" || want !== jbS.scope + "|" + jbS.gu) return;
+    const groups = [];   // [제목, [{r, gu, zi, zname}], 강조]
+    let all = [];
+    gus.forEach(gu => {
+      const P = prep(gu); if (!P) return;
+      const zones = baseZones(gu), { res, none } = jbAssign(gu, P.cx);
+      res.forEach((l, zi) => l.forEach(r => all.push({ r, gu, zi, zname: zones[zi].name })));
+      none.forEach(r => all.push({ r, gu, zi: -1, zname: "" }));
+    });
+    const before = all.length;
+    const keep = new Set(jbFilter(all.map(o => o.r)));
+    all = all.filter(o => keep.has(o.r));
+    const sortO = l => { const s = jbSortL(l.map(o => o.r)); return s.map(r => l.find(o => o.r === r)); };
+    let title, sub;
+    if (jbS.scope !== "seoul") all = all.filter(o => o.gu === jbS.gu);
+    if (jbS.scope === "zone") {
+      const zn = baseZones(jbS.gu)[jbS.zi].name;
+      title = `${jbS.gu} · ${zn} 정비사업`;
+      groups.push([null, sortO(all.filter(o => o.zi === jbS.zi)), false]);
+    } else if (jbS.scope === "gu") {
+      title = `${jbS.gu} 정비사업 · 생활권별`;
+      baseZones(jbS.gu).forEach((z, zi) => groups.push([z.name, sortO(all.filter(o => o.zi === zi)), false]));
+      const nn = all.filter(o => o.zi < 0); if (nn.length) groups.push(["생활권에 못 붙인 구역", sortO(nn), false]);
+    } else {
+      title = `서울 전체 정비사업 · 구별`;
+      gus.forEach(gu => { const l = all.filter(o => o.gu === gu); if (l.length) groups.push([gu, sortO(l), false]); });
+    }
+    const shownL = groups.flatMap(g => g[1]);
+    const cnt = {}; shownL.forEach(o => cnt[o.r.stage] = (cnt[o.r.stage] || 0) + 1);
+    const hhSum = shownL.reduce((s, o) => s + o.r.new, 0);
+    const filt = [jbS.stage !== "all" ? `${jbS.stage} 이후` : "", jbS.type !== "all" ? jbS.type : ""].filter(Boolean).join(" · ");
+    let html = `<h2>${title}</h2><div class="hint" style="margin:2px 0 4px">${filt ? filt + " · " : ""}${jbS.sort === "hh" ? "세대수 큰 순" : "단계 빠른 순"}</div>
+      <div class="jbsum"><span><b>${shownL.length}개 구역</b>${filt ? ` / 전체 ${before}` : ""}</span><span>공급 <b>${hhSum.toLocaleString()}세대</b></span>${JB.stages.slice().reverse().filter(s => cnt[s]).map(s => `<span>${s} ${cnt[s]}</span>`).join("")}</div>`;
+    html += groups.map(([nm, l]) => `${nm ? `<div class="jbh${l.length ? "" : " zero"}">${nm} <span>${l.length}개 구역</span></div>` : ""}${l.length ? l.map(o => jbItemLink(o.r, o.gu, o.zi, jbS.scope === "zone" ? "" : (jbS.scope === "seoul" ? (o.zname ? `${o.zname}` : "") : o.zname))).join("") : `<div class="hint" style="padding:6px 0 10px">조건에 맞는 구역 없음</div>`}`).join("");
+    html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만 · 공급 0세대 구역 제외 · '시세 보기'를 누르면 그 생활권 시세 그래프로 이동</div>`;
+    card.innerHTML = html;
+    card.querySelectorAll(".go").forEach(b => b.onclick = () => goZone(b.dataset.gu, +b.dataset.zi));
+  });
+}
+function goZone(gu, zi) {
+  const gus = Object.keys(INDEX.regions[state.sido] || {}).sort();
+  state.gu = gu; state.picked = []; $("selGu").value = gus.indexOf(gu);
+  loadGu(state.sido, gu, () => { initZone(); state.zone = Math.max(0, zi); $("selZone").value = state.zone; setTab("view"); onZoneChange(); window.scrollTo(0, 0); });
 }
 $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => setTab(b.dataset.t));
 setRange(Math.max(0, N - 12), N - 1);
