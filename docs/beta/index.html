@@ -797,39 +797,72 @@ function loadH2C() {
   return H2C || (H2C = new Promise((ok, no) => { const sc = document.createElement("script");
     sc.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; sc.onload = () => ok(window.html2canvas); sc.onerror = no; document.head.appendChild(sc); }));
 }
-async function shotSave(el, name, btn, fixClone) {   // 화면 요소를 사진으로 저장 (카드 저장·한 장 이미지 공통)
+async function shotBlob(el, fixClone, jpg) {   // 화면 요소 → PNG (jpg면 JPG: 용량이 훨씬 작음)
+  const h2c = await loadH2C();
+  const cv = await h2c(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true,
+    onclone: doc => {   // 접힌 'ⓘ 설명' 내용이 사진에 겹쳐 찍히지 않게 지움
+      doc.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
+      doc.querySelectorAll(".chtip").forEach(t => t.remove());
+      doc.querySelectorAll(".hov").forEach(h => h.remove());
+      doc.querySelectorAll(".scroll").forEach(x => { x.style.overflow = "visible"; });   // 옆으로 넘치는 표도 다 찍히게
+      if (fixClone) fixClone(doc);
+    } });
+  return new Promise(r => jpg ? cv.toBlob(r, "image/jpeg", 0.9) : cv.toBlob(r, "image/png"));
+}
+async function shotSaveMany(items, btn) {   // items: [{ el, name, fix, jpg }] — 아이폰은 공유창 한 번에, 갤럭시·PC는 차례로 내려받기(갤러리 Download 앨범)
   if (btn.classList.contains("busy")) return; btn.classList.add("busy");
   try {
-    const h2c = await loadH2C();
-    const cv = await h2c(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true,
-      onclone: doc => {   // 접힌 'ⓘ 설명' 내용이 사진에 겹쳐 찍히지 않게 지움
-        doc.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
-        doc.querySelectorAll(".chtip").forEach(t => t.remove());
-        doc.querySelectorAll(".hov").forEach(h => h.remove());
-        doc.querySelectorAll(".scroll").forEach(x => { x.style.overflow = "visible"; });   // 옆으로 넘치는 표도 다 찍히게
-        if (fixClone) fixClone(doc);
-      } });
-    const blob = await new Promise(r => cv.toBlob(r, "image/png"));
-    name = name.replace(/[\/:*?"<>|·]/g, "");
-    const file = new File([blob], name, { type: "image/png" });
-    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);   // 아이폰은 공유창의 '이미지 저장', 갤럭시·PC는 바로 내려받기(갤러리 Download 앨범)
-    if (ios && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: name }); toast("사진을 공유창으로 보냈어요");
+    const files = [];
+    for (const it of items) files.push(new File([await shotBlob(it.el, it.fix, it.jpg)], it.name.replace(/[\/:*?"<>|·]/g, ""), { type: it.jpg ? "image/jpeg" : "image/png" }));
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    if (ios && navigator.canShare && navigator.canShare({ files })) {
+      await navigator.share({ files, title: files[0].name }); toast(files.length > 1 ? `사진 ${files.length}장을 공유창으로 보냈어요` : "사진을 공유창으로 보냈어요");
     } else {
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
-      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-      toast("사진으로 저장했어요 · 갤러리 Download 앨범");
+      for (let k = 0; k < files.length; k++) {
+        const a = document.createElement("a"); a.href = URL.createObjectURL(files[k]); a.download = files[k].name; document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        if (k < files.length - 1) await new Promise(r => setTimeout(r, 700));   // 연달아 받기 막힘 방지
+      }
+      toast(files.length > 1 ? `사진 ${files.length}장 저장했어요 · 갤러리 Download 앨범` : "사진으로 저장했어요 · 갤러리 Download 앨범");
     }
   } catch (e) { if (!(e && e.name === "AbortError")) alert("사진 저장에 실패했어요. 다시 한 번 눌러주세요."); }
   btn.classList.remove("busy");
 }
+function shotSave(el, name, btn, fixClone) { return shotSaveMany([{ el, name, fix: fixClone }], btn); }
+/* 정비사업 탭 목록: 길면 구역 줄 사이에서 여러 장으로 나눠 JPG로 저장 (네이버 카페에서 긴 사진이 깨지는 문제)
+   장마다 제목(1/3 …)·출처가 들어가고, 생활권 중간에서 넘어가면 생활권 머리줄을 '(이어서)'로 다시 붙임 */
+const JB_PAGE_H = 1500;   // 한 장 본문 최대 높이(화면 px). 저장 사진은 2배
+function jbParts(kids) {   // [본문 시작, 본문 끝] — 머리(제목·요약·단계 칸)와 출처 줄 사이
+  let b0 = kids.findIndex(k => k.classList.contains("jbstg")); if (b0 < 0) b0 = kids.findIndex(k => k.classList.contains("jbsum"));
+  let f = kids.findIndex(k => k.classList.contains("foot")); if (f < 0) f = kids.length;
+  return [b0 + 1, f];
+}
+function capJb(card, btn) {
+  const kids = [...card.children], [b0, b1] = jbParts(kids), body = kids.slice(b0, b1);
+  const pages = [[]]; let h = 0;
+  body.forEach((k, i) => {
+    const kh = k.offsetHeight + 8, nextH = k.classList.contains("jbh") && body[i + 1] ? body[i + 1].offsetHeight : 0;   // 머리줄은 다음 줄과 같이
+    if (pages[pages.length - 1].length && h + kh + nextH > JB_PAGE_H) { pages.push([]); h = 0; }
+    pages[pages.length - 1].push(i); h += kh;
+  });
+  const n = pages.length;
+  const nm = jbS.scope === "seoul" ? "서울전체" : jbS.scope === "zone" ? `${jbS.gu}_${baseZones(jbS.gu)[jbS.zi].name}` : `${jbS.gu}_생활권별`;
+  const items = pages.map((pg, p) => ({ el: card, jpg: true, name: `${nm}_정비사업${n > 1 ? `_${p + 1}of${n}` : ""}.jpg`, fix: doc => {
+    const c = doc.getElementById("chartCard"); c.querySelectorAll(".go").forEach(x => x.remove());
+    c.querySelectorAll(".jbh").forEach(x => { x.style.position = "static"; });   // 스크롤 따라 붙는 머리줄이 사진에서 엉뚱한 곳에 찍히지 않게
+    const ck = [...c.children], [c0, c1] = jbParts(ck), cb = ck.slice(c0, c1), keep = new Set(pg);
+    const first = pg[0]; let hd = -1; for (let i = first; i >= 0; i--) if (cb[i].classList.contains("jbh")) { hd = i; break; }
+    if (hd >= 0 && hd < first) { const cp = cb[hd].cloneNode(true), sp = cp.querySelector("span"); if (sp) sp.textContent += " (이어서)"; c.insertBefore(cp, cb[first]); }
+    cb.forEach((k, i) => { if (!keep.has(i)) k.remove(); });
+    if (n > 1) { const t = c.querySelector("h2"); if (t) t.insertAdjacentHTML("beforeend", ` <span style="font-size:.7em;color:#1f56b3">${p + 1}/${n}</span>`); }
+  } }));
+  if (n > 1) toast(`길어서 ${n}장으로 나눠 저장해요`);
+  return shotSaveMany(items, btn);
+}
 function capCard(id, btn) {
   const el = $(id); if (!el) return;
   const z = zonesFor(state.sido, state.gu)[state.zone];
-  if (state.tab === "jb" && id === "chartCard") {   // 정비사업 탭 목록 ('시세 보기' 버튼은 빼고)
-    const nm = jbS.scope === "seoul" ? "서울전체" : jbS.scope === "zone" ? `${jbS.gu}_${baseZones(jbS.gu)[jbS.zi].name}` : `${jbS.gu}_생활권별`;
-    return shotSave(el, `${nm}_정비사업.png`, btn, doc => doc.querySelectorAll("#chartCard .go").forEach(x => x.remove()));
-  }
+  if (state.tab === "jb" && id === "chartCard") return capJb(el, btn);   // 정비사업 탭 목록: 길면 나눠서 JPG
   if (state.tab === "top" && id === "chartCard") {   // 상단 비교 막대 목록: 펼친 상태면 전체, 접힌 상태면 지금 보이는 줄만
     const box = $("barBox"), keep = new Set();
     if (box && !topS.open) [...box.children].forEach((r, k) => { const t = r.offsetTop - box.offsetTop - box.scrollTop; if (t + r.offsetHeight > 0 && t < box.clientHeight) keep.add(k); });
