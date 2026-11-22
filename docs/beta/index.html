@@ -822,6 +822,10 @@ async function shotSave(el, name, btn, fixClone) {   // 화면 요소를 사진�
 function capCard(id, btn) {
   const el = $(id); if (!el) return;
   const z = zonesFor(state.sido, state.gu)[state.zone];
+  if (state.tab === "jb" && id === "chartCard") {   // 정비사업 탭 목록 ('시세 보기' 버튼은 빼고)
+    const nm = jbS.scope === "seoul" ? "서울전체" : jbS.scope === "zone" ? `${jbS.gu}_${baseZones(jbS.gu)[jbS.zi].name}` : `${jbS.gu}_생활권별`;
+    return shotSave(el, `${nm}_정비사업.png`, btn, doc => doc.querySelectorAll("#chartCard .go").forEach(x => x.remove()));
+  }
   if (state.tab === "top" && id === "chartCard") {   // 상단 비교 막대 목록: 펼친 상태면 전체, 접힌 상태면 지금 보이는 줄만
     const box = $("barBox"), keep = new Set();
     if (box && !topS.open) [...box.children].forEach((r, k) => { const t = r.offsetTop - box.offsetTop - box.scrollTop; if (t + r.offsetHeight > 0 && t < box.clientHeight) keep.add(k); });
@@ -837,7 +841,7 @@ function capCard(id, btn) {
     const bz = baseZones(topS.gu)[topS.zi];
     return shotSave(el, `${topS.gu}_${bz ? bz.name : ""}_상단비교.png`, btn, doc => doc.querySelectorAll("#summary col:first-child").forEach(c => c.remove()));
   }
-  const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : id === "sumCard" ? "단지요약" : "현황";
+  const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : id === "sumCard" ? "단지요약" : id === "jbCard" ? "정비사업" : "현황";
   return shotSave(el, `${state.gu}_${(CH_ALL && id === "chartCard") || (TR_ALL && id === "trCard") ? "전체생활권" : (z && z.name || "")}_${kind}.png`, btn);
 }
 /* ---------- 임장 기록용 한 장 이미지: 머리말 → 구 현황(선택) → 교통 → 시세 그래프 → 단지별 요약 → 출처 ---------- */
@@ -1012,7 +1016,8 @@ function renderJb(z) {
       h += l.slice(0, MAX).map(r => `<div class="jbrow"><b>${r.name}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${r.new.toLocaleString()}세대</span></div>`).join("");
       if (l.length > MAX) h += `<div class="jbmore">외 ${l.length - MAX}개 구역은 정비사업 탭에서</div>`;
     }
-    h += `<button class="btn primary" type="button" id="jbGo">정비사업 탭에서 자세히 보기 (단계·이주 일정)</button>`;
+    h += `<button class="btn primary" type="button" id="jbGo" data-html2canvas-ignore>정비사업 탭에서 자세히 보기 (단계·이주 일정)</button>`;
+    h += `<div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="jbCard">이미지로 저장 ↓</button></div>`;
     card.innerHTML = h;
     card.style.display = "";
     $("jbGo").onclick = () => { jbS.gu = state.gu; jbS.zi = Math.max(0, zi0); jbS.scope = "zone"; setTab("jb"); };
@@ -1624,6 +1629,7 @@ function renderJbTab() {
       <div class="jbsum"><span><b>${shownL.length}개 구역</b>${filt ? ` / 전체 ${before}` : ""}</span><span>공급 <b>${hhSum.toLocaleString()}세대</b></span>${JB.stages.slice().reverse().filter(s => cnt[s]).map(s => `<span>${s} ${cnt[s]}</span>`).join("")}</div>`;
     html += groups.map(([nm, l]) => `${nm ? `<div class="jbh${l.length ? "" : " zero"}">${nm} <span>${l.length}개 구역</span></div>` : ""}${l.length ? l.map(o => jbItemLink(o.r, o.gu, o.zi, jbS.scope === "zone" ? "" : (jbS.scope === "seoul" ? (o.zname ? `${o.zname}` : "") : o.zname))).join("") : `<div class="hint" style="padding:6px 0 10px">조건에 맞는 구역 없음</div>`}`).join("");
     html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만 · 공급 0세대 구역 제외 · '시세 보기'를 누르면 그 생활권 시세 그래프로 이동</div>`;
+    html += `<div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="chartCard">이미지로 저장 ↓</button></div>`;
     card.innerHTML = html;
     card.querySelectorAll(".go").forEach(b => b.onclick = () => goZone(b.dataset.gu, +b.dataset.zi));
   });
