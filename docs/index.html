@@ -364,9 +364,10 @@
 
   <div class="card" id="chartCard"></div>
 
-  <div class="card nj">
+  <div class="card nj" id="sumCard">
     <h3 id="sumTitle">단지별 요약</h3>
     <div class="scroll"><table id="summary"></table></div>
+    <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="sumCard">이미지로 저장 ↓</button></div>
   </div>
 
   <div class="card vt-only" id="jbCard" style="display:none"></div>
@@ -747,10 +748,11 @@ async function capCard(id, btn) {
         doc.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
         doc.querySelectorAll(".chtip").forEach(t => t.remove());
         doc.querySelectorAll(".hov").forEach(h => h.remove());
+        doc.querySelectorAll(".scroll").forEach(x => { x.style.overflow = "visible"; });   // 옆으로 넘치는 표도 다 찍히게
       } });
     const blob = await new Promise(r => cv.toBlob(r, "image/png"));
     const z = zonesFor(state.sido, state.gu)[state.zone];
-    const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : "현황";
+    const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : id === "sumCard" ? "단지요약" : "현황";
     const name = `${state.gu}_${(CH_ALL && id === "chartCard") || (TR_ALL && id === "trCard") ? "전체생활권" : (z && z.name || "")}_${kind}.png`.replace(/[\/:*?"<>|·]/g, "");
     const file = new File([blob], name, { type: "image/png" });
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);   // 아이폰은 공유창의 '이미지 저장', 갤럭시·PC는 바로 내려받기(갤러리 Download 앨범)
