@@ -252,7 +252,8 @@
   #recent th,#recent td{text-align:left!important}
   .barbox{max-height:330px;overflow-y:auto;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:4px 10px;-webkit-overflow-scrolling:touch}
   .barbox.open{max-height:none}
-  .barrow{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;padding:3px 4px;font-size:13.5px;border-radius:6px}
+  .barrow .brk{font-style:normal;display:inline-block;width:2.9em;color:#1f56b3;font-weight:700;font-size:12px}
+  .barrow{display:grid;grid-template-columns:minmax(0,12em) minmax(0,1fr) 5.2em;gap:8px;align-items:center;padding:3px 4px;font-size:13.5px;border-radius:6px}
   .barrow.base{font-weight:700;background:#e8f0fe}
   .barrow.same{background:#fff3d1}
   .barrow.same > span:first-child{font-weight:600;color:#8a5a00}
@@ -316,14 +317,14 @@
   .sheet .sh-src{font-size:10.5px;color:var(--mute);line-height:1.5;padding-top:8px}
   /* 생활권 선택: 가로 긴 줄로 한 줄에 하나씩 */
   .gi .gzl .zrk{display:block;font-size:11.5px;margin-top:2px}
-  .gi #zoneTabs{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-  .gi #zoneTabs button{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;border-radius:9px;padding:5px 10px;font-size:14px;line-height:1.3}
-  .gi #zoneTabs button span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .gi #zoneTabs button small{font-size:11px;color:var(--mute);font-weight:400;padding-left:27px}
-  .gi #zoneTabs button.on small{color:#d6e3fb}
-  .gi #zoneTabs button.add{align-items:center;grid-column:1 / -1;padding:6px 10px}
-  .gi #zoneTabs em.rk{font-style:normal;font-size:12px;font-weight:800;color:#1f56b3;display:inline-block;width:27px}
-  .gi #zoneTabs button.on em.rk{color:#fff}
+  .gi .rkgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .gi .rkgrid button{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;border-radius:9px;padding:5px 10px;font-size:14px;line-height:1.3}
+  .gi .rkgrid button span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gi .rkgrid button small{font-size:11px;color:var(--mute);font-weight:400;padding-left:27px}
+  .gi .rkgrid button.on small{color:#d6e3fb}
+  .gi .rkgrid button.add{align-items:center;grid-column:1 / -1;padding:6px 10px}
+  .gi .rkgrid em.rk{font-style:normal;font-size:12px;font-weight:800;color:#1f56b3;display:inline-block;width:27px}
+  .gi .rkgrid button.on em.rk{color:#fff}
 </style>
 </head>
 <body data-tab="view">
@@ -338,7 +339,7 @@
     <div class="gih"><select id="selSido" aria-label="시·도"></select><select id="selGu" aria-label="구"></select><b>현황</b><span class="rg" id="giRegion"></span><select id="selZone" hidden></select></div>
     <div id="giBody"></div>
     <div class="gzl" id="zoneLabel">생활권 선택</div>
-    <div class="gzt" id="zoneTabs"></div>
+    <div class="gzt rkgrid" id="zoneTabs"></div>
     <div class="onerow" data-html2canvas-ignore><button type="button" class="onebtn" id="oneBtn">임장 기록용 한 장 이미지 만들기</button></div>
     <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="guInfo">이미지로 저장 ↓</button></div>
   </div>
@@ -349,8 +350,8 @@
   </div>
   <div class="card tt-only gi hc" id="topHead">
     <div class="gih"><select id="topGu" aria-label="구"></select><b>기준 생활권</b><span class="rg">상단 비교</span></div>
-    <div class="gzl" style="margin-top:0">이 생활권과 상단(최고가)이 비슷한 곳을 찾아요</div>
-    <div class="gzt" id="topTabs"></div><select id="topZone" hidden></select>
+    <div class="gzl" style="margin-top:0">이 생활권과 상단(최고가)이 비슷한 곳을 찾아요<span class="zrk" id="topRkNote"></span></div>
+    <div class="gzt rkgrid" id="topTabs"></div><select id="topZone" hidden></select>
     <div class="gzl">상단 기간</div>
     <div class="seg" id="segWin"><button data-v="3">최근 3개월</button><button data-v="6" class="on">6개월</button><button data-v="12">12개월</button><button data-v="custom">직접 선택</button></div>
   </div>
@@ -564,12 +565,8 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
     + (G && G.head ? `<div class="ghd">${(h => h.length > 1 ? `${h[0]}<br><b>${h.slice(1).join(" — ")}</b>` : `<b>${h[0]}</b>`)(G.head.split(/\s*—\s*/))}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : "");
   const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
   const S6 = window.GUSTATS || {};
-  $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span><span class="zrk">순위·금액 = ${S6.from ? `${fmtYM(S6.from)}~${fmtYM(S6.to)} ` : "최근 "}6개월 84㎡ 최고가 기준</span>`;
-  const TRZ = (window.TRANSIT || {}).zones || {}, rk = zoneRank(state.gu);
-  const order = zs.map((x, i) => i).sort((a, b) => (rk[zs[b].name] ? 1 : 0) - (rk[zs[a].name] ? 1 : 0) || (rk[zs[b].name] || {}).v - (rk[zs[a].name] || {}).v || 0);
-  bar.innerHTML = order.map(i => { const x = zs[i], st = x.kind === "base" && TRZ[state.gu + "|" + x.name], r = x.kind === "base" && rk[x.name];
-    const info = r ? `${(r.v / 10000).toFixed(1).replace(/\.0$/, "")}억` : "";
-    return `<button type="button" data-i="${i}" class="${i === state.zone ? "on" : ""}${x.kind === "pick" ? " add" : ""}"><span>${r ? `<em class="rk">${r.n}위</em>` : ""}${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</span>${info ? `<small>${info}</small>` : ""}</button>`; }).join("");
+  $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span><span class="zrk">${rankNote()}</span>`;
+  bar.innerHTML = rankBtns(state.gu, zs, state.zone);
   bar.classList.toggle("dim", state.view === "top5");
   bar.querySelectorAll("button").forEach(b => b.onclick = () => {
     const i = +b.dataset.i; if (i === state.zone) return;
@@ -825,6 +822,17 @@ async function shotSave(el, name, btn, fixClone) {   // 화면 요소를 사진�
 function capCard(id, btn) {
   const el = $(id); if (!el) return;
   const z = zonesFor(state.sido, state.gu)[state.zone];
+  if (state.tab === "top" && id === "chartCard") {   // 상단 비교 막대 목록: 펼친 상태면 전체, 접힌 상태면 지금 보이는 줄만
+    const box = $("barBox"), keep = new Set();
+    if (box && !topS.open) [...box.children].forEach((r, k) => { const t = r.offsetTop - box.offsetTop - box.scrollTop; if (t + r.offsetHeight > 0 && t < box.clientHeight) keep.add(k); });
+    const bz = baseZones(topS.gu)[topS.zi];
+    return shotSave(el, `${topS.gu}_${bz ? bz.name : ""}_상단순위.png`, btn, doc => {
+      const b = doc.getElementById("barBox"); if (!b) return;
+      b.style.maxHeight = "none"; b.style.overflow = "visible";
+      if (keep.size) [...b.children].forEach((r, k) => { if (!keep.has(k)) r.remove(); });
+      doc.querySelectorAll("#chartCard .row").forEach(x => x.remove());
+    });
+  }
   if (state.tab === "top" && id === "sumCard") {   // 상단 비교: 기준 생활권 위아래 목록
     const bz = baseZones(topS.gu)[topS.zi];
     return shotSave(el, `${topS.gu}_${bz ? bz.name : ""}_상단비교.png`, btn, doc => doc.querySelectorAll("#summary col:first-child").forEach(c => c.remove()));
@@ -1296,6 +1304,14 @@ function ensureGu(gu, cb) {
 }
 function ensureAll(gus, cb) { let left = gus.length; if (!left) return cb(); gus.forEach(g => ensureGu(g, () => { if (--left === 0) cb(); })); }
 const GU_PREP = {};
+function rankBtns(gu, zs, cur) {   // 생활권 버튼: 상단 순서로 두 줄씩 — "1위 압구정·청담" + 작은 금액
+  const rk = zoneRank(gu);
+  const order = zs.map((x, i) => i).sort((a, b) => (rk[zs[b].name] ? 1 : 0) - (rk[zs[a].name] ? 1 : 0) || (rk[zs[b].name] || {}).v - (rk[zs[a].name] || {}).v || 0);
+  return order.map(i => { const x = zs[i], r = x.kind === "base" && rk[x.name];
+    const info = r ? `${(r.v / 10000).toFixed(1).replace(/\.0$/, "")}억` : "";
+    return `<button type="button" data-i="${i}" class="${i === cur ? "on" : ""}${x.kind === "pick" ? " add" : ""}"><span>${r ? `<em class="rk">${r.n}위</em>` : ""}${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</span>${info ? `<small>${info}</small>` : ""}</button>`; }).join("");
+}
+function rankNote() { const S = window.GUSTATS || {}; return `순위·금액 = ${S.from ? `${fmtYM(S.from)}~${fmtYM(S.to)} ` : "최근 "}6개월 84㎡ 최고가 기준`; }
 function zoneRank(gu) {   // 생활권 서열: 대표 단지 84㎡ 매매(분양권·입주권 포함) 최근 6개월 최고가 순 (구 현황과 같은 기간)
   const P = prep(gu), S = window.GUSTATS || {}; if (!P) return {};
   const ms = allMonths, to = S.to || ms[ms.length - 1], from = S.from || ms[Math.max(0, ms.length - 6)];
@@ -1435,7 +1451,8 @@ function renderTopSel() {
   $("topGu").onchange = e => { topS.gu = e.target.value; topS.zi = 0; topS.picked = []; renderTopSel(); render(); };
   $("topZone").onchange = e => { topS.zi = +e.target.value; topS.picked = []; render(); };
   const bar = $("topTabs");
-  bar.innerHTML = baseZones(topS.gu).map((z, i) => `<button type="button" data-i="${i}" class="${i === topS.zi ? "on" : ""}">${z.name}</button>`).join("");
+  bar.innerHTML = rankBtns(topS.gu, baseZones(topS.gu).map(z => ({ ...z, kind: "base" })), topS.zi);
+  $("topRkNote").textContent = rankNote();
   bar.querySelectorAll("button").forEach(b => b.onclick = () => { const i = +b.dataset.i; if (i === topS.zi) return; topS.zi = i; topS.picked = []; renderTopSel(); render(); });
 }
 function renderTop() {
@@ -1456,16 +1473,18 @@ function renderTop() {
     let html = `<h2>상단 비교 · ${zoneTitle(base.gu, base.z)} 기준</h2><div class="hint" style="margin:2px 0 4px">${fmtYM(from)}~${fmtYM(to)} · ${cmpUnit().split(" · ")[0]} · ${state.type === "sale" ? "매매" : "전세"} 상단(대표 단지 중 최고 거래가)</div>`;
     html += `<div class="unit">기준 상단 <b>${eok(base.v)}</b> (${base.b.who}) · <span style="color:#2a6fdb;font-weight:600">파랑</span> 기준보다 높음 · <span style="color:#e5484d;font-weight:600">빨강</span> 기준보다 낮음 (±10% 이내) · <span class="samekey">${base.gu} 생활권</span></div>
       <div class="barbox${topS.open ? " open" : ""}" id="barBox">`;
-    sorted.forEach(o => {
+    renderTopSel();   // 모든 구 자료가 들어온 뒤 기준 생활권 순위 다시 그리기
+    sorted.forEach((o, k) => {
       const isBase = o === base, near = Math.abs(o.v - base.v) / base.v <= 0.10;
       const col = isBase ? "#1d1f23" : near ? (o.v > base.v ? "#2a6fdb" : "#e5484d") : "#c9d3e3";
       html += `<div class="barrow${isBase ? " base" : o.gu === base.gu ? " same" : ""}">
-        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneTitle(o.gu, o.z)}</span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><em class="brk">${k + 1}위</em>${zoneTitle(o.gu, o.z)}</span>
         <span style="background:#f1f3f6;border-radius:4px;height:16px;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${(o.v / max * 100).toFixed(1)}%;background:${col};border-radius:4px"></i></span>
         <span style="text-align:right">${eok(o.v)}</span></div>`;
     });
     html += `</div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="barToggle">${topS.open ? "접기" : `전체 펼치기 (${sorted.length}개)`}</button><span class="hint">목록은 기준 생활권이 가운데 오게 맞춰져요</span></div>
-      <div class="foot">상단 = 선택한 평형의 기간 안 실제 최고 거래가 (해제·직거래 제외)</div>`;
+      <div class="foot">상단 = 선택한 평형의 기간 안 실제 최고 거래가 (해제·직거래 제외) · 국토부 실거래가 · 만든이 비상</div>
+      <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="chartCard">이미지로 저장 ↓</button></div>`;
     card.innerHTML = html;
     const box = $("barBox"), br = box.querySelector(".base");
     if (!topS.open && br) box.scrollTop = br.offsetTop - box.offsetTop - box.clientHeight / 2 + br.clientHeight / 2;
