@@ -295,10 +295,6 @@
   .onezoom{margin:0 auto;width:max-content}
   .onefoot{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
   .onefoot .btn{flex:1;font-size:15px;padding:11px}
-  .onepg+.onepg{margin-top:18px}
-  .onepl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--sub);margin:0 0 6px}
-  .onepl b{color:var(--ink)}
-  .onepl .mini{margin-left:auto}
   .sheet{width:460px;background:#fff;padding:18px 16px 12px;color:var(--ink)}
   .sheet .sh-h{border-bottom:2px solid #1d1f23;padding-bottom:10px;margin-bottom:4px}
   .sheet .sh-k{font-size:11.5px;color:#1f56b3;font-weight:700;letter-spacing:.2px}
@@ -343,7 +339,7 @@
     <div id="giBody"></div>
     <div class="gzl" id="zoneLabel">생활권 선택</div>
     <div class="gzt" id="zoneTabs"></div>
-    <div class="onerow" data-html2canvas-ignore><button type="button" class="onebtn" id="oneBtn">임장 기록용 이미지 만들기 (2장)</button></div>
+    <div class="onerow" data-html2canvas-ignore><button type="button" class="onebtn" id="oneBtn">임장 기록용 한 장 이미지 만들기</button></div>
     <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="guInfo">이미지로 저장 ↓</button></div>
   </div>
   <div class="card vt-only" id="trCard" style="display:none">
@@ -430,11 +426,11 @@
 
   <div class="sign">시험판 · 새 기능을 먼저 만들어 보는 곳 · <a href="../">기본 사이트</a> · <a href="../v1/">v1 고정판</a> · 만든이 비상</div>
 </div>
-<div class="one" id="oneDlg" hidden role="dialog" aria-label="임장 기록 이미지 미리보기">
-  <div class="onebar"><b>임장 기록 이미지 2장 미리보기</b><button type="button" class="mini" id="oneClose">닫기</button></div>
+<div class="one" id="oneDlg" hidden role="dialog" aria-label="한 장 이미지 미리보기">
+  <div class="onebar"><b>한 장 이미지 미리보기</b><button type="button" class="mini" id="oneClose">닫기</button></div>
   <div class="onechk" id="oneChk"></div>
-  <div class="oneview" id="oneView"><div class="onezoom" id="oneZoom"></div></div>
-  <div class="onefoot"><button type="button" class="btn" id="oneCancel">취소</button><button type="button" class="btn primary" id="oneSave">2장 모두 저장 ↓</button></div>
+  <div class="oneview" id="oneView"><div class="onezoom" id="oneZoom"><div class="sheet" id="oneSheet"></div></div></div>
+  <div class="onefoot"><button type="button" class="btn" id="oneCancel">취소</button><button type="button" class="btn primary" id="oneSave">이미지로 저장 ↓</button></div>
 </div>
 
 <script>
@@ -800,38 +796,32 @@ function loadH2C() {
   return H2C || (H2C = new Promise((ok, no) => { const sc = document.createElement("script");
     sc.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; sc.onload = () => ok(window.html2canvas); sc.onerror = no; document.head.appendChild(sc); }));
 }
-async function shotBlob(el, fixClone) {   // 화면 요소 → PNG
-  const h2c = await loadH2C();
-  const cv = await h2c(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true,
-    onclone: doc => {   // 접힌 'ⓘ 설명' 내용이 사진에 겹쳐 찍히지 않게 지움
-      doc.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
-      doc.querySelectorAll(".chtip").forEach(t => t.remove());
-      doc.querySelectorAll(".hov").forEach(h => h.remove());
-      doc.querySelectorAll(".scroll").forEach(x => { x.style.overflow = "visible"; });   // 옆으로 넘치는 표도 다 찍히게
-      if (fixClone) fixClone(doc);
-    } });
-  return new Promise(r => cv.toBlob(r, "image/png"));
-}
-async function shotSaveMany(items, btn) {   // items: [{ el, name, fix }] — 아이폰은 공유창 한 번에, 갤럭시·PC는 차례로 내려받기(갤러리 Download 앨범)
+async function shotSave(el, name, btn, fixClone) {   // 화면 요소를 사진으로 저장 (카드 저장·한 장 이미지 공통)
   if (btn.classList.contains("busy")) return; btn.classList.add("busy");
   try {
-    const files = [];
-    for (const it of items) files.push(new File([await shotBlob(it.el, it.fix)], it.name.replace(/[\/:*?"<>|·]/g, ""), { type: "image/png" }));
-    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    if (ios && navigator.canShare && navigator.canShare({ files })) {
-      await navigator.share({ files, title: files[0].name }); toast(`사진 ${files.length}장을 공유창으로 보냈어요`);
+    const h2c = await loadH2C();
+    const cv = await h2c(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true,
+      onclone: doc => {   // 접힌 'ⓘ 설명' 내용이 사진에 겹쳐 찍히지 않게 지움
+        doc.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
+        doc.querySelectorAll(".chtip").forEach(t => t.remove());
+        doc.querySelectorAll(".hov").forEach(h => h.remove());
+        doc.querySelectorAll(".scroll").forEach(x => { x.style.overflow = "visible"; });   // 옆으로 넘치는 표도 다 찍히게
+        if (fixClone) fixClone(doc);
+      } });
+    const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+    name = name.replace(/[\/:*?"<>|·]/g, "");
+    const file = new File([blob], name, { type: "image/png" });
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);   // 아이폰은 공유창의 '이미지 저장', 갤럭시·PC는 바로 내려받기(갤러리 Download 앨범)
+    if (ios && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name }); toast("사진을 공유창으로 보냈어요");
     } else {
-      for (let k = 0; k < files.length; k++) {
-        const a = document.createElement("a"); a.href = URL.createObjectURL(files[k]); a.download = files[k].name; document.body.appendChild(a); a.click();
-        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-        if (k < files.length - 1) await new Promise(r => setTimeout(r, 700));   // 연달아 받기 막힘 방지
-      }
-      toast(`사진 ${files.length}장 저장했어요 · 갤러리 Download 앨범`);
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      toast("사진으로 저장했어요 · 갤러리 Download 앨범");
     }
   } catch (e) { if (!(e && e.name === "AbortError")) alert("사진 저장에 실패했어요. 다시 한 번 눌러주세요."); }
   btn.classList.remove("busy");
 }
-function shotSave(el, name, btn, fixClone) { return shotSaveMany([{ el, name, fix: fixClone }], btn); }
 function capCard(id, btn) {
   const el = $(id); if (!el) return;
   const z = zonesFor(state.sido, state.gu)[state.zone];
@@ -842,7 +832,7 @@ function capCard(id, btn) {
   const kind = id === "trCard" ? "교통" : id === "chartCard" ? "시세" : id === "sumCard" ? "단지요약" : "현황";
   return shotSave(el, `${state.gu}_${(CH_ALL && id === "chartCard") || (TR_ALL && id === "trCard") ? "전체생활권" : (z && z.name || "")}_${kind}.png`, btn);
 }
-/* ---------- 임장 기록용 이미지 2장: ① 교통·시세 그래프(구 현황 선택)  ② 단지별 요약·정비사업 — 장마다 머리말·출처 ---------- */
+/* ---------- 임장 기록용 한 장 이미지: 머리말 → 구 현황(선택) → 교통 → 시세 그래프 → 단지별 요약 → 출처 ---------- */
 const ONE_KEY = "lifezone-one-v1";
 const ONE_PARTS = [["gu", "구 현황"], ["tr", "교통"], ["ch", "시세 그래프"], ["sum", "단지별 요약"], ["jb", "정비사업"]];
 function oneOpts() { const o = { gu: false, tr: true, ch: true, sum: true, jb: true }; try { Object.assign(o, JSON.parse(localStorage.getItem(ONE_KEY)) || {}); } catch (e) {} return o; }
@@ -870,12 +860,12 @@ function oneBuild() {
   const G = (window.GUINFO || {})[state.gu];
   const area = isTop ? "단지별 거래 많은 평형" : { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "단지별 대표 평형" }[state.area];
   const typ = state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세";
-  const head = (k, sub) => `<div class="sh-h"><div class="sh-k">비상한 아파트 생활권 · 임장 기록 ${k}/2 · ${sub}</div><div class="sh-t">${title}</div>
+  const sh = $("oneSheet");
+  let h = `<div class="sh-h"><div class="sh-k">비상한 아파트 생활권 · 임장 기록</div><div class="sh-t">${title}</div>
     <div class="sh-s"><b>${state.gu}</b>${G && G.region ? ` · ${G.region}` : ""} · 기준 <b>${String(last).slice(0, 4)}년 ${+String(last).slice(4)}월</b></div>
     <div class="sh-c">${area} · ${typ} · ${state.metric === "max" ? "월 최고가" : "월 평균가"} · ${ym}</div></div>`;
-  let h = "", h2 = "";
   const sec = (label, inner, cls) => `<div class="sh-sec${cls ? " " + cls : ""}"><div class="sh-l">${label}</div>${inner}</div>`;
-  const src = ["실거래가 국토교통부(계약일 " + ym + (state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 그래프는 신규 계약") + ")"], src2 = [src[0]];
+  const src = ["실거래가 국토교통부(계약일 " + ym + (state.type === "sale" ? ", 해제·직거래 제외" : ", 전세 그래프는 신규 계약") + ")"];
   if (avail.gu && o.gu) {
     const g = oneClean($("giBody").querySelector(".gst").cloneNode(true));
     h += sec("구 현황", g.outerHTML, "gi");
@@ -891,8 +881,8 @@ function oneBuild() {
   }
   if (avail.sum && o.sum) {
     const t = oneClean($("summary").cloneNode(true));
-    h2 += sec($("sumTitle").textContent || "단지별 요약", t.outerHTML);
-    if (/\d/.test(t.textContent)) src2.push("세대수 공동주택관리정보시스템(K-apt)");
+    h += sec($("sumTitle").textContent || "단지별 요약", t.outerHTML);
+    if (/\d/.test(t.textContent)) src.push("세대수 공동주택관리정보시스템(K-apt)");
   }
   if (avail.jb && o.jb) {   // 정비사업: 이 생활권에 연결된 구역 전부 (화면 카드는 6개까지만)
     const zi0 = baseZones(state.gu).findIndex(b => b.name === z.name), l = jbAssign(state.gu).res[zi0] || [];
@@ -905,21 +895,16 @@ function oneBuild() {
         + `<div class="jbmini">${cnt.map(([st, n, lt]) => `<span class="${lt ? "late" : ""}">${st} ${n}</span>`).join("")}</div>`
         + [...l].sort((a, b) => si(b) - si(a)).map(r => `<div class="jbrow"><b>${r.name}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${(r.new || 0).toLocaleString()}세대</span></div>`).join("");
     }
-    h2 += sec("정비사업 (재개발·재건축)", j, "sh-jb");
-    src2.push(`정비사업 ${JB.src}${JB.asof ? ` ${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말` : ""}`);
+    h += sec("정비사업 (재개발·재건축)", j, "sh-jb");
+    src.push(`정비사업 ${JB.src}${JB.asof ? ` ${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말` : ""}`);
   }
-  if (!isTop && z.kind === "base") { src.push("생활권 구분 훨훨 강의자료"); src2.push("생활권 구분 훨훨 강의자료"); }
-  const foot = l => `<div class="sh-src">출처 ${l.join(" · ")} · 참고용 · apexman01.github.io/silgeorae · 만든이 비상</div>`;
-  const pages = [[h, src, "교통·시세"], [h2, src2, "단지·정비사업"]];
-  $("oneZoom").innerHTML = pages.map(([body, l, sub], k) => body
-    ? `<div class="onepg"><div class="onepl"><b>${k + 1}장</b> ${sub}<button type="button" class="mini" data-pg="${k}">이 장만 저장 ↓</button></div><div class="sheet" id="oneSheet${k + 1}">${head(k + 1, sub)}${body}${foot(l)}</div></div>`
-    : `<div class="onepg"><div class="onepl"><b>${k + 1}장</b> ${sub} · 넣을 칸을 골라주세요</div></div>`).join("");
-  $("oneZoom").querySelectorAll("[data-pg]").forEach(b => b.onclick = e => oneSave(e.currentTarget, [+b.dataset.pg]));
+  if (!isTop && z.kind === "base") src.push("생활권 구분 훨훨 강의자료");
+  h += `<div class="sh-src">출처 ${src.join(" · ")} · 참고용 · apexman01.github.io/silgeorae · 만든이 비상</div>`;
+  sh.innerHTML = h;
   oneFit();
 }
 function oneFit() {   // 폰 화면 폭에 맞게 미리보기만 줄여 보이기 (저장은 원래 크기)
-  const s1 = $("oneZoom").querySelector(".sheet"); if (!s1) { $("oneZoom").style.zoom = ""; return; }
-  const w = $("oneView").clientWidth - 24, sc = Math.min(1, w / s1.offsetWidth);
+  const w = $("oneView").clientWidth - 24, sc = Math.min(1, w / $("oneSheet").offsetWidth);
   $("oneZoom").style.zoom = sc < 1 ? sc.toFixed(3) : "";
 }
 function oneOpen() {
@@ -931,20 +916,16 @@ function oneClose() { $("oneDlg").hidden = true; document.body.style.overflow = 
 $("oneBtn").onclick = oneOpen;
 $("oneClose").onclick = oneClose; $("oneCancel").onclick = oneClose;
 window.addEventListener("resize", () => { if (!$("oneDlg").hidden) oneFit(); });
-function oneSave(btn, which) {   // which: 저장할 장 번호 목록 (0 = 1장, 1 = 2장)
+$("oneSave").onclick = e => {
   const z = zonesFor(state.sido, state.gu)[state.zone];
   const nm = state.view === "top5" ? "거래량TOP5" : z.kind === "pick" ? "직접고른단지" : z.name;
-  const ms = visMonths(), last = ms[ms.length - 1], sub = ["교통시세", "단지정비사업"];
-  const fix = doc => {
+  const ms = visMonths();
+  shotSave($("oneSheet"), `${state.gu}_${nm}_임장한장_${ms[ms.length - 1]}.png`, e.currentTarget, doc => {
     const d = doc.getElementById("oneDlg"); d.style.position = "absolute"; d.style.height = "auto"; d.style.bottom = "auto";
     doc.getElementById("oneView").style.overflow = "visible";
     doc.getElementById("oneZoom").style.zoom = "";
-  };
-  const items = which.map(k => ({ el: $("oneSheet" + (k + 1)), name: `${state.gu}_${nm}_${k + 1}_${sub[k]}_${last}.png`, fix })).filter(x => x.el);
-  if (!items.length) { toast("넣을 칸을 먼저 골라주세요"); return; }
-  shotSaveMany(items, btn);
-}
-$("oneSave").onclick = e => oneSave(e.currentTarget, [0, 1]);
+  });
+};
 function toast(msg) {
   let t = document.querySelector(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.appendChild(t); }
   t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200);
