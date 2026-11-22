@@ -312,6 +312,14 @@
   .sheet table.sum-view th{font-size:10.5px}
   .sheet table.sum-view td small{font-size:8.6px;letter-spacing:-.4px}
   .sheet .sh-src{font-size:10.5px;color:var(--mute);line-height:1.5;padding-top:8px}
+  /* 생활권 선택: 가로 긴 줄로 한 줄에 하나씩 */
+  .gi #zoneTabs{flex-direction:column;flex-wrap:nowrap;gap:6px}
+  .gi #zoneTabs button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border-radius:10px;padding:10px 14px;font-size:15px}
+  .gi #zoneTabs button small{font-size:12px;color:var(--mute);font-weight:400;white-space:nowrap}
+  .gi #zoneTabs button.on small{color:#d6e3fb}
+  .gi #zoneTabs button.add{justify-content:center}
+  .gi #zoneTabs em.rk{font-style:normal;font-size:12.5px;font-weight:800;color:#1f56b3;margin-right:8px}
+  .gi #zoneTabs button.on em.rk{color:#fff}
 </style>
 </head>
 <body data-tab="view">
@@ -552,7 +560,11 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
     + (G && G.head ? `<div class="ghd">${(h => h.length > 1 ? `${h[0]}<br><b>${h.slice(1).join(" — ")}</b>` : `<b>${h[0]}</b>`)(G.head.split(/\s*—\s*/))}${G.tags ? `<span>${G.tags.join(" · ")}</span>` : ""}</div>` : "");
   const zs = zonesFor(state.sido, state.gu), bar = $("zoneTabs");
   $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span>`;
-  bar.innerHTML = zs.map((x, i) => `<button type="button" data-i="${i}" class="${i === state.zone ? "on" : ""}${x.kind === "pick" ? " add" : ""}">${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</button>`).join("");
+  const TRZ = (window.TRANSIT || {}).zones || {}, rk = zoneRank(state.gu);
+  const order = zs.map((x, i) => i).sort((a, b) => (rk[zs[b].name] ? 1 : 0) - (rk[zs[a].name] ? 1 : 0) || (rk[zs[b].name] || {}).v - (rk[zs[a].name] || {}).v || 0);
+  bar.innerHTML = order.map(i => { const x = zs[i], st = x.kind === "base" && TRZ[state.gu + "|" + x.name], r = x.kind === "base" && rk[x.name];
+    const info = [st ? st.st : "", r ? `${(r.v / 10000).toFixed(1).replace(/\.0$/, "")}억` : ""].filter(Boolean).join(" · ");
+    return `<button type="button" data-i="${i}" class="${i === state.zone ? "on" : ""}${x.kind === "pick" ? " add" : ""}"><span>${r ? `<em class="rk">${r.n}위</em>` : ""}${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</span>${info ? `<small>${info}</small>` : ""}</button>`; }).join("");
   bar.classList.toggle("dim", state.view === "top5");
   bar.querySelectorAll("button").forEach(b => b.onclick = () => {
     const i = +b.dataset.i; if (i === state.zone) return;
@@ -1261,6 +1273,18 @@ function ensureGu(gu, cb) {
 }
 function ensureAll(gus, cb) { let left = gus.length; if (!left) return cb(); gus.forEach(g => ensureGu(g, () => { if (--left === 0) cb(); })); }
 const GU_PREP = {};
+function zoneRank(gu) {   // 생활권 서열: 대표 단지 84㎡ 매매(분양권·입주권 포함) 최근 6개월 최고가 순 (구 현황과 같은 기간)
+  const P = prep(gu), S = window.GUSTATS || {}; if (!P) return {};
+  const ms = allMonths, to = S.to || ms[ms.length - 1], from = S.from || ms[Math.max(0, ms.length - 6)];
+  const [lo, hi] = AREA_BANDS["84"], rows = P.d.sale.concat(P.pre), out = [];
+  baseZones(gu).forEach(z => {
+    const all = new Set(); z.complexes.forEach(n => matchIdxs(P.cx, n).forEach(i => all.add(i)));
+    let v = 0; rows.forEach(r => { if (all.has(r[0]) && r[1] >= lo && r[1] < hi && r[2] >= from && r[2] <= to && r[4] > v) v = r[4]; });
+    if (v) out.push([z.name, v]);
+  });
+  const res = {}; out.sort((a, b) => b[1] - a[1]).forEach(([n, v], k) => res[n] = { n: k + 1, v });
+  return res;
+}
 function prep(gu) {
   if (GU_PREP[gu]) return GU_PREP[gu];
   const d = (window.DATA_GU || {})[gu]; if (!d) return null;
