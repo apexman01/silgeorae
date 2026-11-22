@@ -315,15 +315,14 @@
   .sheet .sh-jb .jbtiles{margin-top:0}
   .sheet .sh-src{font-size:10.5px;color:var(--mute);line-height:1.5;padding-top:8px}
   /* 생활권 선택: 가로 긴 줄로 한 줄에 하나씩 */
-  .gi #zoneTabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .gi #zoneTabs button{min-width:0;display:flex;align-items:center;gap:6px;text-align:left;border-radius:10px;padding:9px 10px;font-size:14px}
-  .gi #zoneTabs button span{flex:1;min-width:0;word-break:keep-all;line-height:1.3}
-  .gi #zoneTabs button small{font-size:12.5px;color:var(--sub);font-weight:600;white-space:nowrap}
-  .gi #zoneTabs button.on small{color:#d6e3fb}
-  .gi #zoneTabs button.add{justify-content:center;grid-column:1 / -1;padding:7px 10px}
-  .gi #zoneTabs button.add span{flex:none}
   .gi .gzl .zrk{display:block;font-size:11.5px;margin-top:2px}
-  .gi #zoneTabs em.rk{font-style:normal;font-size:12px;font-weight:800;color:#1f56b3;margin-right:5px}
+  .gi #zoneTabs{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .gi #zoneTabs button{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;border-radius:9px;padding:5px 10px;font-size:14px;line-height:1.3}
+  .gi #zoneTabs button span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gi #zoneTabs button small{font-size:11px;color:var(--mute);font-weight:400;padding-left:27px}
+  .gi #zoneTabs button.on small{color:#d6e3fb}
+  .gi #zoneTabs button.add{align-items:center;grid-column:1 / -1;padding:6px 10px}
+  .gi #zoneTabs em.rk{font-style:normal;font-size:12px;font-weight:800;color:#1f56b3;display:inline-block;width:27px}
   .gi #zoneTabs button.on em.rk{color:#fff}
 </style>
 </head>
