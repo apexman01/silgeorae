@@ -315,13 +315,15 @@
   .sheet .sh-jb .jbtiles{margin-top:0}
   .sheet .sh-src{font-size:10.5px;color:var(--mute);line-height:1.5;padding-top:8px}
   /* 생활권 선택: 가로 긴 줄로 한 줄에 하나씩 */
-  .gi #zoneTabs{flex-direction:column;flex-wrap:nowrap;gap:6px}
-  .gi #zoneTabs button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border-radius:10px;padding:10px 14px;font-size:15px}
-  .gi #zoneTabs button small{font-size:12px;color:var(--mute);font-weight:400;white-space:nowrap}
+  .gi #zoneTabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .gi #zoneTabs button{min-width:0;display:flex;align-items:center;gap:6px;text-align:left;border-radius:10px;padding:9px 10px;font-size:14px}
+  .gi #zoneTabs button span{flex:1;min-width:0;word-break:keep-all;line-height:1.3}
+  .gi #zoneTabs button small{font-size:12.5px;color:var(--sub);font-weight:600;white-space:nowrap}
   .gi #zoneTabs button.on small{color:#d6e3fb}
-  .gi #zoneTabs button.add{justify-content:center}
+  .gi #zoneTabs button.add{justify-content:center;grid-column:1 / -1;padding:7px 10px}
+  .gi #zoneTabs button.add span{flex:none}
   .gi .gzl .zrk{display:block;font-size:11.5px;margin-top:2px}
-  .gi #zoneTabs em.rk{font-style:normal;font-size:12.5px;font-weight:800;color:#1f56b3;margin-right:8px}
+  .gi #zoneTabs em.rk{font-style:normal;font-size:12px;font-weight:800;color:#1f56b3;margin-right:5px}
   .gi #zoneTabs button.on em.rk{color:#fff}
 </style>
 </head>
@@ -567,7 +569,7 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
   const TRZ = (window.TRANSIT || {}).zones || {}, rk = zoneRank(state.gu);
   const order = zs.map((x, i) => i).sort((a, b) => (rk[zs[b].name] ? 1 : 0) - (rk[zs[a].name] ? 1 : 0) || (rk[zs[b].name] || {}).v - (rk[zs[a].name] || {}).v || 0);
   bar.innerHTML = order.map(i => { const x = zs[i], st = x.kind === "base" && TRZ[state.gu + "|" + x.name], r = x.kind === "base" && rk[x.name];
-    const info = [st ? st.st : "", r ? `${(r.v / 10000).toFixed(1).replace(/\.0$/, "")}억` : ""].filter(Boolean).join(" · ");
+    const info = r ? `${(r.v / 10000).toFixed(1).replace(/\.0$/, "")}억` : "";
     return `<button type="button" data-i="${i}" class="${i === state.zone ? "on" : ""}${x.kind === "pick" ? " add" : ""}"><span>${r ? `<em class="rk">${r.n}위</em>` : ""}${x.kind === "custom" ? "★ " : ""}${x.kind === "pick" ? "＋ 직접 고르기" : x.name}</span>${info ? `<small>${info}</small>` : ""}</button>`; }).join("");
   bar.classList.toggle("dim", state.view === "top5");
   bar.querySelectorAll("button").forEach(b => b.onclick = () => {
