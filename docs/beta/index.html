@@ -209,6 +209,10 @@
   body[data-tab="jb"] .controls > .ctl:not(.j-only), body[data-tab="jb"] .nj, body[data-tab="jb"] .row3{display:none!important}
   .jbsum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--sub);margin:6px 0 4px}
   .jbsum b{color:var(--ink)}
+  .jbstg{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 6px;font-size:12.5px}
+  .jbstg span{background:#fbe4e6;color:#8e2a37;border-radius:999px;padding:3px 9px}
+  .jbstg span b{font-weight:700}
+  .jbstg span.off{background:#f1f3f5;color:#9aa0a8}
   .jb .go{font:inherit;font-size:12.5px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:3px 10px;margin-left:6px;cursor:pointer;color:var(--accent)}
   #jbCard{background:#fff7f7;border:1px solid #efc4c7;border-left:5px solid #d0606e}
   #jbCard h3{color:#8e2a37}
@@ -1603,7 +1607,10 @@ function renderJbTab() {
       res.forEach((l, zi) => l.forEach(r => all.push({ r, gu, zi, zname: zones[zi].name })));
       none.forEach(r => all.push({ r, gu, zi: -1, zname: "" }));
     });
-    const before = all.length;
+    // 단계 칸: 단계로 거르기 전(범위·종류만 적용) 전체를 단계별로 세어서 늘 보여줌
+    const scoped = all.filter(o => (jbS.scope === "seoul" || o.gu === jbS.gu) && (jbS.scope !== "zone" || o.zi === jbS.zi) && (jbS.type === "all" || jbKind(o.r) === jbS.type));
+    const before = scoped.length, cntAll = {};
+    scoped.forEach(o => cntAll[o.r.stage] = (cntAll[o.r.stage] || 0) + 1);
     const keep = new Set(jbFilter(all.map(o => o.r)));
     all = all.filter(o => keep.has(o.r));
     const sortO = l => { const s = jbSortL(l.map(o => o.r)); return s.map(r => l.find(o => o.r === r)); };
@@ -1626,7 +1633,8 @@ function renderJbTab() {
     const hhSum = shownL.reduce((s, o) => s + o.r.new, 0);
     const filt = [jbS.stage !== "all" ? `${jbS.stage} 이후` : "", jbS.type !== "all" ? jbS.type : ""].filter(Boolean).join(" · ");
     let html = `<h2>${title}</h2><div class="hint" style="margin:2px 0 4px">${filt ? filt + " · " : ""}${jbS.sort === "hh" ? "세대수 큰 순" : "단계 빠른 순"}</div>
-      <div class="jbsum"><span><b>${shownL.length}개 구역</b>${filt ? ` / 전체 ${before}` : ""}</span><span>공급 <b>${hhSum.toLocaleString()}세대</b></span>${JB.stages.slice().reverse().filter(s => cnt[s]).map(s => `<span>${s} ${cnt[s]}</span>`).join("")}</div>`;
+      <div class="jbsum"><span><b>${shownL.length}개 구역</b>${shownL.length !== before ? ` / 전체 ${before}` : ""}</span><span>공급 <b>${hhSum.toLocaleString()}세대</b></span></div>
+      <div class="jbstg">${JB.stages.slice().reverse().filter(s => cntAll[s]).map(s => `<span class="${cnt[s] ? "" : "off"}">${s} <b>${cntAll[s]}</b></span>`).join("")}</div>`;
     html += groups.map(([nm, l]) => `${nm ? `<div class="jbh${l.length ? "" : " zero"}">${nm} <span>${l.length}개 구역</span></div>` : ""}${l.length ? l.map(o => jbItemLink(o.r, o.gu, o.zi, jbS.scope === "zone" ? "" : (jbS.scope === "seoul" ? (o.zname ? `${o.zname}` : "") : o.zname))).join("") : `<div class="hint" style="padding:6px 0 10px">조건에 맞는 구역 없음</div>`}`).join("");
     html += `<div class="foot">${JB.src} · ${JB.asof ? `${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말 기준` : ""} · 착공 전까지 진행 중인 구역만 · 공급 0세대 구역 제외 · '시세 보기'를 누르면 그 생활권 시세 그래프로 이동</div>`;
     html += `<div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="chartCard">이미지로 저장 ↓</button></div>`;
