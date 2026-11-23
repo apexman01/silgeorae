@@ -450,7 +450,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script><script src="../data/gustats.js?v=' + _v + '"><\/script><script src="../transit.js?v=' + _v + '"><\/script>');
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="lifezones_patch.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script><script src="../data/gustats.js?v=' + _v + '"><\/script><script src="../transit.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -789,9 +789,16 @@ function render() {
     });
     // 생활권 내 단지 (z.complexes 에 등록된 단지 기준)
     const zoneNames = new Set(z.complexes.map(n => norm(n.split("|")[0].split("@")[0])));
-    const zoneCx = Object.values(merged).filter(c => zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n);
-    const extraCx = Object.values(merged).filter(c => !zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n).slice(0,15);
-    const allCx = [...zoneCx, ...extraCx];
+    let allCx;
+    if (z.dongs && z.dongs.length) {
+      // dongs 지정된 생활권: 그 동 소속 단지만 (거래 많은 순, 최대 30개)
+      const dongSet = new Set(z.dongs);
+      allCx = Object.values(merged).filter(c => dongSet.has(c.dong)).sort((a,b)=>b.n-a.n).slice(0,30);
+    } else {
+      const zoneCx = Object.values(merged).filter(c => zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n);
+      const extraCx = Object.values(merged).filter(c => !zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n).slice(0,15);
+      allCx = [...zoneCx, ...extraCx];
+    }
     const pickedNow = new Set(list.map(c => norm(c.name || c.label || "")));
     const addable = allCx.filter(c => !pickedNow.has(norm(c.name)));
     if (addable.length) {
