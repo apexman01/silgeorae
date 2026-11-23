@@ -53,6 +53,15 @@
   .legend button.off{color:#a3a8b0;background:#f3f4f6;border-style:dashed}
   .legend button.off i{background:#c5c9cf!important}
   .legend .lhint{font-size:12px;color:var(--mute);align-self:center}
+  .addpick-wrap{margin:4px 0 6px;position:relative}
+  .addpick-wrap .btn-add{font:inherit;font-size:12.5px;padding:4px 10px;border:1px dashed var(--line);border-radius:999px;background:transparent;color:var(--sub);cursor:pointer}
+  .addpick-wrap .btn-add:hover{background:var(--bg2)}
+  .addpick-drop{display:none;position:absolute;z-index:20;top:calc(100% + 4px);left:0;min-width:200px;max-width:280px;max-height:220px;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:6px 4px}
+  .addpick-drop.show{display:block}
+  .addpick-drop label{display:block;font-size:13px;padding:5px 10px;cursor:pointer;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .addpick-drop label:hover{background:var(--bg2)}
+  .addpick-drop label small{color:var(--mute);font-size:11.5px;margin-left:4px}
+  .addpick-drop label input{margin-right:6px}
   tr.off td{opacity:.4}
   .legend i{display:inline-block;width:22px;height:3px;border-radius:2px;position:relative}
   .legend i::after{content:"";position:absolute;left:7px;top:-3px;width:9px;height:9px;border-radius:50%;background:inherit}
@@ -181,7 +190,7 @@
     .row3 .ctl{min-width:0}
     .row3 .seg{display:flex;width:100%}
     .row3 .seg button{flex:1 1 0;padding:8px 1px;font-size:13px;min-width:0;letter-spacing:-.3px}
-    #segView button[data-v="top5"],#segView button[data-v="top10"]{font-size:11.5px;letter-spacing:-.5px}
+    #segView button[data-v="top5"]{font-size:11.5px;letter-spacing:-.5px;flex-grow:1.3}
     #segMetric button{font-size:12px;letter-spacing:-.5px}
     .c-area{width:100%}
     #segArea, .period #segPeriod{display:flex;width:100%}
@@ -379,7 +388,7 @@
       <div class="seg" id="jbSort"><button data-v="stage" class="on">단계 순</button><button data-v="hh">세대수 순</button></div></div>
     <div class="row3">
     <div class="ctl v-only"><label>보기</label>
-      <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">TOP5</button><button data-v="top10">TOP10</button></div></div>
+      <div class="seg" id="segView"><button data-v="zone" class="on">생활권</button><button data-v="top5">거래량 TOP5</button></div></div>
     <div class="ctl"><label>거래</label>
       <div><div class="seg" id="segType"><button data-v="sale" class="on">매매</button><button data-v="jeonse">전세</button></div><span id="preWrap"></span></div></div>
     <div class="ctl"><label>지표</label>
@@ -538,7 +547,7 @@ function transitBox(gu, zz, cur) {
 function renderTransit(z) {   // 생활권 교통 카드: 선택 생활권(또는 전체 펼치기) — 노선 뱃지(예정은 회색) + 주요 업무지구까지 시간
   const card = $("trCard"), T = window.TRANSIT;
   const zs = baseZones(state.gu).filter(zz => T && T.zones[state.gu + "|" + zz.name]);
-  if (!zs.length || ["top5","top10"].includes(state.view)) { card.style.display = "none"; return; }
+  if (!zs.length || state.view === "top5") { card.style.display = "none"; return; }
   const curName = z && z.kind === "base" ? z.name : null;
   const list = TR_ALL ? zs : zs.filter(zz => zz.name === curName);
   $("zoneTransit").innerHTML = (list.length ? list.map(zz => transitBox(state.gu, zz, TR_ALL && zz.name === curName)).join("") : `<div class="hint">직접 고른 단지는 교통 정보가 없어요. '전체 생활권 펼치기'로 이 구의 생활권 교통을 볼 수 있어요.</div>`)
@@ -571,7 +580,7 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
   const S6 = window.GUSTATS || {};
   $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span><span class="zrk">${rankNote()}</span>`;
   bar.innerHTML = rankBtns(state.gu, zs, state.zone);
-  bar.classList.toggle("dim", ["top5","top10"].includes(state.view));
+  bar.classList.toggle("dim", state.view === "top5");
   bar.querySelectorAll("button").forEach(b => b.onclick = () => {
     const i = +b.dataset.i; if (i === state.zone) return;
     state.zone = i; $("selZone").value = i; onZoneChange();
@@ -584,6 +593,7 @@ function onZoneChange() {
   $("pickDelete").style.display = z.kind === "custom" ? "" : "none";
   if (z.kind === "custom") { state.picked = [...z.complexes]; $("pickName").value = z.name; }
   else if (z.kind === "pick") { if (!state.picked.length) state.picked = []; $("pickName").value = ""; }
+  else { state.picked = []; }  // base 생활권으로 이동하면 추가 단지 초기화
   if (isPick) renderPicker();
   render();
 }
@@ -662,8 +672,7 @@ function top5Complexes() {
     const e = g[k] || (g[k] = { name: c.name, area: a, n: 0, built: c.built, dong: c.dong });
     e.n++;
   });
-  const topN = state.view === "top10" ? 10 : 5;
-  return Object.values(g).sort((a, b) => b.n - a.n).slice(0, topN).map((e, k) => {
+  return Object.values(g).sort((a, b) => b.n - a.n).slice(0, 5).map((e, k) => {
     const cxs = CX.filter(x => norm(x.name) === norm(e.name) && x.dong === e.dong);
     const dup = new Set(CX.filter(x => norm(x.name) === norm(e.name)).map(x => x.dong)).size > 1;   // 같은 이름이 다른 동에도 있으면 동 표시
     const nm = dup ? `${e.name}(${e.dong.replace(/[0-9]+가$/, "")})` : e.name;
@@ -672,9 +681,13 @@ function top5Complexes() {
   });
 }
 function currentComplexes() {
-  if (["top5","top10"].includes(state.view)) return top5Complexes();
+  if (state.view === "top5") return top5Complexes();
   const z = zonesFor(state.sido, state.gu)[state.zone];
-  return complexesOf(z, (z.kind === "base") ? z.complexes : state.picked);
+  if (z.kind === "base") {
+    const extra = state.picked.filter(n => !z.complexes.some(c => norm(c.split("|")[0].split("@")[0]) === norm(n)));
+    return complexesOf(z, [...z.complexes, ...extra]);
+  }
+  return complexesOf(z, state.picked);
 }
 function complexesOf(z, names) {
   return names.map(n => {
@@ -739,7 +752,7 @@ function render() {
   if (!DATA) return;
   $("preWrap").style.display = state.type === "sale" && PRESALE.length ? "" : "none";
   const z = zonesFor(state.sido, state.gu)[state.zone];
-  const topMode = ["top5","top10"].includes(state.view);
+  const topMode = state.view === "top5";
   $("selZone").disabled = topMode;
   $("picker").classList.toggle("show", !topMode && (z.kind === "pick" || z.kind === "custom"));
   $("segArea").style.opacity = topMode ? .4 : 1; $("segArea").title = topMode ? "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요" : "";
@@ -749,8 +762,8 @@ function render() {
   const typeLabel = state.type === "sale" ? "실거래가" : "전세가";
   const areaLabel = { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "단지별 대표 평형" }[state.area];
   const metricLabel = state.metric === "max" ? "그 달 최고" : "그 달 평균";
-  const isTop = ["top5","top10"].includes(state.view);
-  const title = isTop ? `${state.gu} 거래량 TOP${state.view === "top10" ? 10 : 5}` : z.kind === "pick" ? "직접 고른 단지" : z.name;
+  const isTop = state.view === "top5";
+  const title = isTop ? `${state.gu} 거래량 TOP5` : z.kind === "pick" ? "직접 고른 단지" : z.name;
 
   const series = list.map((c, k) => {
     const rep = isTop ? c.rep : state.area === "rep" && c.cx ? repArea(c, z) : null;
@@ -764,6 +777,28 @@ function render() {
   const capBtns = `<span class="cbtn" data-html2canvas-ignore>${isTop ? "" : `<button type="button" class="mini${CH_ALL ? " on" : ""}" id="chAll">${CH_ALL ? "선택 생활권만" : "전체 생활권 펼치기"}</button>`}</span>`;
   let html = `<div class="ch"><h2>${title}</h2>${capBtns}</div>${sub ? `<div class="${isTop ? "hint" : "znote"}"${isTop ? ' style="margin:2px 0 4px"' : ""}>${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
   html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
+
+  /* 단지 추가 버튼: 생활권 보기에서 base 생활권일 때만 */
+  if (!isTop && z && z.kind === "base") {
+    const counts = {};
+    srcRows().forEach(r => { counts[r[0]] = (counts[r[0]] || 0) + 1; });
+    const merged = {};
+    CX.filter(c => c.gu === state.gu).forEach(c => {
+      const k = norm(c.name), m = merged[k] || (merged[k] = { name: c.name, dong: c.dong, n: 0 });
+      m.n += counts[c.i] || 0;
+    });
+    // 생활권 내 단지 (z.complexes 에 등록된 단지 기준)
+    const zoneNames = new Set(z.complexes.map(n => norm(n.split("|")[0].split("@")[0])));
+    const zoneCx = Object.values(merged).filter(c => zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n);
+    const extraCx = Object.values(merged).filter(c => !zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n).slice(0,15);
+    const allCx = [...zoneCx, ...extraCx];
+    const pickedNow = new Set(list.map(c => norm(c.name || c.label || "")));
+    const addable = allCx.filter(c => !pickedNow.has(norm(c.name)));
+    if (addable.length) {
+      const opts = addable.map(c => `<label><input type="checkbox" data-n="${c.name}"> ${c.name} <small>${c.dong}·${c.n}건</small></label>`).join("");
+      html += `<div class="addpick-wrap" data-html2canvas-ignore><button type="button" class="btn-add" id="btnAddCx">＋ 단지 추가</button><div class="addpick-drop" id="addDrop">${opts}</div></div>`;
+    }
+  }
 
   if (!vals.length) {
     html += `<div class="empty">${!list.length ? "위에서 단지를 골라주세요." : !shown.length ? "모든 단지를 숨겼어요. 위 단지 버튼을 눌러 다시 켜세요." : "이 조건에 맞는 거래가 없어요. 면적이나 거래 종류를 바꿔보세요."}</div>`;
@@ -894,7 +929,7 @@ function oneClean(node) {   // 화면용 버튼·말풍선·접힌 설명 빼고
   return node;
 }
 function oneBuild() {
-  const o = oneOpts(), z = zonesFor(state.sido, state.gu)[state.zone], isTop = ["top5","top10"].includes(state.view);
+  const o = oneOpts(), z = zonesFor(state.sido, state.gu)[state.zone], isTop = state.view === "top5";
   const ms = visMonths(), last = ms[ms.length - 1], ym = `${fmtYM(ms[0])}~${fmtYM(last)}`;
   const T = window.TRANSIT, hasTr = !isTop && z.kind === "base" && !!(T && T.zones[state.gu + "|" + z.name]);
   const avail = { gu: !!$("giBody").querySelector(".gst"), tr: hasTr, ch: !!$("chartCard").querySelector("svg, .empty"), sum: $("summary").rows.length > 1, jb: !isTop && z.kind === "base" && !!(window.JB && JB.rows[state.gu]) };
@@ -906,7 +941,7 @@ function oneBuild() {
     const n = oneOpts(); n[i.dataset.k] = i.checked; try { localStorage.setItem(ONE_KEY, JSON.stringify(n)); } catch (e) {}
     oneBuild();
   });
-  const title = isTop ? `${state.gu} 거래량 TOP${state.view === "top10" ? 10 : 5}` : z.kind === "pick" ? "직접 고른 단지" : z.name;
+  const title = isTop ? `${state.gu} 거래량 TOP5` : z.kind === "pick" ? "직접 고른 단지" : z.name;
   const G = (window.GUINFO || {})[state.gu];
   const area = isTop ? "단지별 거래 많은 평형" : { "59": "59㎡", "74": "74㎡", "84": "84㎡", "big": "100㎡ 이상", "rep": "단지별 대표 평형" }[state.area];
   const typ = state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세";
@@ -968,7 +1003,7 @@ $("oneClose").onclick = oneClose; $("oneCancel").onclick = oneClose;
 window.addEventListener("resize", () => { if (!$("oneDlg").hidden) oneFit(); });
 $("oneSave").onclick = e => {
   const z = zonesFor(state.sido, state.gu)[state.zone];
-  const nm = state.view === "top10" ? "거래량TOP10" : ["top5","top10"].includes(state.view) ? "거래량TOP5" : z.kind === "pick" ? "직접고른단지" : z.name;
+  const nm = state.view === "top5" ? "거래량TOP5" : z.kind === "pick" ? "직접고른단지" : z.name;
   const ms = visMonths();
   shotSave($("oneSheet"), `${state.gu}_${nm}_임장한장_${ms[ms.length - 1]}.png`, e.currentTarget, doc => {
     const d = doc.getElementById("oneDlg"); d.style.position = "absolute"; d.style.height = "auto"; d.style.bottom = "auto";
@@ -1190,6 +1225,21 @@ function bindLegend() {
     state.hidden.has(n) ? state.hidden.delete(n) : state.hidden.add(n);
     render();
   });
+  const btnAdd = $("btnAddCx"), drop = $("addDrop");
+  if (btnAdd && drop) {
+    btnAdd.onclick = e => { e.stopPropagation(); drop.classList.toggle("show"); };
+    drop.querySelectorAll("input").forEach(cb => cb.onchange = () => {
+      const n = cb.dataset.n;
+      if (cb.checked) {
+        if (state.picked.length >= MAX_PICK) { cb.checked = false; return; }
+        if (!state.picked.includes(n)) state.picked.push(n);
+      } else state.picked = state.picked.filter(x => x !== n);
+      render();
+    });
+    document.addEventListener("pointerdown", function hdl(e) {
+      if (!drop.contains(e.target) && e.target !== btnAdd) { drop.classList.remove("show"); document.removeEventListener("pointerdown", hdl); }
+    });
+  }
 }
 function star(cx, cy, r, color) {
   let p = [];
