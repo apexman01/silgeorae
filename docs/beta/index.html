@@ -408,7 +408,7 @@
         <input type="text" id="pickName" placeholder="생활권 이름 (예: 답십리역 신축)">
         <button class="btn primary" id="pickSave">내 생활권으로 저장</button>
         <button class="btn" id="pickDelete" style="display:none">이 생활권 삭제</button>
-        <span class="hint">최대 6개 단지 · 거래 많은 순</span>
+        <span class="hint">최대 6개 단지 · 거래 많은 순 상위 20개 표시 (더 보려면 검색)</span>
       </div>
       <div class="list" id="pickList"></div>
     </div>
@@ -600,7 +600,7 @@ function renderPicker() {
     const n = counts[c.i] || 0; m.n += n;
     if (n > m.best) { m.best = n; m.name = c.name; m.dong = c.dong; }
   });
-  const list = Object.values(merged).sort((a, b) => b.n - a.n);
+  const list = Object.values(merged).sort((a, b) => b.n - a.n).slice(0, q ? 999 : 20);
   $("pickList").innerHTML = list.map(c => {
     const on = state.picked.includes(c.name);
     return `<label><input type="checkbox" data-n="${c.name}" ${on ? "checked" : ""}> ${c.name} <small>${c.dong} · ${c.n}건</small></label>`;
