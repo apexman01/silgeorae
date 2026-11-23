@@ -8,7 +8,7 @@
           인증키·활용신청이 없거나 실패하면 이전 값을 그대로 둠
 실거래가 자료(docs/data/<코드>.js)만 읽고 그 형식은 바꾸지 않습니다.
 """
-import json, os, re, statistics, urllib.parse, urllib.request
+import json, os, re, statistics, time, urllib.parse, urllib.request
 from datetime import date
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,8 +59,15 @@ def fetch_pop(key, regions):
                 q = urllib.parse.urlencode({"serviceKey": key, "stdgCd": code + "00000", "srchFrYm": ym, "srchToYm": ym,
                                             "lv": "2", "regSeCd": "1", "type": "JSON", "numOfRows": 1000, "pageNo": 1})
                 try:
-                    with urllib.request.urlopen(f"{api}?{q}", timeout=30) as r:
-                        txt = r.read().decode("utf-8", "replace")
+                    txt = None
+                    for tr in range(2):   # 한 구에서 오류가 나면 한 번 더 시도
+                        try:
+                            with urllib.request.urlopen(f"{api}?{q}", timeout=30) as r:
+                                txt = r.read().decode("utf-8", "replace")
+                            break
+                        except Exception:
+                            if tr == 1 or ok == 0: raise
+                            time.sleep(3)
                     j = json.loads(txt)
                     items = (((j.get("Response") or j.get("response") or {}).get("items") or {}).get("item")) or []
                     if isinstance(items, dict):
@@ -82,7 +89,8 @@ def fetch_pop(key, regions):
                         try: msg = e.read().decode("utf-8", "replace")[:200]
                         except Exception: pass
                     print(f"인구 {api} {ym} {gu}: {e} {msg}")
-                    break
+                    if ok == 0: break   # 첫 구부터 안 되면 다른 달·주소로, 중간에 실패하면 그 구만 건너뛰고 계속
+                    continue
             if ok:
                 print(f"인구: {ym} 기준 {ok}개 구 ({api})")
                 return out
@@ -124,7 +132,7 @@ def main():
         stats[gu]["rank"] = i
 
     old = prev_out()
-    pop = fetch_pop(os.environ.get("DATA_GO_KR_KEY", "").strip(), regions) or old.get("pop", {})
+    pop = {**old.get("pop", {}), **fetch_pop(os.environ.get("DATA_GO_KR_KEY", "").strip(), regions)}   # 못 받은 구는 지난 숫자 유지
     lo = shift(str(last), -(WIN - 1))
     res = {"from": lo, "to": str(last), "win": WIN, "total": len(stats), "gu": stats, "pop": pop}
     with open(OUT, "w", encoding="utf-8") as f:
