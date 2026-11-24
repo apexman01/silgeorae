@@ -774,9 +774,10 @@ function render() {
   $("preWrap").style.display = state.type === "sale" && PRESALE.length ? "" : "none";
   const z = zonesFor(state.sido, state.gu)[state.zone];
   const topMode = state.view === "top5" || state.view === "flag";
+  const lockArea = state.view === "top5";   // 평형 선택 자체를 막는 건 TOP5뿐(단지+평형 조합을 거래량으로 뽑아서). 생활권 대장은 평형을 직접 골라도 됨
   $("selZone").disabled = topMode;
   $("picker").classList.toggle("show", !topMode && (z.kind === "pick" || z.kind === "custom"));
-  $("segArea").style.opacity = topMode ? .4 : 1; $("segArea").title = topMode ? (state.view === "flag" ? "생활권 대장은 그 단지의 대표 평형을 보여줘요" : "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요") : "";
+  $("segArea").style.opacity = lockArea ? .4 : 1; $("segArea").title = lockArea ? "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요" : "";
   renderGuInfo(z); renderTransit(z);
   const list = currentComplexes();
   const card = $("chartCard");
@@ -787,16 +788,17 @@ function render() {
   const title = state.view === "top5" ? `${state.gu} 거래량 TOP5` : state.view === "flag" ? `${state.gu} 생활권 대장 비교` : z.kind === "pick" ? "직접 고른 단지" : z.name;
 
   const series = list.map((c, k) => {
-    const rep = isTop ? (c.rep !== undefined ? c.rep : c.cx ? repArea(c, null) : null) : state.area === "rep" && c.cx ? repArea(c, z) : null;
-    return { ...c, rep, label: state.view === "top5" ? c.label : rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
-      ...(c.cx && (isTop || state.area !== "rep" || rep) ? seriesFor(c.idxs, rep) : { pts: [], rows: [] }) };
+    const rep = lockArea ? c.rep : state.area === "rep" && c.cx ? repArea(c, state.view === "flag" ? null : z) : null;
+    return { ...c, rep, label: lockArea ? c.label : rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
+      ...(c.cx && (lockArea || state.area !== "rep" || rep) ? seriesFor(c.idxs, rep) : { pts: [], rows: [] }) };
   });
   const shown = series.filter(s => !state.hidden.has(s.name));
   const vals = shown.flatMap(s => s.pts.filter(Boolean).map(p => p.v));
 
-  const sub = isTop ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별` : z.note;
+  const sub = state.view === "top5" ? `${fmtYM(visMonths()[0])}~${fmtYM(visMonths().slice(-1)[0])} ${state.type === "sale" ? (state.presale && PRESALE.length ? "매매+분양권·입주권" : "매매") : "전세"} 거래 건수 기준 · 단지+전용면적별`
+    : state.view === "flag" ? "각 생활권의 대장(대표 1번째) 단지만 모아 비교" : z.note;
   const capBtns = `<span class="cbtn" data-html2canvas-ignore>${isTop ? "" : `<button type="button" class="mini${CH_ALL ? " on" : ""}" id="chAll">${CH_ALL ? "선택 생활권만" : "전체 생활권 펼치기"}</button>`}</span>`;
-  let html = `<div class="ch"><h2>${title}</h2>${capBtns}</div>${sub ? `<div class="${isTop ? "hint" : "znote"}"${isTop ? ' style="margin:2px 0 4px"' : ""}>${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
+  let html = `<div class="ch"><h2>${title}</h2>${capBtns}</div>${sub ? `<div class="${isTop ? "hint" : "znote"}"${isTop ? ' style="margin:2px 0 4px"' : ""}>${sub}</div>` : ""}<div class="unit">${lockArea ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
   html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
   /* 단지 추가 버튼: 생활권 보기(base) · 거래량 TOP5 · 생활권 대장 전부에서 노출 (직접 고르기는 자체 검색 피커가 있어 제외) */
