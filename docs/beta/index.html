@@ -1012,7 +1012,7 @@ function oneBuild() {
       const cnt = JB.stages.map((st, i) => [st, l.filter(r => si(r) === i).length, i >= LI]).filter(x => x[1]);
       j = `<div class="jbtiles"><div><small>진행 구역</small><b>${l.length}</b>개</div><div><small>공급 예정</small><b>${l.reduce((t, r) => t + (r.new || 0), 0).toLocaleString()}</b>세대</div><div><small>관리처분 이후</small><b>${l.filter(r => si(r) >= LI).length}</b>개</div></div>`
         + `<div class="jbmini">${cnt.map(([st, n, lt]) => `<span class="${lt ? "late" : ""}">${st} ${n}</span>`).join("")}</div>`
-        + [...l].sort((a, b) => si(b) - si(a)).map(r => `<div class="jbrow"><b>${r.name}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${jbHH(r)}</span></div>`).join("");
+        + [...l].sort((a, b) => si(b) - si(a)).map(r => `<div class="jbrow"><b>${jbNm(r)}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${jbHH(r)}</span></div>`).join("");
     }
     h += sec("정비사업 (재개발·재건축)", j, "sh-jb");
     src.push(`정비사업 ${JB.src}${JB.asof ? ` ${JB.asof.slice(2, 4)}년 ${+JB.asof.slice(5, 7)}월말` : ""}`);
@@ -1074,6 +1074,7 @@ const JB = window.JB || { rows: {}, stages: [] };
 const JB_SHORT = { "구역지정": "지정", "추진위": "추진위", "조합설립": "조합", "건축심의": "심의", "사업시행": "사시", "관리처분": "관처", "착공": "착공" };
 const jbHH = r => r.new > 0 ? `${r.new.toLocaleString()}세대` : `공급 미정`;   // 정비계획 전이라 엑셀에 공급 세대수가 없는 구역
 const dkey = d => String(d || "").replace(/\d+가$/, "");   // '성수동1가'·'한강로3가' → '성수동'·'한강로'
+const jbNm = r => r.name + (r._ext && r.dong ? `(${r.dong})` : "");   // 예: 삼익파크(길동)
 function jbMatch(z, name) { return (z.jb || []).some(k => k.endsWith("-") ? name.startsWith(k) : name === k); }
 function jbAssign(gu, cx) {   // 구역 → 생활권 번호 (자동: 대표 단지가 있는 동 / 애매하면 lifezones.js의 jb·jbDongs)
   cx = cx || CX;
@@ -1085,6 +1086,7 @@ function jbAssign(gu, cx) {   // 구역 → 생활권 번호 (자동: 대표 단
     const rd = dkey(r.dong);
     if (zi < 0) zi = zones.findIndex(z => (z.jbDongs || []).map(dkey).includes(rd));
     if (zi < 0) { const hit = autoDongs.map((ds, i) => ds.has(rd) ? i : -1).filter(i => i >= 0); if (hit.length === 1) zi = hit[0]; }
+    r._ext = zi >= 0 && !autoDongs[zi].has(rd) && !(zones[zi].dongs || []).map(dkey).includes(rd);   // 생활권 소속 동이 아닌 인접 구역 → 이름 뒤에 (동) 표시
     (zi < 0 ? none : res[zi]).push(r);
   });
   const st = r => JB.stages.indexOf(r.stage);
@@ -1097,7 +1099,7 @@ function jbItem(r) {
   const kind = r.type.includes("재건축") ? "재건축" : r.type.includes("도시정비형") ? "도시정비형 재개발" : "재개발";
   const k = JB.stages.indexOf(r.stage);
   const iju = r.dates["이주시작"] && k >= 5 ? ` · 이주 ${ym(r.dates["이주시작"])}~${r.dates["이주종료"] ? ym(r.dates["이주종료"]) : ""}` : "";
-  return `<div class="jb"><div class="t"><b>${r.name}</b><span class="tag">${kind}</span>${r.jc ? `<span class="tag">재정비촉진</span>` : ""}<span class="hh">${r.new > 0 ? `${r.new.toLocaleString()}세대${r.old ? ` (기존 ${r.old.toLocaleString()})` : ""}` : `기존 ${r.old.toLocaleString()}세대 · 공급 미정`}</span></div>
+  return `<div class="jb"><div class="t"><b>${jbNm(r)}</b><span class="tag">${kind}</span>${r.jc ? `<span class="tag">재정비촉진</span>` : ""}<span class="hh">${r.new > 0 ? `${r.new.toLocaleString()}세대${r.old ? ` (기존 ${r.old.toLocaleString()})` : ""}` : `기존 ${r.old.toLocaleString()}세대 · 공급 미정`}</span></div>
     <div class="bar">${JB.stages.map((s, i) => `<i class="${i < k ? "on" : i === k ? "now" : ""}"></i>`).join("")}</div>
     <div class="lb">${JB.stages.map((s, i) => `<span class="${i === k ? "now" : ""}">${JB_SHORT[s] || s}</span>`).join("")}</div>
     <div class="cur">지금: <b>${r.stage}</b>${r.dates[r.stage] ? ` (${ym(r.dates[r.stage])})` : ""}${iju} · ${r.dong}</div></div>`;
@@ -1121,7 +1123,7 @@ function renderJb(z) {
     else {
       h += `<div class="jbtiles"><div><small>진행 구역</small><b>${l.length}</b>개</div><div><small>공급 예정</small><b>${hh.toLocaleString()}</b>세대</div><div><small>관리처분 이후</small><b>${late}</b>개</div></div>`;
       h += `<div class="jbmini">${cnt.map(([s, n, lt]) => `<span class="${lt ? "late" : ""}">${s} ${n}</span>`).join("")}</div>`;
-      h += l.slice(0, MAX).map(r => `<div class="jbrow"><b>${r.name}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${jbHH(r)}</span></div>`).join("");
+      h += l.slice(0, MAX).map(r => `<div class="jbrow"><b>${jbNm(r)}</b><span class="kd">${kind(r)}</span><span class="st${si(r) >= LI ? " late" : ""}">${r.stage}</span><span class="n">${jbHH(r)}</span></div>`).join("");
       if (l.length > MAX) h += `<div class="jbmore">외 ${l.length - MAX}개 구역은 정비사업 탭에서</div>`;
     }
     h += `<button class="btn primary" type="button" id="jbGo" data-html2canvas-ignore>정비사업 탭에서 자세히 보기 (단계·이주 일정)</button>`;
