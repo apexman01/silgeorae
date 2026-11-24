@@ -62,6 +62,8 @@
   .addpick-drop label:hover{background:var(--bg2)}
   .addpick-drop label small{color:var(--mute);font-size:11.5px;margin-left:4px}
   .addpick-drop label input{margin-right:6px}
+  .addpick-search{display:block;width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;margin:2px 2px 6px;outline:none;background:#fff}
+  .addpick-search:focus,.addpick-search.active{background:#fff0f5;border-color:#f3a7c6}
   tr.off td{opacity:.4}
   .legend i{display:inline-block;width:16px;height:3px;border-radius:2px;position:relative}
   .legend i::after{content:"";position:absolute;left:5px;top:-2.5px;width:8px;height:8px;border-radius:50%;background:inherit}
@@ -464,6 +466,7 @@ const CUSTOM_KEY = "lifezone-custom-v1";
 const state = { sido: null, gu: null, zone: 0, type: "sale", area: "84", metric: "max", from: 0, to: 0, presale: true, picked: [], hidden: new Set(), view: "zone", customPeriod: false };
 const INDEX = window.DATA_INDEX || { regions: {}, months: [] };
 let DATA = null, PRESALE = [], CX = [];
+let ADDPICK_ALL = [], ADDPICK_DEFAULT = [];
 function srcRows() { return state.type === "sale" ? (state.presale ? DATA.sale.concat(PRESALE) : DATA.sale) : DATA.jeonse; }
 const $ = id => document.getElementById(id);
 const norm = s => String(s).replace(/\s+/g, "").toLowerCase();
@@ -672,22 +675,30 @@ function top5Complexes() {
     const e = g[k] || (g[k] = { name: c.name, area: a, n: 0, built: c.built, dong: c.dong });
     e.n++;
   });
-  return Object.values(g).sort((a, b) => b.n - a.n).slice(0, 5).map((e, k) => {
+  const top = Object.values(g).sort((a, b) => b.n - a.n).slice(0, 5).map((e, k) => {
     const cxs = CX.filter(x => norm(x.name) === norm(e.name) && x.dong === e.dong);
     const dup = new Set(CX.filter(x => norm(x.name) === norm(e.name)).map(x => x.dong)).size > 1;   // 같은 이름이 다른 동에도 있으면 동 표시
     const nm = dup ? `${e.name}(${e.dong.replace(/[0-9]+가$/, "")})` : e.name;
     return { name: `top${k + 1}|${e.name}@${e.dong}|${e.area}`, label: `${k + 1}위 ${nm} ${e.area}㎡ · ${e.n}건`, rep: e.area,
              cx: { ...cxs[0], built: cxs.map(x => x.built).filter(Boolean).sort()[0] || "-" }, idxs: new Set(cxs.map(x => x.i)) };
   });
+  return [...top, ...pickedExtras(top)];
 }
 /* 생활권 대장 비교: 이 구의 각 생활권(base) 대표 1단지(복수면 첫 번째)를 모아 한 그래프로 */
 function flagshipComplexes() {
   const zones = zonesFor(state.sido, state.gu).filter(z => z.kind === "base");
-  return zones.map(z => {
+  const top = zones.map(z => {
     const first = z.complexes[0];
     const c = complexesOf(z, [first])[0];
     return { ...c, name: `flag|${z.name}|${first}`, label: `${z.name} · ${c.label}` };
   }).filter(c => c.cx);
+  return [...top, ...pickedExtras(top)];
+}
+/* TOP5·생활권 대장에서 '+ 단지 추가'로 고른 단지를 뒤에 덧붙임 (이미 들어간 단지는 중복 제외) */
+function pickedExtras(existing) {
+  const have = new Set(existing.filter(c => c.cx).map(c => norm(c.cx.name)));
+  const names = state.picked.filter(n => !have.has(norm(n)));
+  return names.length ? complexesOf({}, names) : [];
 }
 function currentComplexes() {
   if (state.view === "top5") return top5Complexes();
@@ -776,7 +787,7 @@ function render() {
   const title = state.view === "top5" ? `${state.gu} 거래량 TOP5` : state.view === "flag" ? `${state.gu} 생활권 대장 비교` : z.kind === "pick" ? "직접 고른 단지" : z.name;
 
   const series = list.map((c, k) => {
-    const rep = state.view === "top5" ? c.rep : state.area === "rep" && c.cx ? repArea(c, state.view === "flag" ? null : z) : null;
+    const rep = isTop ? (c.rep !== undefined ? c.rep : c.cx ? repArea(c, null) : null) : state.area === "rep" && c.cx ? repArea(c, z) : null;
     return { ...c, rep, label: isTop ? c.label : rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
       ...(c.cx && (isTop || state.area !== "rep" || rep) ? seriesFor(c.idxs, rep) : { pts: [], rows: [] }) };
   });
@@ -788,8 +799,8 @@ function render() {
   let html = `<div class="ch"><h2>${title}</h2>${capBtns}</div>${sub ? `<div class="${isTop ? "hint" : "znote"}"${isTop ? ' style="margin:2px 0 4px"' : ""}>${sub}</div>` : ""}<div class="unit">${isTop ? "단지별 해당 평형" : areaLabel} · ${metricLabel} ${typeLabel}(억)</div>`;
   html += `<div class="legend">${series.map(s => `<button type="button" data-n="${s.name}" class="${state.hidden.has(s.name) ? "off" : ""}" aria-pressed="${!state.hidden.has(s.name)}"><i style="background:${s.color}"></i>${s.label}${preTag(s.rows || [], true)}${state.type === "sale" && !state.presale && !(s.rows || []).length && s.idxs && PRESALE.some(r => s.idxs.has(r[0])) ? ` <span class="tag pre">분양권·입주권만 있음</span>` : ""}</button>`).join("")}<span class="lhint">누르면 숨김/표시</span></div>`;
 
-  /* 단지 추가 버튼: 생활권 보기에서 base 생활권일 때만 */
-  if (!isTop && z && z.kind === "base") {
+  /* 단지 추가 버튼: 생활권 보기(base) · 거래량 TOP5 · 생활권 대장 전부에서 노출 (직접 고르기는 자체 검색 피커가 있어 제외) */
+  if (isTop || (z && z.kind === "base")) {
     const counts = {};
     srcRows().forEach(r => { counts[r[0]] = (counts[r[0]] || 0) + 1; });
     const merged = {};
@@ -797,23 +808,27 @@ function render() {
       const k = norm(c.name), m = merged[k] || (merged[k] = { name: c.name, dong: c.dong, n: 0 });
       m.n += counts[c.i] || 0;
     });
-    // 생활권 내 단지 (z.complexes 에 등록된 단지 기준)
-    const zoneNames = new Set(z.complexes.map(n => norm(n.split("|")[0].split("@")[0])));
-    let allCx;
-    if (z.dongs && z.dongs.length) {
+    const all = Object.values(merged).sort((a, b) => b.n - a.n);
+    let defaultCx;
+    if (isTop) {
+      // TOP5·생활권 대장: 구 전체에서 거래 많은 순 20개를 기본으로, 더 찾고 싶으면 검색
+      defaultCx = all.slice(0, 20);
+    } else if (z.dongs && z.dongs.length) {
       // dongs 지정된 생활권: 그 동 소속 단지만 (거래 많은 순, 최대 30개)
       const dongSet = new Set(z.dongs);
-      allCx = Object.values(merged).filter(c => dongSet.has(c.dong)).sort((a,b)=>b.n-a.n).slice(0,30);
+      defaultCx = all.filter(c => dongSet.has(c.dong)).slice(0, 30);
     } else {
-      const zoneCx = Object.values(merged).filter(c => zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n);
-      const extraCx = Object.values(merged).filter(c => !zoneNames.has(norm(c.name))).sort((a,b)=>b.n-a.n).slice(0,15);
-      allCx = [...zoneCx, ...extraCx];
+      // 생활권 내 단지(z.complexes 등록 기준) 먼저, 나머지 구 전체 상위 15개
+      const zoneNames = new Set(z.complexes.map(n => norm(n.split("|")[0].split("@")[0])));
+      const zoneCx = all.filter(c => zoneNames.has(norm(c.name)));
+      const extraCx = all.filter(c => !zoneNames.has(norm(c.name))).slice(0, 15);
+      defaultCx = [...zoneCx, ...extraCx];
     }
-    const pickedNow = new Set(list.map(c => norm(c.name || c.label || "")));
-    const addable = allCx.filter(c => !pickedNow.has(norm(c.name)));
-    if (addable.length) {
-      const opts = addable.map(c => `<label><input type="checkbox" data-n="${c.name}"> ${c.name} <small>${c.dong}·${c.n}건</small></label>`).join("");
-      html += `<div class="addpick-wrap" data-html2canvas-ignore><button type="button" class="btn-add" id="btnAddCx">＋ 단지 추가</button><div class="addpick-drop" id="addDrop">${opts}</div></div>`;
+    const pickedNow = new Set(list.filter(c => c.cx).map(c => norm(c.cx.name)));
+    ADDPICK_ALL = all.filter(c => !pickedNow.has(norm(c.name)));
+    ADDPICK_DEFAULT = defaultCx.filter(c => !pickedNow.has(norm(c.name)));
+    if (ADDPICK_ALL.length) {
+      html += `<div class="addpick-wrap" data-html2canvas-ignore><button type="button" class="btn-add" id="btnAddCx">＋ 단지 추가</button><div class="addpick-drop" id="addDrop"><input type="text" id="addSearch" class="addpick-search" placeholder="단지명 검색 (구 전체)" autocomplete="off"><div id="addOpts"></div></div></div>`;
     }
   }
 
@@ -1242,17 +1257,32 @@ function bindLegend() {
     state.hidden.has(n) ? state.hidden.delete(n) : state.hidden.add(n);
     render();
   });
-  const btnAdd = $("btnAddCx"), drop = $("addDrop");
+  const btnAdd = $("btnAddCx"), drop = $("addDrop"), search = $("addSearch"), optsBox = $("addOpts");
   if (btnAdd && drop) {
-    btnAdd.onclick = e => { e.stopPropagation(); drop.classList.toggle("show"); };
-    drop.querySelectorAll("input").forEach(cb => cb.onchange = () => {
-      const n = cb.dataset.n;
-      if (cb.checked) {
-        if (state.picked.length >= MAX_PICK) { cb.checked = false; return; }
-        if (!state.picked.includes(n)) state.picked.push(n);
-      } else state.picked = state.picked.filter(x => x !== n);
-      render();
-    });
+    const renderOpts = arr => {
+      optsBox.innerHTML = arr.length
+        ? arr.map(c => `<label><input type="checkbox" data-n="${c.name}"> ${c.name} <small>${c.dong}·${c.n}건</small></label>`).join("")
+        : `<div class="hint" style="padding:5px 10px">검색 결과가 없어요</div>`;
+      optsBox.querySelectorAll("input").forEach(cb => cb.onchange = () => {
+        const n = cb.dataset.n;
+        if (cb.checked) {
+          if (state.picked.length >= MAX_PICK) { cb.checked = false; return; }
+          if (!state.picked.includes(n)) state.picked.push(n);
+        } else state.picked = state.picked.filter(x => x !== n);
+        render();
+      });
+    };
+    btnAdd.onclick = e => {
+      e.stopPropagation();
+      const opening = !drop.classList.contains("show");
+      drop.classList.toggle("show");
+      if (opening) { search.value = ""; search.classList.remove("active"); renderOpts(ADDPICK_DEFAULT); search.focus(); }
+    };
+    search.oninput = () => {
+      const q = norm(search.value.trim());
+      search.classList.toggle("active", !!q);
+      renderOpts(q ? ADDPICK_ALL.filter(c => norm(c.name).includes(q)).slice(0, 50) : ADDPICK_DEFAULT);
+    };
     document.addEventListener("pointerdown", function hdl(e) {
       if (!drop.contains(e.target) && e.target !== btnAdd) { drop.classList.remove("show"); document.removeEventListener("pointerdown", hdl); }
     });
