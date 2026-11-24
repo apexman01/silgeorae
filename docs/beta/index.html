@@ -788,7 +788,7 @@ function render() {
 
   const series = list.map((c, k) => {
     const rep = isTop ? (c.rep !== undefined ? c.rep : c.cx ? repArea(c, null) : null) : state.area === "rep" && c.cx ? repArea(c, z) : null;
-    return { ...c, rep, label: isTop ? c.label : rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
+    return { ...c, rep, label: state.view === "top5" ? c.label : rep ? `${c.label} ${rep}㎡` : c.label, color: COLORS[k % COLORS.length],
       ...(c.cx && (isTop || state.area !== "rep" || rep) ? seriesFor(c.idxs, rep) : { pts: [], rows: [] }) };
   });
   const shown = series.filter(s => !state.hidden.has(s.name));
