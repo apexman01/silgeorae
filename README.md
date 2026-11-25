@@ -35,6 +35,12 @@
 - 확인 뒤 정식 반영 시: `node scripts/build_summary.js --out docs/data/summary --no-patch` + 자동 갱신(update.yml)에 단계 추가
 - 파일 구조(항목 이름)를 바꾸면 임장기록 프로젝트 지침도 같이 고쳐야 하므로 먼저 보고
 
+## 시세 그룹 (시험판)
+
+- 화면: `docs/beta/group.html` — 가용 금액(매매가 또는 투자금=매매−전세) 범위의 단지를 생활권 서열 순으로 모아 보기
+- 자료: 시세 요약 파일(`docs/beta/data/summary/`) + 전세 시세 `scripts/build_group.js` → `docs/beta/data/group/jeonse.json`
+- 정식 반영 시: `node scripts/build_group.js --out docs/data/group --no-patch` + 자동 갱신(update.yml)에 단계 추가
+
 ## 정비사업 카드 (시험판)
 
 - 자료: 서울 열린데이터광장 「서울특별시 도시정비사업 통계」(OA-22856) 엑셀, 분기마다 갱신
