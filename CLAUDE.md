@@ -21,8 +21,12 @@
   - 남은 일: 사용자가 임장기록 프로젝트에서 테스트 후 OK하면 정식 반영
     `node scripts/build_summary.js --out docs/data/summary --no-patch` + `.github/workflows/update.yml`에 요약 생성 단계 추가
 
+- 시험판 새 화면(2026-11-25, 커밋 c387bf9): 서울 지도 홈(home.html)·상승/하락(cycle.html)·내 집 진단(mine.html)·시세 그룹(group.html)·공통 아래 메뉴(nav.js)
+  - 자료: `node scripts/build_beta.js` → `docs/beta/data/x/` (아직 자동 갱신 미연결)
+  - 사용자 확인 대기 → OK 후 정식 반영 방법 결정
+
 ## 로드맵
-1. 하락기/상승기 2. 규제탐색기 3. 생활권 요약 4. 교통1·2 5. 내 집 진단
+1. 하락기/상승기(시험판 완료) 2. 규제탐색기 3. 생활권 요약 4. 교통1·2 5. 내 집 진단(시험판 완료)
 6. 앱 출시: PWA(홈 화면 설치) → 앱스토어 등록
 
 ## 참고
