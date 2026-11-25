@@ -1,0 +1,66 @@
+/* 시험판 새 화면 공통 스타일 (home·cycle·mine·group) */
+:root{
+  --ink:#1d1f23; --sub:#5b616b; --mute:#9aa0a8; --line:#e6e8eb; --bg:#f6f7f9; --card:#fff;
+  --accent:#2a6fdb; --accent-soft:#e3ecfb; --up:#d9443a; --up-soft:#fdeceb; --down:#2a6fdb; --down-soft:#e7effc;
+  --warm:#c2551f; --violet:#7a4fd6; --violet-soft:#efe9fb; --good:#1f9d6b;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+button,input,select{font:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px 40px}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.top h1{font-size:21px;margin:0;letter-spacing:-.3px}
+.top .meta{font-size:12px;color:var(--mute)}
+.lead{color:var(--sub);font-size:13px;margin:4px 0 0;line-height:1.5}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260;font-weight:500;vertical-align:1px}
+.tag.pre{background:#fff1e8;color:var(--warm);font-weight:600}
+.tag.old{background:#f1f2f4;color:var(--mute)}
+.tag.up{background:var(--up-soft);color:var(--up);font-weight:600}
+.tag.down{background:var(--down-soft);color:var(--down);font-weight:600}
+.tag.vio{background:var(--violet-soft);color:var(--violet);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+.card h2{font-size:16px;margin:0 0 10px;letter-spacing:-.2px}
+.card h2 small{font-size:12px;color:var(--mute);font-weight:500;margin-left:4px}
+.lbl{display:block;font-size:12px;color:var(--sub);font-weight:600;margin-bottom:5px}
+.seg{display:flex;border:1px solid #d5d9de;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{flex:1;font-size:13px;border:0;background:#fff;padding:7px 2px;color:var(--sub);min-height:36px;white-space:nowrap}
+.seg button+button{border-left:1px solid #d5d9de}
+.seg button.on{background:var(--ink);color:#fff}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;font-size:13px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:6px 12px;color:var(--sub)}
+.chips button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.foot{color:var(--mute);font-size:12px;line-height:1.6;margin-top:14px}
+.empty{background:var(--card);border:1px dashed #cfd4da;border-radius:12px;padding:22px 14px;text-align:center;color:var(--sub);font-size:14px;line-height:1.6}
+.up{color:var(--up)} .down{color:var(--down)}
+.num{font-variant-numeric:tabular-nums}
+
+/* 등장 모션 */
+.rise{opacity:0;transform:translateY(10px);animation:rise .55s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.rise{animation:none;opacity:1;transform:none}}
+
+/* 전고점·전저점·현재 막대 */
+.db{position:relative;height:22px}
+.db .rail{position:absolute;left:0;right:0;top:10px;height:2px;background:#eceef1}
+.db .span{position:absolute;top:8px;height:6px;border-radius:3px;background:linear-gradient(90deg,#b9cdf3,#f3b9b4);transform-origin:left;animation:grow .8s cubic-bezier(.2,.7,.2,1) both}
+.db .pk,.db .lo{position:absolute;top:5px;width:2px;height:12px;background:#8f969e}
+.db .cur{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 1.5px var(--ink);background:var(--ink);animation:pop .5s .5s both}
+.db .cur.up{background:var(--up);box-shadow:0 0 0 1.5px var(--up)}
+.db .cur.down{background:var(--down);box-shadow:0 0 0 1.5px var(--down)}
+@keyframes grow{from{transform:scaleX(0)}}
+@keyframes pop{from{transform:scale(0)}}
+
+/* 공통 아래 메뉴 (nav.js) */
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:saturate(1.6) blur(10px);-webkit-backdrop-filter:saturate(1.6) blur(10px);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+.bnav .in{max-width:720px;margin:0 auto;display:flex}
+.bnav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 0 3px;color:#8b9199;text-decoration:none;font-size:11px;font-weight:600;border-radius:10px}
+.bnav a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bnav a.on{color:var(--ink)}
+.bnav a.on svg{stroke:var(--accent)}
+body.has-bnav{padding-bottom:calc(64px + env(safe-area-inset-bottom))}

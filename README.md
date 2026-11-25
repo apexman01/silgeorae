@@ -41,6 +41,19 @@
 - 자료: 시세 요약 파일(`docs/beta/data/summary/`) + 전세 시세 `scripts/build_group.js` → `docs/beta/data/group/jeonse.json`
 - 정식 반영 시: `node scripts/build_group.js --out docs/data/group --no-patch` + 자동 갱신(update.yml)에 단계 추가
 
+## 새 화면 묶음 (시험판, 2026-11-25)
+
+| 주소 | 파일 | 내용 |
+|---|---|---|
+| `/beta/home.html` | 서울 지도 | 25개 구 지도(84㎡ 시세·6개월 변화·전고점 대비·전세가율), 2021년~ 타임랩스 재생, 구를 누르면 시세 흐름·생활권 서열 |
+| `/beta/cycle.html` | 상승·하락 | 구별·단지별 전고점(2021~22 최고)·전저점·지금 위치, 전고점 돌파/고점 아래 목록 |
+| `/beta/mine.html` | 내 집 진단 | 단지 검색 → 시세·전세·갭·사이클·입지 서열·갈아타기 후보 |
+| `/beta/group.html` | 시세 그룹 | 시세(4층 이상 최근 3건 중간)/최근 1건/내 호가, 서열 기준 2가지, 네이버 호가 링크 |
+
+- 공통: `docs/beta/x.css`·`x.js`(모양·함수), `nav.js`(아래 메뉴, 생활권 그래프 화면에도 붙음)
+- 자료: `node scripts/build_beta.js` → `docs/beta/data/x/` (map.json 지도 경계, gu.json 구별 월별, cx.json 단지 지표). 지도 경계 원본은 `data/geo/seoul_gu_2013.geojson`
+- 아직 자동 갱신에 안 넣음. 정식 반영 시 `node scripts/build_beta.js --out docs/data/x --no-patch`를 update.yml에 추가
+
 ## 정비사업 카드 (시험판)
 
 - 자료: 서울 열린데이터광장 「서울특별시 도시정비사업 통계」(OA-22856) 엑셀, 분기마다 갱신

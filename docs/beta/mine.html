@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>내 집 진단 시험판</title>
+<link rel="stylesheet" href="x.css">
+<style>
+  .search{position:relative;margin-top:12px}
+  .search input{width:100%;font-size:16px;padding:11px 12px;border:1px solid #d5d9de;border-radius:12px;background:#fff}
+  .sug{margin-top:6px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sug button{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:#fff;padding:10px 12px;font-size:14.5px}
+  .sug button:first-child{border-top:0}
+  .sug button small{display:block;font-size:12px;color:var(--mute);margin-top:1px}
+  .hd{display:flex;align-items:flex-start;gap:10px}
+  .hd .t{flex:1;min-width:0}
+  .hd h2{font-size:20px;margin:0}
+  .hd small{display:block;font-size:12.5px;color:var(--sub);margin-top:3px}
+  .hd .chg{flex:none;font-size:12.5px;border:1px solid #d5d9de;background:#fff;border-radius:8px;padding:6px 10px;color:var(--sub)}
+  .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .kpi div{background:var(--bg);border-radius:12px;padding:10px}
+  .kpi small{display:block;font-size:11.5px;color:var(--sub)}
+  .kpi b{font-size:21px;letter-spacing:-.4px}
+  .kpi em{display:block;font-style:normal;font-size:11px;color:var(--mute);margin-top:2px}
+  .verdict{border-radius:12px;padding:12px;margin-top:10px;font-size:14.5px;line-height:1.55}
+  .verdict.up{background:var(--up-soft)} .verdict.mid{background:#f1f3f5} .verdict.down{background:var(--down-soft)}
+  .verdict b{font-size:15.5px}
+  .trs{margin-top:6px;font-size:13px}
+  .trs div{display:flex;justify-content:space-between;padding:5px 0;border-top:1px dashed var(--line);color:var(--sub)}
+  .trs div:first-child{border-top:0}
+  .trs b{color:var(--ink)}
+  .loc{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .loc div{background:var(--bg);border-radius:12px;padding:10px}
+  .loc small{display:block;font-size:11.5px;color:var(--sub)}
+  .loc b{font-size:22px}
+  .loc b span{font-size:13px;color:var(--mute);font-weight:500}
+  .gauge{height:8px;border-radius:4px;background:#e3e6ea;margin-top:8px;position:relative;overflow:hidden}
+  .gauge i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,#7ea5e6,#1f4aa8);width:0;transition:width 1s cubic-bezier(.2,.7,.2,1)}
+  .alt{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+  .alt:first-of-type{border-top:0}
+  .alt .rk{flex:none;min-width:40px;text-align:center;font-size:12px;font-weight:700;color:#fff;background:var(--violet);border-radius:6px;padding:3px 4px}
+  .alt .nm{flex:1;min-width:0;font-size:14px}
+  .alt .nm small{display:block;font-size:12px;color:var(--mute)}
+  .alt b{flex:none;font-size:14.5px}
+  .links{display:flex;gap:6px;margin-top:10px}
+  .links a{flex:1;text-align:center;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #cfdcf3;background:#f2f6fd;border-radius:10px;padding:9px 4px}
+  .links a.nv{border-color:#bfe6cf;background:#eefaf3;color:#11873f}
+  .warn{font-size:12px;color:var(--warm);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>내 집 진단 <span class="tag pre">시험판</span></h1><span class="meta" id="meta"></span></div>
+  <p class="lead">내 단지가 지금 어디쯤인지, 사이클·입지 서열·갈아탈 곳을 한 번에 봅니다. 고른 단지는 이 기기에 기억됩니다.</p>
+  <div id="pickBox"></div>
+  <div id="out"></div>
+  <p class="foot" id="foot"></p>
+</div>
+<script src="x.js"></script>
+<script src="nav.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const KEY = "silgeorae_mine_v1";
+let C, ALL = [], ME = X.store.get(KEY, null);
+
+X.get("data/x/cx.json").then(c => {
+  C = c; $("meta").textContent = `기준 ${X.ym(c.기준월)}`;
+  c.생활권.forEach(z => (c.단지[z.구][z.이름] || []).forEach(x => ALL.push({ z, c: x, id: z.구 + "|" + z.이름 + "|" + x.이름 })));
+  $("foot").innerHTML = `자료: 국토부 실거래가. 생활권 대표 단지 ${ALL.length}곳만 진단할 수 있습니다(시세 요약 파일과 같은 단지).<br>` +
+    `· 시세 = 4층 이상 매매(분양권·입주권 포함) 최근 12개월 중 최근 3건 중간값. 전세 = 신규 계약 4층 이상 최근 6개월 중간값.<br>` +
+    `· 전고점 = 2021~22년 최고가, 전저점 = 그 뒤 최저가(가장 낮은 1건은 급매로 보고 뺌). 생활권 서열 = 대표 단지 84㎡ 시세 중간값 순.`;
+  ME && find(ME) ? show() : pick();
+}).catch(e => { $("out").innerHTML = `<div class="empty">자료를 불러오지 못했습니다.</div>`; console.error(e); });
+
+function find(m) { return ALL.find(x => x.id === m.id); }
+function pick() {
+  $("out").innerHTML = "";
+  $("pickBox").innerHTML = `<div class="search"><input id="q" type="search" placeholder="단지 이름 검색 (예: 고덕그라시움, 마포래미안)" autocomplete="off"><div class="sug" id="sug" hidden></div></div>` +
+    `<div class="empty" style="margin-top:12px">내 단지(또는 관심 단지)를 검색해서 고르세요.</div>`;
+  const q = $("q"); q.focus();
+  q.oninput = () => {
+    const t = q.value.replace(/\s+/g, "").toLowerCase();
+    const r = t ? ALL.filter(x => (x.c.이름 + x.c.검색명 + x.z.이름 + x.z.구).replace(/\s+/g, "").toLowerCase().includes(t)).slice(0, 12) : [];
+    $("sug").hidden = !r.length;
+    $("sug").innerHTML = r.map(x => `<button data-id="${X.esc(x.id)}">${X.esc(x.c.이름)}<small>${x.z.구} ${X.esc(x.z.이름)} · ${x.c.준공 || "-"}년${x.c.세대수 ? " · " + x.c.세대수.toLocaleString() + "세대" : ""}</small></button>`).join("");
+  };
+  $("sug").onclick = e => { const b = e.target.closest("button"); if (!b) return; const x = ALL.find(y => y.id === b.dataset.id); ME = { id: x.id, area: x.c["84"] ? "84" : "59" }; X.store.set(KEY, ME); show(); };
+}
+
+function show() {
+  $("pickBox").innerHTML = "";
+  const x = find(ME), c = x.c, z = x.z;
+  const areas = ["59", "84"].filter(a => c[a]);
+  if (!c[ME.area]) ME.area = areas[0];
+  const a = c[ME.area];
+  const gap = a.시세 && a.전세 ? a.시세 - a.전세[0] : null;
+  const jr = a.시세 && a.전세 ? a.전세[0] / a.시세 * 100 : null;
+  const pk = a.전고점 && a.전고점[0], lo = a.전저점 && a.전저점[0], cur = a.시세;
+  const rec = pk && lo != null && cur && pk > lo ? (cur - lo) / (pk - lo) * 100 : null;
+  const vs = pk && cur ? (cur / pk - 1) * 100 : null;
+  let vcls = "mid", vtxt = "전고점 정보가 부족합니다 (2021~22년 거래 없음).";
+  if (vs != null) {
+    if (cur > pk) { vcls = "up"; vtxt = `<b>상승기 — 전고점 돌파</b><br>2021~22년 최고가 ${X.eok(pk)}보다 <b class="up">${X.pct(vs)}</b> 높습니다.`; }
+    else if (rec != null && rec >= 40) { vtxt = `<b>회복 중</b><br>전고점까지 <b>${X.eok(pk - cur)}</b> 남았습니다. 떨어졌던 폭의 ${rec.toFixed(0)}%를 되찾았습니다.`; }
+    else { vcls = "down"; vtxt = `<b>바닥권</b><br>전고점 대비 <b class="down">${X.pct(vs)}</b>. 떨어졌던 폭의 ${rec == null ? "-" : rec.toFixed(0) + "%"}만 회복했습니다.`; }
+  }
+  // 입지
+  const nZ = C.생활권.filter(q => q.중간순위).length;
+  const guZ = C.생활권.filter(q => q.구 === z.구 && q.중간순위).sort((p, q) => p.중간순위 - q.중간순위);
+  const inGu = guZ.findIndex(q => q === z) + 1;
+  // 갈아타기: 같은 평형, 시세 ±10%, 서열이 더 높은 생활권
+  const alts = cur ? ALL.filter(y => y.z !== z && y.z.중간순위 && z.중간순위 && y.z.중간순위 < z.중간순위 && y.c[ME.area] && y.c[ME.area].시세 &&
+    Math.abs(y.c[ME.area].시세 / cur - 1) <= 0.1).sort((p, q) => p.z.중간순위 - q.z.중간순위).slice(0, 6) : [];
+  const ser = (a.월별 || []).map(([m, v]) => [Math.floor(m / 100) * 12 + m % 100, v]);
+  const lines = []; if (pk) lines.push({ y: pk, c: "#d9443a", t: "전고점 " + X.eok1(pk) }); if (lo) lines.push({ y: lo, c: "#2a6fdb", t: "전저점 " + X.eok1(lo) });
+  const tr = a.시세근거 ? a.시세근거.거래.slice().reverse() : [];
+
+  $("out").innerHTML =
+  `<div class="card rise"><div class="hd"><div class="t"><h2>${X.esc(c.이름)}</h2><small>${z.구} ${X.esc(z.이름)} · ${c.법정동 || ""} · ${c.준공 || "-"}년${c.세대수 ? " · " + c.세대수.toLocaleString() + "세대" : ""}</small></div><button class="chg" id="chg">단지 바꾸기</button></div>` +
+  (areas.length > 1 ? `<div class="seg" id="segA" style="margin-top:10px">${areas.map(v => `<button data-v="${v}" class="${v === ME.area ? "on" : ""}">${v}㎡</button>`).join("")}</div>` : "") +
+  `<div class="kpi"><div><small>시세 (${ME.area}㎡)</small><b class="num" id="k1">-</b><em>${a.시세근거 ? a.시세근거.층조건 + " 최근 " + a.시세근거.건수 + "건 중간값" : "최근 12개월 거래 없음"}</em></div>` +
+  `<div><small>전세 시세</small><b class="num">${a.전세 ? X.eok(a.전세[0]) : "-"}</b><em>${a.전세 ? `신규 ${a.전세[1]}건 · 최근 ${a.전세[2]}개월` : "거래 없음"}</em></div>` +
+  `<div><small>투자금(갭)</small><b class="num">${X.eok(gap)}</b><em>시세 − 전세</em></div>` +
+  `<div><small>전세가율</small><b class="num">${jr == null ? "-" : jr.toFixed(0) + "%"}</b><em>12개월 거래 ${a.건수12}건</em></div></div>` +
+  (tr.length ? `<div class="trs">${tr.map(t => `<div><span>${X.ymd(t[0])} · ${t[2]}층 ${t[3] !== "매매" ? `<span class="tag pre">${t[3]}</span>` : ""}</span><b>${X.eok(t[1])}</b></div>`).join("")}</div>` : "") +
+  (a.확정전 ? `<div class="warn">※ 이번 달 신고된 거래가 들어 있습니다. 해제(취소)되면 다음 갱신 때 빠집니다.</div>` : "") +
+  `<div class="links"><a class="nv" href="${X.naver(c.검색명)}" target="_blank" rel="noopener">네이버 호가 보기 ↗</a><a href="group.html?p=${cur ? Math.round(cur / 1000) / 10 : ""}&a=${ME.area}">같은 가격대 보기</a></div></div>` +
+
+  `<div class="card rise" style="animation-delay:.08s"><h2>사이클 위치</h2><div class="verdict ${vcls}">${vtxt}</div>` +
+  (pk && lo != null && cur ? `<div style="margin-top:12px">${X.dumbbell(pk, lo, cur, Math.min(lo, cur) * 0.93, Math.max(pk, cur) * 1.05)}</div>` +
+    `<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);margin-top:2px"><span>저 ${X.eok(lo)} (${X.ym(Math.floor(a.전저점[1] / 100))})</span><span>고 ${X.eok(pk)} (${X.ym(Math.floor(a.전고점[1] / 100))})</span></div>` : "") +
+  (ser.length > 2 ? `<div style="margin-top:14px">${X.spark(ser, { w: 600, h: 150, c: "#1d1f23", fill: "#eef0f3", lines, extra: [pk, lo].filter(Boolean) })}</div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mute)"><span>${X.ym(a.월별[0][0])}</span><span>월별 중간값</span><span>${X.ym(a.월별[a.월별.length - 1][0])}</span></div>` : "") + `</div>` +
+
+  `<div class="card rise" style="animation-delay:.14s"><h2>입지 서열</h2><div class="loc">` +
+  `<div><small>서울 생활권 서열</small><b class="num">${z.중간순위 || "-"}<span> / ${nZ}</span></b><div class="gauge"><i id="g1"></i></div></div>` +
+  `<div><small>${z.구} 안 순위</small><b class="num">${inGu || "-"}<span> / ${guZ.length}</span></b><div class="gauge"><i id="g2"></i></div></div></div>` +
+  `<p style="font-size:12.5px;color:var(--sub);margin:10px 0 0">${X.esc(z.이름)} 생활권 대표 단지 84㎡ 시세 중간값 ${X.eok1(z.중간)}. 막대가 길수록 상급지입니다.</p></div>` +
+
+  `<div class="card rise" style="animation-delay:.2s"><h2>갈아타기 후보 <small>같은 ${ME.area}㎡ · 시세 ±10% · 더 높은 생활권</small></h2>` +
+  (alts.length ? alts.map(y => { const v = y.c[ME.area].시세; return `<div class="alt"><span class="rk">${y.z.중간순위}위</span><div class="nm">${X.esc(y.c.이름)}<small>${y.z.구} ${X.esc(y.z.이름)}</small></div><b class="num">${X.eok(v)} <small style="font-size:11px;color:${v > cur ? "var(--up)" : "var(--down)"}">${v > cur ? "+" : ""}${X.eok1(v - cur)}</small></b></div>`; }).join("")
+    : `<div style="font-size:13.5px;color:var(--sub)">비슷한 가격에 더 높은 서열의 생활권 단지가 없습니다. 이미 이 가격대 최상위권입니다.</div>`) +
+  `<div class="links"><a href="group.html?p=${cur ? Math.round(cur / 1000) / 10 : ""}&a=${ME.area}">시세 그룹에서 더 보기</a><a href="cycle.html?gu=${encodeURIComponent(z.구)}">${z.구} 상승·하락</a></div></div>`;
+
+  if (cur) X.count($("k1"), cur, v => X.eok(Math.round(v / 100) * 100));
+  requestAnimationFrame(() => setTimeout(() => {
+    if ($("g1") && z.중간순위) $("g1").style.width = ((nZ - z.중간순위 + 1) / nZ * 100) + "%";
+    if ($("g2") && inGu) $("g2").style.width = ((guZ.length - inGu + 1) / guZ.length * 100) + "%";
+  }, 50));
+  $("chg").onclick = pick;
+  const sa = $("segA"); if (sa) sa.onclick = e => { const b = e.target.closest("button"); if (!b) return; ME.area = b.dataset.v; X.store.set(KEY, ME); show(); };
+}
+</script>
+</body>
+</html>
