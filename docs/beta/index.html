@@ -225,6 +225,11 @@
   .jbstg span b{font-weight:700}
   .jbstg span.off{background:#f1f3f5;color:#9aa0a8}
   .jb .go{font:inherit;font-size:12.5px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:3px 10px;margin-left:6px;cursor:pointer;color:var(--accent)}
+  .jb .go.zp{display:flex;align-items:center;gap:8px;width:100%;margin:8px 0 2px;border-radius:10px;padding:7px 10px;text-align:left;border-color:#cfdcf3;background:#f5f8fe}
+  .jb .go.zp .zt{flex:1;min-width:0;font-weight:700;font-size:13px}
+  .jb .go.zp .zt small{display:block;font-weight:500;font-size:11px;color:var(--sub,#5b616b);margin-top:1px}
+  .jb .go.zp .zv{flex:none;text-align:right;font-size:11px;color:var(--sub,#5b616b);line-height:1.25}
+  .jb .go.zp .zv b{display:block;font-size:15px;color:var(--ink,#1d1f23)}
   #jbCard{background:#fff7f7;border:1px solid #efc4c7;border-left:5px solid #d0606e}
   #jbCard h3{color:#8e2a37}
   #jbCard .jb{border-top-color:#f3d7d9}
@@ -384,7 +389,7 @@
   </div>
   <div class="controls">
     <div class="ctl j-only"><label>단계</label>
-      <div class="seg" id="jbStage"><button data-v="all" class="on">전체</button><button data-v="사업시행">사업시행 이후</button><button data-v="관리처분">관리처분 이후</button></div></div>
+      <div class="seg" id="jbStage"><button data-v="all" class="on">전체</button><button data-v="사업시행">사업시행 이후</button><button data-v="관리처분">관리처분 이후</button><button data-v="착공">착공</button></div></div>
     <div class="ctl j-only"><label>종류</label>
       <div class="seg" id="jbType"><button data-v="all" class="on">전체</button><button data-v="재개발">재개발</button><button data-v="재건축">재건축</button></div></div>
     <div class="ctl j-only"><label>정렬</label>
@@ -1724,9 +1729,14 @@ function jbSortL(l) {
   const st = r => JB.stages.indexOf(r.stage);
   return l.slice().sort(jbS.sort === "hh" ? (a, b) => b.new - a.new : (a, b) => st(b) - st(a) || b.new - a.new);
 }
+const ZR_MEMO = {};   // 구별 생활권 서열(84㎡ 최근 6개월 최고가) — 자료가 바뀌지 않으니 한 번만 계산
+function zrOf(gu) { return ZR_MEMO[gu] || (ZR_MEMO[gu] = zoneRank(gu)); }
 function jbItemLink(r, gu, zi, zname) {
   const h = jbItem(r);
-  const tag = zname ? `<button class="go" type="button" data-gu="${gu}" data-zi="${zi}">${zname} 시세 보기</button>` : "";
+  const zr = zname ? zrOf(gu)[zname] : null;
+  const tag = !zname ? "" : zr
+    ? `<button class="go zp" type="button" data-gu="${gu}" data-zi="${zi}"><span class="zt">${zname} 시세 보기 →<small>이 구역이 있는 생활권 · ${gu} 안 ${zr.n}위</small></span><span class="zv">84㎡ 최고가<b>${eok(zr.v)}</b>최근 6개월</span></button>`
+    : `<button class="go" type="button" data-gu="${gu}" data-zi="${zi}">${zname} 시세 보기</button>`;
   return h.replace('<div class="cur">', `<div class="cur">`).replace(/<\/div><\/div>$/, `${tag}</div></div>`);
 }
 let jbTok = 0;   // 늦게 끝난 이전 불러오기(예: 서울 전체)가 지금 화면을 덮어쓰지 않게
@@ -1769,7 +1779,7 @@ function renderJbTab() {
     const shownL = groups.flatMap(g => g[1]);
     const cnt = {}; shownL.forEach(o => cnt[o.r.stage] = (cnt[o.r.stage] || 0) + 1);
     const hhSum = shownL.reduce((s, o) => s + o.r.new, 0);
-    const filt = [jbS.stage !== "all" ? `${jbS.stage} 이후` : "", jbS.type !== "all" ? jbS.type : ""].filter(Boolean).join(" · ");
+    const filt = [jbS.stage === "착공" ? "착공 단계만" : jbS.stage !== "all" ? `${jbS.stage} 이후` : "", jbS.type !== "all" ? jbS.type : ""].filter(Boolean).join(" · ");
     let html = `<h2>${title}</h2><div class="hint" style="margin:2px 0 4px">${filt ? filt + " · " : ""}${jbS.sort === "hh" ? "세대수 큰 순" : "단계 빠른 순"}</div>
       <div class="jbsum"><span><b>${shownL.length}개 구역</b>${shownL.length !== before ? ` / 전체 ${before}` : ""}</span><span>공급 <b>${hhSum.toLocaleString()}세대</b></span></div>
       <div class="jbstg">${JB.stages.slice().reverse().filter(s => cntAll[s]).map(s => `<span class="${cnt[s] ? "" : "off"}">${s} <b>${cntAll[s]}</b></span>`).join("")}</div>`;
