@@ -1,0 +1,14 @@
+{
+  "name": "silgeorae-tracker",
+  "private": true,
+  "description": "내 유닛 네이버페이부동산 호가 시세트래킹 (개인용)",
+  "scripts": {
+    "setup": "npx playwright install chromium",
+    "track": "node track.js",
+    "report": "node track.js --report-only"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16",
+    "playwright": "^1.48.2"
+  }
+}

@@ -15,6 +15,7 @@
 | `data/cache/` | 받은 원자료 보관 (최근 4개월만 새로 받는 데 사용) |
 | `scripts/build_from_csv.py` | (예비용) 실거래가 공개시스템 CSV로 자료 만들기 |
 | `.github/workflows/update.yml` | 매월 3일 새벽 자동 실행 설정 |
+| `tracker/` | (개인용) 내 유닛 네이버 호가 시세트래킹 — 내 PC에서 실행, 사용법은 `tracker/README.md` |
 
 ## 버전 관리
 
