@@ -171,6 +171,21 @@
   .tag.me{background:#f0a500;color:#fff;font-weight:700}
   .track i.me{background:#f0a500;border-color:#f0a500;box-shadow:0 0 0 3px rgba(240,165,0,.3);z-index:2}
   .legend i.me{background:#f0a500;border-color:#f0a500}
+  /* 스크롤해도 기준이 보이는 띠 (설정 칸이 화면 밖으로 나가면 나타남) */
+  .stick{position:fixed;left:0;right:0;top:0;z-index:30;padding:8px max(16px, calc((100% - 720px) / 2 + 16px));box-shadow:0 2px 10px rgba(0,0,0,.06);background:rgba(255,255,255,.96);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;
+    opacity:0;transform:translateY(-100%);pointer-events:none;transition:opacity .2s,transform .2s}
+  .stick.show{opacity:1;transform:none;pointer-events:auto}
+  .stick .k{flex:none;font-size:11px;font-weight:700;color:#fff;background:#f0a500;border-radius:5px;padding:2px 6px}
+  .stick .k.p{background:var(--ink)}
+  .stick .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stick .t b{font-size:14.5px;display:block;overflow:hidden;text-overflow:ellipsis}
+  .stick .t small{display:block;font-size:11.5px;color:var(--sub)}
+  .stick .r{flex:none;text-align:right;font-size:11px;color:var(--sub);line-height:1.3}
+  .stick .r b{display:block;font-size:15px;color:var(--ink)}
+  .stick .go{flex:none;font-size:11.5px;color:var(--accent);font-weight:600}
+  .dl{display:block;font-size:11.5px;font-weight:700;margin-top:1px}
+  .dl.pl{color:#d9443a} .dl.mi{color:#2a6fdb} .dl.eq{color:#b07a00}
 </style>
 </head>
 <body>
@@ -215,6 +230,7 @@
     </details>
   </div>
 
+  <div class="stick" id="stick" role="button" tabindex="0" aria-label="기준 다시 보기"></div>
   <div id="out"><div class="empty">자료를 불러오는 중…</div></div>
   <p class="foot" id="foot"></p>
 </div>
@@ -358,6 +374,11 @@ function render() {
     });
   } else h += `<div class="flat">` + rows.slice().sort((a, b) => b.v - a.v || byRank(a.zone, b.zone)).map(r => item(r, true)).join("") + `</div>`;
   out.innerHTML = h;
+  // 기준 띠
+  const st = $("stick");
+  st.innerHTML = B
+    ? `<span class="k">기준</span><span class="t"><b>${X.esc(B.c.이름)}</b><small>${AREA()}㎡ · 범위 ${eok1(lo)}~${eok1(hi)}</small></span><span class="r">${what}<b>${eok(B.v)}</b></span><span class="go">바꾸기</span>`
+    : `<span class="k p">${what}</span><span class="t"><b>${eok(price() * 10000)}</b><small>${areaTxt} · 범위 ${S.tol === "0" ? eok1(lo) + "대" : eok1(lo) + "~" + eok1(hi)}</small></span><span class="go">바꾸기</span>`;
   $("vtabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.view = b.dataset.v; save(); render(); };
 }
 
@@ -397,7 +418,9 @@ function item(r, showZone, outOfRange) {
     (lastT[3] !== "매매" && r.kind !== "호가" ? ` <span class="tag pre">${lastT[3]}</span>` : "") +
     (r.cf && r.kind !== "호가" ? ` <span class="tag cf">이번 달</span>` : "") + (r.old && r.kind !== "호가" ? ` <span class="tag old">오래됨</span>` : "");
   const basisTxt = r.kind === "호가" ? "내가 적은 호가" : r.kind === "최근" ? `${X.ymd(lastT[0])} · ${lastT[2]}층` : `${r.d.시세근거.층조건} ${r.d.시세근거.건수}건 중간 · ~${X.ymd(r.date)}`;
-  const right = useGap() ? `<b>${eok(r.v)}</b><small>매매 ${eok(r.p)} − 전세 ${eok(r.d.전세[0])}</small>` : `<b>${eok(r.p)}</b><small>${basisTxt}</small>`;
+  const center = price() * 10000, df = r.v - center;
+  const dl = me ? `<span class="dl eq">기준</span>` : center ? `<span class="dl ${Math.abs(df) < 50 ? "eq" : df > 0 ? "pl" : "mi"}">${Math.abs(df) < 50 ? "기준과 같음" : (isCx() ? "기준보다 " : "") + (df > 0 ? "+" : "−") + eok(Math.abs(df))}</span>` : "";
+  const right = useGap() ? `<b>${eok(r.v)}</b>${dl}<small>매매 ${eok(r.p)} − 전세 ${eok(r.d.전세[0])}</small>` : `<b>${eok(r.p)}</b>${dl}<small>${basisTxt}</small>`;
   const hg = HOGA[r.id];
   return `<div class="it${r.old ? " old" : ""}${outOfRange ? " out" : ""}${me ? " base" : ""}"><div class="nm">` +
     (showZone ? `<span class="zt">${rk(r.zone) ? rk(r.zone) + "위 " : ""}${r.zone.구} ${X.esc(r.zone.이름)}</span><br>` : "") +
@@ -458,6 +481,12 @@ $("cxBox").addEventListener("click", e => {
   if (t.id === "cxCancel") { PK.open = false; return renderPick(); }
   if (t.closest(".selar")) { S.cxA = t.dataset.a; save(); return render(); }
 });
+
+// 기준 띠: 설정 칸이 화면에서 사라지면 보이기, 누르면 설정 칸으로
+const ctlBox = document.querySelector(".controls");
+if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => $("stick").classList.toggle("show", !e.isIntersecting && e.boundingClientRect.bottom < 0 && !!$("stick").innerHTML)), { threshold: 0 }).observe(ctlBox);
+const goTop = () => ctlBox.scrollIntoView({ behavior: "smooth", block: "start" });
+$("stick").onclick = goTop; $("stick").onkeydown = e => { if (e.key === "Enter") goTop(); };
 
 // 설정 연결
 const pick = (id, k) => $(id).onclick = e => { const b = e.target.closest("button"); if (!b) return; S[k] = b.dataset.v; save(); render(); };
