@@ -230,7 +230,7 @@
   .jb .go.zp .zt small{display:block;font-weight:500;font-size:10.5px;color:var(--sub,#5b616b)}
   .jb .go.zp .zv{flex:none;text-align:right;font-size:10.5px;color:var(--sub,#5b616b);line-height:1.2}
   .jb .go.zp .zv b{display:block;font-size:14px;color:var(--ink,#1d1f23)}
-  .jb .go.zp .zv b small{font-size:10.5px;font-weight:500;color:var(--sub,#5b616b);margin-left:3px}
+  .jb .go.zp .zv b small{font-size:10.5px;font-weight:500;color:var(--sub,#5b616b);margin-right:3px}
   #jbCard{background:#fff7f7;border:1px solid #efc4c7;border-left:5px solid #d0606e}
   #jbCard h3{color:#8e2a37}
   #jbCard .jb{border-top-color:#f3d7d9}
@@ -1736,7 +1736,7 @@ function jbItemLink(r, gu, zi, zname) {
   const h = jbItem(r);
   const zr = zname ? zrOf(gu)[zname] : null;
   const tag = !zname ? "" : zr
-    ? `<button class="go zp" type="button" data-gu="${gu}" data-zi="${zi}"><span class="zt">${zname} 시세 보기 →<small>이 구역 생활권 · ${gu} 안 ${zr.n}위</small></span><span class="zv">84㎡ 최고가<b>${eok(zr.v)}<small>최근 6개월</small></b></span></button>`
+    ? `<button class="go zp" type="button" data-gu="${gu}" data-zi="${zi}"><span class="zt">${zname} 시세 보기 →<small>이 구역 생활권 · ${gu} 안 ${zr.n}위</small></span><span class="zv">84㎡ 최고가<b><small>최근 6개월</small>${eok(zr.v)}</b></span></button>`
     : `<button class="go" type="button" data-gu="${gu}" data-zi="${zi}">${zname} 시세 보기</button>`;
   return h.replace('<div class="cur">', `<div class="cur">`).replace(/<\/div><\/div>$/, `${tag}</div></div>`);
 }
