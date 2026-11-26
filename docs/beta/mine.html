@@ -124,7 +124,7 @@ function show() {
   `<div><small>전세가율</small><b class="num">${jr == null ? "-" : jr.toFixed(0) + "%"}</b><em>12개월 거래 ${a.건수12}건</em></div></div>` +
   (tr.length ? `<div class="trs">${tr.map(t => `<div><span>${X.ymd(t[0])} · ${t[2]}층 ${t[3] !== "매매" ? `<span class="tag pre">${t[3]}</span>` : ""}</span><b>${X.eok(t[1])}</b></div>`).join("")}</div>` : "") +
   (a.확정전 ? `<div class="warn">※ 이번 달 신고된 거래가 들어 있습니다. 해제(취소)되면 다음 갱신 때 빠집니다.</div>` : "") +
-  `<div class="links"><a class="nv" href="${X.naver(c.검색명)}" target="_blank" rel="noopener">네이버 호가 보기 ↗</a><a href="group.html?p=${cur ? Math.round(cur / 1000) / 10 : ""}&a=${ME.area}">같은 가격대 보기</a></div></div>` +
+  `<div class="links"><a class="nv" href="${X.naver(c.검색명)}" target="_blank" rel="noopener">네이버 호가 보기 ↗</a><a href="group.html?cx=${encodeURIComponent(x.id)}&a=${ME.area}">같은 가격대 보기</a></div></div>` +
 
   `<div class="card rise" style="animation-delay:.08s"><h2>사이클 위치</h2><div class="verdict ${vcls}">${vtxt}</div>` +
   (pk && lo != null && cur ? `<div style="margin-top:12px">${X.dumbbell(pk, lo, cur, Math.min(lo, cur) * 0.93, Math.max(pk, cur) * 1.05)}</div>` +
@@ -139,7 +139,7 @@ function show() {
   `<div class="card rise" style="animation-delay:.2s"><h2>갈아타기 후보 <small>같은 ${ME.area}㎡ · 시세 ±10% · 더 높은 생활권</small></h2>` +
   (alts.length ? alts.map(y => { const v = y.c[ME.area].시세; return `<div class="alt"><span class="rk">${y.z.중간순위}위</span><div class="nm">${X.esc(y.c.이름)}<small>${y.z.구} ${X.esc(y.z.이름)}</small></div><b class="num">${X.eok(v)} <small style="font-size:11px;color:${v > cur ? "var(--up)" : "var(--down)"}">${v > cur ? "+" : ""}${X.eok1(v - cur)}</small></b></div>`; }).join("")
     : `<div style="font-size:13.5px;color:var(--sub)">비슷한 가격에 더 높은 서열의 생활권 단지가 없습니다. 이미 이 가격대 최상위권입니다.</div>`) +
-  `<div class="links"><a href="group.html?p=${cur ? Math.round(cur / 1000) / 10 : ""}&a=${ME.area}">시세 그룹에서 더 보기</a><a href="cycle.html?gu=${encodeURIComponent(z.구)}">${z.구} 상승·하락</a></div></div>`;
+  `<div class="links"><a href="group.html?cx=${encodeURIComponent(x.id)}&a=${ME.area}">시세 그룹에서 더 보기</a><a href="cycle.html?gu=${encodeURIComponent(z.구)}">${z.구} 상승·하락</a></div></div>`;
 
   if (cur) X.count($("k1"), cur, v => X.eok(Math.round(v / 100) * 100));
   requestAnimationFrame(() => setTimeout(() => {
