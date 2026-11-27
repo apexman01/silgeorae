@@ -42,6 +42,9 @@ runInto(win, "docs/data/index.js");
 runInto(win, "docs/lifezones.js");
 if (USE_PATCH && fs.existsSync(path.join(ROOT, "docs/beta/lifezones_patch.js"))) runInto(win, "docs/beta/lifezones_patch.js");
 const INDEX = win.DATA_INDEX, LZ = win.LIFEZONES;
+const MASTER = {};   // 단지 마스터 (id·세대수)
+const MASTER_FILE = path.join(ROOT, "docs/beta/data/master/complexes.json");
+if (USE_PATCH && fs.existsSync(MASTER_FILE)) JSON.parse(fs.readFileSync(MASTER_FILE, "utf8")).단지.forEach(x => MASTER[x.구 + "|" + x.생활권이름 + "|" + x.이름] = x);
 const months = INDEX.months, lastYm = months[months.length - 1];
 const idxOf = {}; months.forEach((m, i) => idxOf[m] = i);
 const from6 = months[Math.max(0, months.length - 6)], from12 = months[Math.max(0, months.length - 12)];
@@ -72,7 +75,7 @@ function buildMap() {
   // 라벨 위치 손보기 (경계 평균점이 한쪽으로 쏠리는 구)
   const nudge = { "종로구": [0, 18], "강서구": [20, 10], "은평구": [0, 10], "중구": [0, 2], "서초구": [-12, 34], "강남구": [0, -10] };
   for (const [k, [dx, dy]] of Object.entries(nudge)) if (gu[k]) { gu[k].cx += dx; gu[k].cy += dy; }
-  return { 설명: "서울 25개 구 경계 SVG (통계청 2013 경계, southkorea/seoul-maps 간략판)", viewBox: `0 0 ${W} ${H}`, 구: gu };
+  return { 설명: "서울 25개 구 경계 SVG (통계청 2013 경계, southkorea/seoul-maps 간략판)", 출처: ["통계청 행정구역 경계 2013(github.com/southkorea/seoul-maps, data/geo/seoul_gu_2013.geojson)"], 기준일: { 자료: "2013" }, 만든곳: "scripts/build_beta.js", viewBox: `0 0 ${W} ${H}`, 구: gu };
 }
 
 /* ---------- 2·3) 구별·단지별 ---------- */
@@ -182,7 +185,8 @@ function buildData() {
         const info = sz && sz.단지.find(c => c.이름 === base) || {};
         const sale = [], jeon = [];
         cxs.forEach(x => { (byIdx.get(x.i) || []).forEach(r => sale.push(r)); (jbIdx.get(x.i) || []).forEach(r => jeon.push(r)); });
-        const item = { 이름: base, 검색명: cxs[0].name, 준공: info.준공 || null, 세대수: info.세대수 || null, 법정동: info.법정동 || cxs[0].dong };
+        const mx = MASTER[gu + "|" + z.name + "|" + base] || {};
+        const item = { id: mx.id || null, 이름: base, 검색명: cxs[0].name, 준공: info.준공 || null, 세대수: info.세대수 || mx.세대수 || null, 법정동: info.법정동 || cxs[0].dong };
         for (const [a, [lo, hi]] of Object.entries(AREAS)) { const v = cxArea(sale, jeon, lo, hi, item.준공 || D.complexes[cxs[0].i][4]); if (v) item[a] = v; }
         list.push(item);
       });
@@ -203,7 +207,9 @@ function buildData() {
 }
 
 fs.mkdirSync(OUT, { recursive: true });
-const meta = { 기준월: lastYm, 확정월: months[LAST_OK], 잠정월: lastYm, 자료갱신: INDEX.updated, 월: months };
+const meta = { 기준월: lastYm, 확정월: months[LAST_OK], 잠정월: lastYm, 자료갱신: INDEX.updated, 월: months,
+  출처: ["국토부 아파트 매매·전월세·분양권 실거래가(docs/data, 해제·직거래 제외, 전세는 신규 계약)", "생활권 설정 docs/lifezones.js(훨훨 강의자료)", "단지 마스터 docs/beta/data/master/complexes.json(세대수·ID)"],
+  기준일: { 자료: lastYm, 확정: months[LAST_OK], 잠정: lastYm, 갱신: INDEX.updated }, 만든곳: "scripts/build_beta.js" };
 fs.writeFileSync(path.join(OUT, "map.json"), JSON.stringify(buildMap()));
 const { GU, CX, ZONES } = buildData();
 fs.writeFileSync(path.join(OUT, "gu.json"), JSON.stringify({ ...meta, 설명: "구별 84㎡ 3개월 이동 중간값(만원). 매매=해제·직거래 제외, 전세=신규 계약. 전고점=2021~22년 최고, 전저점=그 뒤 최저.", 구: GU }));

@@ -289,6 +289,10 @@
   #segJb small{font-size:12px;opacity:.75;margin-left:3px}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
+  .lzsum{margin:10px 0 2px;padding:10px 12px;border-radius:10px;background:#f6f8fb;font-size:13.5px;line-height:1.55;color:var(--ink)}
+  .lzsum b{display:block;font-size:13px;margin-bottom:2px}
+  .lzsum span{display:block}
+  .lzsum small{display:block;margin-top:4px;font-size:11px;color:var(--mute)}
   .tag{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260}
   .tag.pre{background:#fff1e8;color:#c2551f;font-weight:600}
   .legend .tag{font-size:11px;padding:0 5px}
@@ -365,6 +369,7 @@
     <div id="giBody"></div>
     <div class="gzl" id="zoneLabel">생활권 선택</div>
     <div class="gzt rkgrid" id="zoneTabs"></div>
+    <div class="lzsum" id="lzSum" hidden></div>
     <div class="onerow" data-html2canvas-ignore><button type="button" class="onebtn" id="oneBtn">임장 기록용 한 장 이미지 만들기</button></div>
     <div class="capline" data-html2canvas-ignore><button type="button" class="capt" id="shareBtn">링크 복사</button> <button type="button" class="capt cap" data-cap="guInfo">이미지로 저장 ↓</button></div>
   </div>
@@ -462,7 +467,7 @@
 <script>
   // 브라우저가 예전 자료를 붙잡고 있지 않도록 매번 새로 받기
   var _v = Date.now();
-  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="lifezones_patch.js?v=' + _v + '"><\/script><script src="../data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script><script src="../data/gustats.js?v=' + _v + '"><\/script><script src="../transit.js?v=' + _v + '"><\/script>');
+  document.write('<script src="../data/index.js?v=' + _v + '"><\/script><script src="../lifezones.js?v=' + _v + '"><\/script><script src="lifezones_patch.js?v=' + _v + '"><\/script><script src="data/jb.js?v=' + _v + '"><\/script><script src="../data/hh.js?v=' + _v + '"><\/script><script src="../guinfo.js?v=' + _v + '"><\/script><script src="../data/gustats.js?v=' + _v + '"><\/script><script src="../transit.js?v=' + _v + '"><\/script>');
 </script>
 <script>
 const LIFEZONES = window.LIFEZONES || {};
@@ -562,6 +567,7 @@ function shareLink() {   // 지금 보는 구·생활권 주소 (카페 글에 �
   (navigator.clipboard ? navigator.clipboard.writeText(u.toString()).then(() => toast(msg)) : Promise.reject()).catch(() => window.prompt("아래 주소를 길게 눌러 복사하세요", u.toString()));
 }
 $("shareBtn").onclick = shareLink;
+fetch("data/lz_summary.json", { cache: "no-cache" }).then(r => r.json()).then(j => { window.LZSUM = j; if (state.tab === "view" && typeof DATA !== "undefined" && DATA) renderGuInfo(); }).catch(() => {});
 function initZone(keep) {
   const zs = zonesFor(state.sido, state.gu);
   if (!keep || state.zone >= zs.length) state.zone = 0;
@@ -616,6 +622,10 @@ function renderGuInfo(z) {   // 생활권 보기 맨 위 칸: 시·도·구 선�
   const S6 = window.GUSTATS || {};
   $("zoneLabel").innerHTML = `생활권 선택 <span>· ${zs.filter(x => x.kind === "base").length}개</span><span class="zrk">${rankNote()}</span>`;
   bar.innerHTML = rankBtns(state.gu, zs, state.zone);
+  // 생활권 요약 (data/lz_summary.json — 강의자료 내용을 채우면 2~3줄로 나옴, 비어 있으면 숨김)
+  const zz = zs[state.zone], LS = window.LZSUM, sm = LS && zz && zz.id && LS.생활권[zz.id] && LS.생활권[zz.id].요약;
+  $("lzSum").hidden = !sm;
+  if (sm) $("lzSum").innerHTML = `<b>${zz.name}</b> ${String(sm).split("\n").slice(0, 3).map(t => `<span>${t.replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]))}</span>`).join("")}<small>${LS.출처 && LS.출처[0] || ""}</small>`;
   bar.classList.toggle("dim", state.view === "top5" || state.view === "flag");
   bar.querySelectorAll("button").forEach(b => b.onclick = () => {
     const i = +b.dataset.i; if (i === state.zone) return;

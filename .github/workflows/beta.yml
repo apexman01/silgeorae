@@ -1,7 +1,8 @@
 # 시험판(/beta/) 자료를 매달 자동으로 다시 만듭니다.
 # "실거래가 자동 갱신"(update.yml)이 끝나면 이어서 돌고,
 # Actions 탭 > "시험판 자료 갱신" > Run workflow 로 아무 때나 직접 돌릴 수도 있어요.
-# 만드는 것: docs/beta/data/summary/ (시세 요약), docs/beta/data/x/ (지도·구별 시세·단지 지표)
+# 만드는 것: docs/beta/data/summary/ (시세 요약), docs/beta/data/x/ (지도·구별 시세·단지 지표),
+#          docs/beta/data/jb.js (정비사업, 서울 열린데이터 엑셀을 자동으로 받아 data/jb_auto/에 보관)
 # 정식 사이트(docs/index.html·docs/data/)와 v1(docs/v1/)은 건드리지 않습니다.
 name: 시험판 자료 갱신
 
@@ -40,6 +41,14 @@ jobs:
         continue-on-error: true
         run: python3 scripts/fetch_jb.py
 
+      - name: 시험판 정비사업 자료 (data/jb_auto/ → docs/beta/data/jb.js)
+        run: |
+          pip install --quiet openpyxl
+          python3 scripts/build_jb_beta.py
+
+      - name: 단지 마스터 (K-apt 코드 ID · 세대수 · 정비사업 연결)
+        run: node scripts/build_master.js
+
       - name: 시세 요약 파일 (임장기록용)
         run: node scripts/build_summary.js
 
@@ -50,7 +59,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/beta/data/summary docs/beta/data/x
+          git add docs/beta/data/summary docs/beta/data/x docs/beta/data/jb.js docs/beta/data/master data/jb_auto
           if git diff --cached --quiet; then
             echo "바뀐 것 없음"
           else

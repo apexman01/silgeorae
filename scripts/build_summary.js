@@ -39,6 +39,10 @@ runInto(win, "docs/lifezones.js");
 if (USE_PATCH && fs.existsSync(path.join(ROOT, "docs/beta/lifezones_patch.js"))) runInto(win, "docs/beta/lifezones_patch.js");
 runInto(win, "docs/data/hh.js");
 const INDEX = win.DATA_INDEX, LZ = win.LIFEZONES, HH = win.HH || {};
+// 단지 마스터(scripts/build_master.js)가 있으면 세대수 빈칸을 채우는 데 씀 (시험판만, 항목 이름은 그대로)
+const MASTER = {};
+const MASTER_FILE = path.join(ROOT, "docs/beta/data/master/complexes.json");
+if (USE_PATCH && fs.existsSync(MASTER_FILE)) JSON.parse(fs.readFileSync(MASTER_FILE, "utf8")).단지.forEach(x => MASTER[x.구 + "|" + x.생활권이름 + "|" + x.이름] = x);
 const months = INDEX.months, lastYm = months[months.length - 1];
 const from12 = months[Math.max(0, months.length - 12)];
 
@@ -114,6 +118,7 @@ function buildGu(gu, code) {
       let hh = z.hh && z.hh[n];
       if (!hh) hh = hhAny(norm(cxs[0].name));
       if (!hh) { const seen = new Set(); let sum = 0; cxs.forEach(c => { const k = kaptFind(gu, c.name, c.dong); if (k && !seen.has(k)) { seen.add(k); sum += k[2]; } }); hh = sum || null; }
+      if (!hh && MASTER[gu + "|" + z.name + "|" + base]) hh = MASTER[gu + "|" + z.name + "|" + base].세대수 || null;   // 단지 마스터(K-apt 이름 맞춤)로 채움
       const idxs = new Set(cxs.map(x => x.i));
       const rows = []; idxs.forEach(i => (byIdx.get(i) || []).forEach(r => rows.push(r)));
       item.준공 = built; item.세대수 = hh ? Number(hh) : null; item.법정동 = dongs.join("·");
@@ -155,10 +160,11 @@ for (const [gu, code] of Object.entries(INDEX.regions["서울특별시"])) {
   const doc = {
     설명: "생활권별 대표 단지 시세 요약. 가격 단위는 만원, 표기는 억. 구분=매매/분양권/입주권(분양권·입주권은 거래에 포함하되 구분 표시). 12개월 = 기준월 포함 최근 12개월.",
     기준월: lastYm, 기준월표기: ymText(lastYm), "12개월시작": from12, 자료갱신: INDEX.updated,
+    출처: ["국토부 아파트 매매·분양권 실거래가(docs/data, 해제·직거래 제외)", "공동주택관리정보시스템 K-apt 세대수(docs/data/hh.js)", "생활권 설정 docs/lifezones.js(훨훨 강의자료)"], 기준일: { 자료: lastYm, 갱신: INDEX.updated }, 만든곳: "scripts/build_summary.js",
     ...g,
   };
   fs.writeFileSync(path.join(OUT, `${code}.json`), JSON.stringify(doc));
   made.push({ 구: gu, 구코드: code, 파일: `${code}.json`, 생활권수: g.생활권.length });
 }
-fs.writeFileSync(path.join(OUT, "index.json"), JSON.stringify({ 기준월: lastYm, 자료갱신: INDEX.updated, 구: made }));
+fs.writeFileSync(path.join(OUT, "index.json"), JSON.stringify({ 기준월: lastYm, 자료갱신: INDEX.updated, 출처: ["국토부 아파트 매매·분양권 실거래가(docs/data, 해제·직거래 제외)", "공동주택관리정보시스템 K-apt 세대수(docs/data/hh.js)", "생활권 설정 docs/lifezones.js(훨훨 강의자료)"], 기준일: { 자료: lastYm, 갱신: INDEX.updated }, 만든곳: "scripts/build_summary.js", 구: made }));
 console.log(`${made.length}개 구 → ${path.relative(ROOT, OUT)} (기준월 ${lastYm}, 12개월 시작 ${from12})`);
