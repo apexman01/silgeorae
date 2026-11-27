@@ -39,8 +39,7 @@
 ## 시세 그룹 (시험판)
 
 - 화면: `docs/beta/group.html` — 가용 금액(매매가 또는 투자금=매매−전세) 범위의 단지를 생활권 서열 순으로 모아 보기
-- 자료: 시세 요약 파일(`docs/beta/data/summary/`) + 전세 시세 `scripts/build_group.js` → `docs/beta/data/group/jeonse.json`
-- 정식 반영 시: `node scripts/build_group.js --out docs/data/group --no-patch` + 자동 갱신(update.yml)에 단계 추가
+- 자료: `docs/beta/data/x/cx.json` (build_beta.js). 예전 전세 자료 `data/group/jeonse.json`·`scripts/build_group.js`는 지금 쓰지 않음(삭제 후보)
 
 ## 새 화면 묶음 (시험판, 2026-11-25)
 
@@ -53,7 +52,7 @@
 
 - 공통: `docs/beta/x.css`·`x.js`(모양·함수), `nav.js`(아래 메뉴, 생활권 그래프 화면에도 붙음)
 - 자료: `node scripts/build_beta.js` → `docs/beta/data/x/` (map.json 지도 경계, gu.json 구별 월별, cx.json 단지 지표). 지도 경계 원본은 `data/geo/seoul_gu_2013.geojson`
-- 아직 자동 갱신에 안 넣음. 정식 반영 시 `node scripts/build_beta.js --out docs/data/x --no-patch`를 update.yml에 추가
+- 자동 갱신: `.github/workflows/beta.yml`이 매달 실거래가 갱신(update.yml)이 끝나면 build_summary.js → build_beta.js 순으로 돌려 `docs/beta/data/summary`·`docs/beta/data/x`만 저장. 정식 반영 시에는 `--out docs/data/... --no-patch`로 따로 단계 추가
 
 ## 정비사업 카드 (시험판)
 

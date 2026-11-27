@@ -1,0 +1,52 @@
+# 시험판(/beta/) 자료를 매달 자동으로 다시 만듭니다.
+# "실거래가 자동 갱신"(update.yml)이 끝나면 이어서 돌고,
+# Actions 탭 > "시험판 자료 갱신" > Run workflow 로 아무 때나 직접 돌릴 수도 있어요.
+# 만드는 것: docs/beta/data/summary/ (시세 요약), docs/beta/data/x/ (지도·구별 시세·단지 지표)
+# 정식 사이트(docs/index.html·docs/data/)와 v1(docs/v1/)은 건드리지 않습니다.
+name: 시험판 자료 갱신
+
+on:
+  workflow_run:
+    workflows: ["실거래가 자동 갱신"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect          # 다른 자동 갱신과 동시에 저장하지 않게 (update.yml·hh.yml과 같은 줄)
+  cancel-in-progress: false
+
+jobs:
+  beta:
+    # 실거래가 갱신이 실패했으면 돌지 않음 (직접 실행은 항상)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main          # 방금 저장된 최신 실거래 자료로
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 시세 요약 파일 (임장기록용)
+        run: node scripts/build_summary.js
+
+      - name: 지도·구별 시세·단지 지표
+        run: node scripts/build_beta.js
+
+      - name: 바뀐 자료 저장 (시험판 자료만)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/beta/data/summary docs/beta/data/x
+          if git diff --cached --quiet; then
+            echo "바뀐 것 없음"
+          else
+            git commit -m "시험판 자료 자동 갱신 $(date +%Y-%m-%d)"
+            git pull --rebase origin main
+            git push
+          fi
