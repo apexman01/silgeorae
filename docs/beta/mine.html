@@ -47,6 +47,35 @@
   .links a{flex:1;text-align:center;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #cfdcf3;background:#f2f6fd;border-radius:10px;padding:9px 4px}
   .links a.nv{border-color:#bfe6cf;background:#eefaf3;color:#11873f}
   .warn{font-size:12px;color:var(--warm);margin-top:6px}
+  .cin{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .cin label{display:block;font-size:12px;color:var(--sub);font-weight:600}
+  .cin label.w{grid-column:1/-1}
+  .cin .u{display:flex;align-items:center;border:1px solid #d5d9de;border-radius:10px;background:#fff;margin-top:4px;padding:0 10px}
+  .cin input{flex:1;min-width:0;width:100%;border:0;outline:0;font-size:16px;padding:10px 0;background:transparent}
+  .cin .u span{flex:none;font-size:13px;color:var(--mute);font-weight:500}
+  .res{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:12px}
+  .res div{background:var(--bg);border-radius:12px;padding:10px}
+  .res small{display:block;font-size:11.5px;color:var(--sub)}
+  .res b{font-size:21px;letter-spacing:-.4px}
+  .res em{display:block;font-style:normal;font-size:11px;color:var(--mute);margin-top:2px}
+  .res .main{grid-column:1/-1;background:#eef3fc}
+  .res .main b{font-size:26px}
+  .why{font-size:13px;margin-top:8px;color:var(--ink)}
+  .cliff{background:#fff4e5;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13px;line-height:1.55}
+  .brk div{display:flex;justify-content:space-between;padding:5px 0;border-top:1px dashed var(--line);font-size:13px;color:var(--sub)}
+  .brk div:first-child{border-top:0}
+  .brk b{color:var(--ink)}
+  .rz{border-top:1px solid var(--line);padding:9px 0 4px}
+  .rz:first-of-type{border-top:0}
+  .rz .h{font-size:14px;font-weight:700}
+  .rz .h small{font-size:12px;color:var(--mute);font-weight:500;margin-left:6px}
+  .rz a{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;padding:5px 0 5px 8px;font-size:13.5px}
+  .rz a .nm{flex:1;min-width:0}
+  .rz a .nm small{display:block;font-size:11.5px;color:var(--mute)}
+  .rz a b{flex:none;font-size:14px;text-align:right}
+  .capd p{font-size:12.5px;color:var(--sub);line-height:1.6;margin:8px 0 0}
+  .brk .sm{font-size:11.5px;color:var(--mute);border-top:0;padding-top:0;justify-content:flex-start}
+  .capnote{font-size:12px;color:var(--sub);line-height:1.6;margin:10px 0 0}
 </style>
 </head>
 <body>
@@ -55,9 +84,11 @@
   <p class="lead">내 단지가 지금 어디쯤인지, 사이클·입지 서열·갈아탈 곳을 한 번에 봅니다. 고른 단지는 이 기기에 기억됩니다.</p>
   <div id="pickBox"></div>
   <div id="out"></div>
+  <div id="capCard"></div>
   <p class="foot" id="foot"></p>
 </div>
 <script src="x.js"></script>
+<script src="cap.js"></script>
 <script src="nav.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -197,6 +228,74 @@ function show() {
   if ($("tgBox")) searchBox($("tgBox"), "가고 싶은 단지 이름·초성", y => { TG = { id: y.id }; TPICK = false; X.store.set(TKEY, TG); show(); setTimeout(() => $("tgCard").scrollIntoView({ behavior: "smooth", block: "start" }), 50); });
   const tc = $("tgChg"); if (tc) tc.onclick = () => { TPICK = true; show(); $("tgCard").scrollIntoView({ block: "start" }); };
   const sa = $("segA"); if (sa) sa.onclick = e => { const b = e.target.closest("button"); if (!b) return; ME.area = b.dataset.v; X.store.set(KEY, ME); show(); };
+}
+
+/* ---------- 갈 수 있는 곳: 자본 계산기 → 생활권 추천 (규칙 data/rules.json, 계산 cap.js) ---------- */
+// 입력값은 이 기기(localStorage)에만 저장. 기본값 없음(금리만 비우면 규칙 파일의 기본 금리를 씀)
+const CKEY = "silgeorae_cap_v1";
+let RULES = null, CIN = X.store.get(CKEY, {}), REC_N = 6;
+const CFIELDS = [
+  ["자본", "가용 자본", "억", "w", "지금 쓸 수 있는 현금 전부(매도 대금 포함)"],
+  ["소득", "부부 연소득", "만원", "", ""],
+  ["기타", "기타 대출 연상환액", "만원", "", "신용·차 할부 등 1년 원리금"],
+  ["월", "감당 월 상환액", "만원", "", "비우면 제한 없음"],
+  ["금리", "금리 가정", "%", "", ""],
+];
+Promise.all([X.get("data/rules.json"), X.get("data/x/cx.json")]).then(([r]) => { RULES = r; capForm(); capRender(); })
+  .catch(e => { $("capCard").innerHTML = `<div class="card"><h2>갈 수 있는 곳</h2><div class="empty">규칙 파일을 불러오지 못했습니다.</div></div>`; console.error(e); });
+function capForm() {
+  const D = RULES.DSR;
+  $("capCard").innerHTML = `<div class="card" id="capC"><h2>갈 수 있는 곳 <small>내 자본으로 살 수 있는 가격 → 생활권</small></h2>
+    <div class="cin">${CFIELDS.map(([k, t, u, w, h]) => `<label class="${w}">${t}<div class="u"><input id="ci_${k}" type="text" inputmode="decimal" autocomplete="off" placeholder="${k === "금리" ? "기본 " + +(D.기본금리_가정 * 100).toFixed(2) : ""}" value="${CIN[k] != null ? X.esc(CIN[k]) : ""}"><span>${u}</span></div>${h ? `<small style="font-weight:400;color:var(--mute)">${h}</small>` : ""}</label>`).join("")}</div>
+    <div id="capOut"></div>
+    <p class="capnote">규칙 기준일 <b>${X.esc(RULES.기준일)}</b> · 참고용 · <b>최종 확인은 은행·세무사</b> · 입력값은 이 기기에만 저장</p></div>`;
+  CFIELDS.forEach(([k]) => { $("ci_" + k).oninput = e => { const v = e.target.value.replace(/[^\d.]/g, ""); if (v) CIN[k] = v; else delete CIN[k]; X.store.set(CKEY, CIN); capRender(); }; });
+}
+const num = v => v == null || v === "" || isNaN(+v) ? null : +v;
+const ek = v => v == null ? "-" : (Math.round(v * 100) / 100).toString() + "억";   // 억 단위 숫자 표시
+function capRender() {
+  const o = $("capOut"); if (!o || !RULES || !C) return;
+  const 자본 = num(CIN.자본), 소득 = num(CIN.소득);
+  if (!자본 || !소득) { o.innerHTML = `<div class="empty" style="margin-top:12px;padding:16px">가용 자본과 부부 연소득을 넣으면<br>살 수 있는 최대 가격과 그 가격대 생활권을 보여 줍니다.</div>`; return; }
+  const D = RULES.DSR, rate = num(CIN.금리) != null ? num(CIN.금리) / 100 : D.기본금리_가정;
+  const r = CAP.calc(RULES, { 자본, 연소득: 소득 / 1e4, 기타연상환: (num(CIN.기타) || 0) / 1e4, 월상환: num(CIN.월) != null ? num(CIN.월) / 1e4 : null, 금리: rate });
+  const b = r.최대;
+  if (!b) { o.innerHTML = `<div class="empty" style="margin-top:12px">이 조건으로는 0.1억 이상 집을 살 현금이 부족합니다.</div>`; return; }
+  const ltvP = Math.round(CAP.make(RULES).ltv * 100), tier = (RULES.주담대캡_수도권규제.구간.find(t => t.상한가 == null || b.가격 <= t.상한가 + 1e-9) || {});
+  const LBL = { LTV: `LTV ${ltvP}%`, 캡: `주담대 한도 ${tier.한도}억(${tier.상한가 == null ? "그 위 전부" : tier.상한가 + "억 이하"})`, DSR: `DSR ${D.은행 * 100}%(금리 ${+(rate * 100).toFixed(2)}%+스트레스 ${D.스트레스금리_수도권 * 100}%)`, 월상환: "감당 월 상환액" };
+  const why = b.제약.split("·").map(k => LBL[k]).join(" = ");
+  const diff = b.가격 - r.강의;
+  let h = `<div class="res"><div class="main"><small>매수 가능 가격 (정밀 계산)</small><b class="num">${ek(b.가격)}</b><em>대출·취득세·중개보수까지 넣고 자본 ${ek(자본)} 안에서 가장 비싼 집</em></div>
+    <div><small>강의 공식 (자본 ÷ ${+(1 - ltvP / 100).toFixed(2)})</small><b class="num">${ek(Math.round(r.강의 * 10) / 10)}</b><em>규제지역 어림셈</em></div>
+    <div><small>차이</small><b class="num ${diff < 0 ? "down" : "up"}">${diff < 0 ? "−" : "+"}${ek(Math.abs(Math.round(diff * 10) / 10))}</b><em>정밀 − 강의</em></div></div>
+    <div class="why">한도를 정한 것: <b>${why}</b> → 대출 ${ek(b.대출)}</div>`;
+  if (r.절벽) { const c = r.절벽; h += `<div class="cliff"><b>⚠ ${c.경계}억 절벽에 걸렸어요</b><br>${c.경계}억을 넘으면 주담대 한도가 <b>${c.한도전}억 → ${c.한도후}억</b>으로 줄어, ${ek(c.위.가격)} 집은 현금 <b>${ek(c.위.필요현금)}</b>이 필요합니다(지금보다 ${ek(c.부족)} 더). 한도가 그대로라면 ${ek(c.절벽없으면)}까지 갈 수 있는 자본입니다.</div>`; }
+  h += `<details class="gsrc capd" style="margin-top:8px"><summary><span class="gs2">ⓘ 계산 내역 (${ek(b.가격)} 기준)</span></summary><div class="brk" style="margin-top:6px">
+    <div><span>집값</span><b>${ek(b.가격)}</b></div>
+    <div><span>대출 (가장 작은 값)</span><b>− ${ek(b.대출)}</b></div>
+    <div class="sm"><span>LTV ${ltvP}% / 주담대 한도 / DSR / 월 상환 = ${[b.한도들.LTV, b.한도들.캡, b.한도들.DSR, b.한도들.월상환].map(v => v == null || v === Infinity ? "제한 없음" : ek(Math.round(v * 100) / 100)).join(" / ")}</span></div>
+    <div><span>취득세 ${+(b.취득세율 * 100).toFixed(2)}% + 지방교육세</span><b>+ ${ek(b.취득세)}</b></div>
+    <div><span>중개보수 (상한 요율)</span><b>+ ${ek(b.중개보수)}</b></div>
+    <div><span>필요 현금</span><b>${ek(b.필요현금)}</b></div>
+    <div><span>남는 자본</span><b>${ek(Math.round((자본 - b.필요현금) * 100) / 100)}</b></div></div>
+    <p>가격을 0.1억씩 올려 가며 <b>필요 현금 = 집값 − 대출 + 취득세 + 중개보수</b>가 자본 이하인 가장 비싼 값을 찾습니다(전 구간을 끝까지 봐서 ${RULES.주담대캡_수도권규제.구간.filter(t => t.상한가).map(t => t.상한가 + "억").join("·")} 경계의 한도 절벽도 확인). 대출 = LTV·주담대 한도·DSR·월 상환 한도 중 가장 작은 값.</p>
+    <p>DSR: 연소득 × ${D.은행 * 100}% − 기타 대출 연상환액 안에서, (금리 + 스트레스 ${D.스트레스금리_수도권 * 100}%)로 ${D.만기년}년 ${X.esc(D.상환)} 상환. 월 상환 한도는 스트레스 없이 금리 가정으로. 취득세는 1주택·전용 85㎡ 이하(농특세 없음) 기준.</p>
+    <p>서울은 ${X.esc(RULES.규제지역.서울)}. ${RULES.전세끼고매수.서울아파트 ? "" : `전세 끼고 매수 불가(${X.esc(RULES.전세끼고매수.이유)})라 갭 투자는 계산하지 않습니다. `}1주택자 갈아타기는 기존 집을 ${RULES["1주택갈아타기"].처분조건_개월}개월 안에 처분하는 조건입니다. 일시적 2주택 취득세·양도세 비과세 여부는 판단하지 않습니다(세무사 확인).</p></div></details>`;
+  // 추천: 매수 가능 가격 ±5% 대표 단지 → 생활권별, 생활권 상단(84㎡ 12개월 최고가) 높은 순
+  const P = b.가격 * 1e4, lo = P * 0.95, hi = P * 1.05, by = new Map();
+  ALL.forEach(y => ["84", "59"].forEach(A => { const a = y.c[A]; if (!a || !a.시세 || a.시세 < lo || a.시세 > hi) return; if (a.사이클 && a.사이클.이유 === "입주권") return;
+    if (!by.has(y.z)) by.set(y.z, []); by.get(y.z).push({ y, A, a }); }));
+  const groups = [...by.entries()].sort((p, q) => (q[0].대장 || 0) - (p[0].대장 || 0));
+  const WHYS = { 신축: "신축", 신축입주권: "신축(입주권 시절)", 거래부족: "거래 부족", "저≥고": "저점≥고점" };
+  h += `<h2 style="font-size:15px;margin:16px 0 4px">이 가격대 생활권 <small>대표 단지 시세 ${X.eok1(lo)}~${X.eok1(hi)} (±5%) · ${groups.length}곳</small></h2>` +
+    (groups.length ? groups.slice(0, REC_N).map(([z, l]) => `<div class="rz"><div class="h">${X.esc(z.이름)}<small>${z.구} · 상단 ${X.eok1(z.대장)} · 서열 ${z.중간순위 || "-"}위</small></div>` +
+      l.sort((p, q) => q.a.시세 - p.a.시세).map(({ y, A, a }) => { const cy = a.사이클 && a.사이클.판정 === "가능";
+        return `<a href="${y.c.id ? "cycle.html?cx=" + encodeURIComponent(y.c.id) : "./?gu=" + encodeURIComponent(z.구) + "&lz=" + encodeURIComponent(z.id || z.이름) + "&tab=view"}"><span class="nm">${X.esc(y.c.이름)} <span class="tag">${A}㎡</span><small>${cy ? `하락기 거래 ${a.하락기 ? a.하락기.거래 : "-"}건 · 낙폭 ${a.낙폭 != null ? a.낙폭 + "%" : "-"} · 저점 뒤 ${a.상승률 != null ? "+" + Math.round(a.상승률) + "%" : "-"}` : "사이클 판단 불가 · " + (WHYS[a.사이클 && a.사이클.이유] || "-")}</small></span><b class="num">${X.eok1(a.시세)}${a.시세 > P ? `<small style="display:block;font-size:10.5px;font-weight:500;color:var(--warm)">가능 가격보다 ${X.eok1(a.시세 - P)} 위</small>` : ""}</b></a>`; }).join("") + `</div>`).join("") +
+      (groups.length > REC_N ? `<button class="chg" id="recMore" style="width:100%;margin-top:8px">더 보기 (${groups.length - REC_N}곳 더)</button>` : "")
+    : `<div style="font-size:13.5px;color:var(--sub)">±5% 안에 생활권 대표 단지가 없습니다.</div>`) +
+    `<p class="capnote">사이클 성적: ${(() => { const w = (ALL.map(y => y.c["84"] && y.c["84"].하락기).find(Boolean) || {}).구간; return w ? `서울 하락기 ${X.ym(w[0])}~${X.ym(w[1])}` : "하락기"; })()} 거래 = 서울 하락기 일반 매매 건수, 낙폭 = 전고점→전저점. <b>입주권(정비사업 진행 단지)은 총 매매가 = 초기 투자금 + 승계 이주비 + 분담금 구조라 이번 계산에서 뺐습니다(입주권은 별도 계산 예정).</b></p>`;
+  o.innerHTML = h;
+  const m = $("recMore"); if (m) m.onclick = () => { REC_N += 10; capRender(); };
 }
 </script>
 </body>
