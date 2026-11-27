@@ -44,9 +44,12 @@ runInto(win, "docs/data/index.js");
 runInto(win, "docs/lifezones.js");
 if (USE_PATCH && fs.existsSync(path.join(ROOT, "docs/beta/lifezones_patch.js"))) runInto(win, "docs/beta/lifezones_patch.js");
 const INDEX = win.DATA_INDEX, LZ = win.LIFEZONES;
-const MASTER = {};   // 단지 마스터 (id·세대수)
+const MASTER = {}, MASTER_BY_ZONE = {};   // 단지 마스터 (id·세대수) · 생활권별 목록(가격순 선정 결과, build_master.js가 순서까지 정함)
 const MASTER_FILE = path.join(ROOT, "docs/beta/data/master/complexes.json");
-if (USE_PATCH && fs.existsSync(MASTER_FILE)) JSON.parse(fs.readFileSync(MASTER_FILE, "utf8")).단지.forEach(x => MASTER[x.구 + "|" + x.생활권이름 + "|" + x.이름] = x);
+if (USE_PATCH && fs.existsSync(MASTER_FILE)) JSON.parse(fs.readFileSync(MASTER_FILE, "utf8")).단지.forEach(x => {
+  MASTER[x.구 + "|" + x.생활권이름 + "|" + x.이름] = x;
+  (MASTER_BY_ZONE[x.구 + "|" + x.생활권이름] = MASTER_BY_ZONE[x.구 + "|" + x.생활권이름] || []).push(x);
+});
 const months = INDEX.months, lastYm = months[months.length - 1];
 const idxOf = {}; months.forEach((m, i) => idxOf[m] = i);
 const from6 = months[Math.max(0, months.length - 6)], from12 = months[Math.max(0, months.length - 12)];
@@ -209,16 +212,15 @@ function buildData() {
     zones.forEach(z => {
       const sz = (SUM.생활권 || []).find(x => x.이름 === z.name);
       const list = [];
-      z.complexes.forEach(n => {
-        const parts = n.split("|").map(p => { const [nm, dong] = p.split("@"); return { nm: norm(nm), dong }; });
-        const cxs = CXS.filter(x => parts.some(p => p.nm === norm(x.name) && (!p.dong || x.dong.startsWith(p.dong))));
+      // 생활권 대표 단지 목록 자체는 단지 마스터(build_master.js, 가격순 자동 선정)를 따름 — lifezones.js의 complexes는 이제 동 범위(마스터가 씀)만 정함
+      (MASTER_BY_ZONE[gu + "|" + z.name] || []).forEach(mx => {
+        const cxs = (mx.실거래 || []).map(r => CXS.find(x => x.name === r.이름 && x.dong === r.동)).filter(Boolean);
         if (!cxs.length) return;
-        const base = (z.short && z.short[n]) || n.split("|")[0].split("@")[0];
+        const base = mx.이름;
         const info = sz && sz.단지.find(c => c.이름 === base) || {};
         const sale = [], jeon = [];
         cxs.forEach(x => { (byIdx.get(x.i) || []).forEach(r => sale.push(r)); (jbIdx.get(x.i) || []).forEach(r => jeon.push(r)); });
-        const mx = MASTER[gu + "|" + z.name + "|" + base] || {};
-        const item = { id: mx.id || null, 이름: base, 검색명: cxs[0].name, 준공: info.준공 || null, 세대수: info.세대수 || mx.세대수 || null, 법정동: info.법정동 || cxs[0].dong };
+        const item = { id: mx.id || null, 이름: base, 검색명: cxs[0].name, 준공: info.준공 || mx.준공 || null, 세대수: info.세대수 || mx.세대수 || null, 법정동: info.법정동 || cxs[0].dong };
         const uy = mx.id && USE_YM[mx.id]; if (uy) item.준공월 = uy;
         const win = SEOUL_WIN;
         for (const [a, [lo, hi]] of Object.entries(AREAS)) { const v = cxArea(sale, jeon, lo, hi, item.준공 || mx.준공 || D.complexes[cxs[0].i][4], win, uy && uy.연월); if (v) item[a] = v; }

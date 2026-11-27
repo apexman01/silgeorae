@@ -40,9 +40,12 @@ if (USE_PATCH && fs.existsSync(path.join(ROOT, "docs/beta/lifezones_patch.js")))
 runInto(win, "docs/data/hh.js");
 const INDEX = win.DATA_INDEX, LZ = win.LIFEZONES, HH = win.HH || {};
 // 단지 마스터(scripts/build_master.js)가 있으면 세대수 빈칸을 채우는 데 씀 (시험판만, 항목 이름은 그대로)
-const MASTER = {};
+const MASTER = {}, MASTER_BY_ZONE = {};
 const MASTER_FILE = path.join(ROOT, "docs/beta/data/master/complexes.json");
-if (USE_PATCH && fs.existsSync(MASTER_FILE)) JSON.parse(fs.readFileSync(MASTER_FILE, "utf8")).단지.forEach(x => MASTER[x.구 + "|" + x.생활권이름 + "|" + x.이름] = x);
+if (USE_PATCH && fs.existsSync(MASTER_FILE)) JSON.parse(fs.readFileSync(MASTER_FILE, "utf8")).단지.forEach(x => {
+  MASTER[x.구 + "|" + x.생활권이름 + "|" + x.이름] = x;
+  (MASTER_BY_ZONE[x.구 + "|" + x.생활권이름] = MASTER_BY_ZONE[x.구 + "|" + x.생활권이름] || []).push(x);
+});
 const months = INDEX.months, lastYm = months[months.length - 1];
 const from12 = months[Math.max(0, months.length - 12)];
 
@@ -107,18 +110,17 @@ function buildGu(gu, code) {
     return null;
   };
   const outZones = zones.map(z => {
-    const list = z.complexes.map((n, order) => {
-      const parts = n.split("|").map(p => { const [nm, dong] = p.split("@"); return { nm: norm(nm), dong }; });
-      const cxs = CX.filter(x => parts.some(p => p.nm === norm(x.name) && (!p.dong || x.dong.startsWith(p.dong))));
-      const base = (z.short && z.short[n]) || n.split("|")[0].split("@")[0];
-      const item = { 이름: base, 원래이름: n === base ? undefined : n };
+    // 생활권 대표 단지 목록은 단지 마스터(build_master.js, 가격순 자동 선정)를 따름 — lifezones.js의 complexes는 동 범위만 정함
+    const list = (MASTER_BY_ZONE[gu + "|" + z.name] || []).map((mx, order) => {
+      const cxs = (mx.실거래 || []).map(r => CX.find(x => x.name === r.이름 && x.dong === r.동)).filter(Boolean);
+      const base = mx.이름;
+      const item = { 이름: base };
       if (!cxs.length) return { order, item: { ...item, 비고: "실거래 자료에서 단지를 찾지 못함" }, hh: null };
-      const built = cxs.map(x => x.built).filter(Boolean).sort()[0] || null;
+      const built = cxs.map(x => x.built).filter(Boolean).sort()[0] || mx.준공 || null;
       const dongs = [...new Set(cxs.map(x => x.dong))];
-      let hh = z.hh && z.hh[n];
+      let hh = mx.세대수 || null;
       if (!hh) hh = hhAny(norm(cxs[0].name));
       if (!hh) { const seen = new Set(); let sum = 0; cxs.forEach(c => { const k = kaptFind(gu, c.name, c.dong); if (k && !seen.has(k)) { seen.add(k); sum += k[2]; } }); hh = sum || null; }
-      if (!hh && MASTER[gu + "|" + z.name + "|" + base]) hh = MASTER[gu + "|" + z.name + "|" + base].세대수 || null;   // 단지 마스터(K-apt 이름 맞춤)로 채움
       const idxs = new Set(cxs.map(x => x.i));
       const rows = []; idxs.forEach(i => (byIdx.get(i) || []).forEach(r => rows.push(r)));
       item.준공 = built; item.세대수 = hh ? Number(hh) : null; item.법정동 = dongs.join("·");
