@@ -32,6 +32,14 @@ jobs:
         with:
           node-version: "20"
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 정비사업 엑셀 자동 받기 (서울 열린데이터 OA-22856 → data/jb_auto/)
+        continue-on-error: true
+        run: python3 scripts/fetch_jb.py
+
       - name: 시세 요약 파일 (임장기록용)
         run: node scripts/build_summary.js
 
