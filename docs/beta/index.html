@@ -544,11 +544,15 @@ function initGu() {
 }
 function applyDeep(gu) {   // 첫 화면에서 한 번만
   if (!gu) return;
+  let zi = -1;
   if (DEEP.lz) {
-    const zi = zonesFor(state.sido, gu).findIndex(z => z.kind === "base" && (z.id === DEEP.lz || z.name === DEEP.lz));
+    zi = zonesFor(state.sido, gu).findIndex(z => z.kind === "base" && (z.id === DEEP.lz || z.name === DEEP.lz));
     if (zi >= 0) { state.zone = zi; $("selZone").value = zi; onZoneChange(); }
   }
-  if (DEEP.tab && ["view", "top", "cmp", "jb"].includes(DEEP.tab) && DEEP.tab !== state.tab) { if (DEEP.tab === "jb") jbS.gu = gu; setTab(DEEP.tab); }
+  if (DEEP.tab && ["view", "top", "cmp", "jb"].includes(DEEP.tab) && DEEP.tab !== state.tab) {
+    if (DEEP.tab === "jb") { jbS.gu = gu; if (zi >= 0) { jbS.zi = zi; jbS.scope = "zone"; } }   // 생활권이 있으면 그 생활권 구역만
+    setTab(DEEP.tab);
+  }
 }
 function shareLink() {   // 지금 보는 구·생활권 주소 (카페 글에 붙이는 용도)
   const z = zonesFor(state.sido, state.gu)[state.zone] || {};

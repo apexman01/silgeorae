@@ -32,6 +32,11 @@
   .ctl{display:grid;gap:8px;margin-bottom:10px}
   .ctl .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   select{font-size:14px;padding:7px 8px;border:1px solid #d5d9de;border-radius:8px;background:#fff;color:var(--ink);width:100%}
+  .jbl{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
+  .jbt{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:6px}
+  .jbt small{display:block;font-weight:500;font-size:11.5px;color:var(--mute);margin-top:2px}
+  a.jbtag{display:inline-block;margin:0 4px 6px 0;padding:4px 9px;font-size:12.5px;border-radius:999px;background:#eef0f3;color:#5b616b;text-decoration:none}
+  a.jbtag small{color:var(--mute);margin-left:2px}
   .more{display:block;width:100%;margin-top:8px;border:1px solid #d5d9de;background:#fff;border-radius:10px;padding:9px;color:var(--sub);font-size:13.5px}
   .key{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--sub);margin:0 0 8px}
   .key i{display:inline-block;vertical-align:middle;margin-right:4px}
@@ -79,18 +84,19 @@ Promise.all([X.get("data/x/gu.json"), X.get("data/x/cx.json")]).then(([g, c]) =>
   $("selGu").innerHTML = `<option value="">서울 전체</option>` + gus.map(x => `<option${x === S.gu ? " selected" : ""}>${x}</option>`).join("");
   $("foot").innerHTML = `자료: 국토부 실거래가(매매는 해제·직거래 제외, 분양권·입주권 포함).<br>` +
     `· 전고점 = 2021~22년 <b>일반 매매</b> 최고가, 전저점 = 전고점 이후 일반 매매 최저가(2건 이상이면 가장 낮은 1건은 급매로 보고 뺌). 분양권·입주권은 분양가·조합원 가격이라 사이클 판단에서 뺍니다.<br>` +
-    `· <b>판단 불가</b> = 신축(2021~22 일반 매매 2건 미만, 분양권만 있었음) · 입주권(거래 절반 이상이 입주권, 정비사업 진행) · 거래 부족(구축인데 2021~22 일반 매매 2건 미만) · 저≥고(전고점 뒤 최저가가 전고점보다 높음). 순위·회복률에서 뺍니다.<br>` +
+    `· <b>판단 불가</b> = 신축·분양권만(2021~22 일반 매매 2건 미만, 분양권만 있었음) · 거래 2건 미만(구축인데 2021~22 일반 매매 부족) · 저≥고(전고점 뒤 최저가가 전고점보다 높음). <b>정비사업 진행</b> = 거래 절반 이상이 입주권. 모두 순위·회복률에서 뺍니다.<br>` +
     `· 구 단위 지금 값은 <b>${X.ym(g.확정월)}</b> 기준입니다. 마지막 달(${X.ym(g.잠정월)})은 신고기한(30일)이 남아 거래가 덜 들어와 '잠정'으로 봅니다.<br>` +
     `· 회복률 = (지금 − 전저점) ÷ (전고점 − 전저점). 100% 넘으면 전고점 돌파.<br>` +
     `· 구 단위는 구 전체 84㎡ 거래의 3개월 이동 중간값으로 계산해 단지 단위와 숫자가 다를 수 있습니다.`;
   renderPhase(); renderGu(); renderCx();
 }).catch(e => { $("guRows").innerHTML = `<div class="empty">자료를 불러오지 못했습니다.</div>`; console.error(e); });
 
-function cxNA() {   // 시세는 있지만 사이클 판단을 못 하는 단지
+function cxNA(jb) {   // 시세는 있지만 사이클 판단을 못 하는 단지 (jb=true: 입주권 위주 = 정비사업 진행 단지만, false: 그 밖의 판단 불가)
   const out = [];
-  C.생활권.forEach(z => (C.단지[z.구][z.이름] || []).forEach(c => { const a = c[S.area]; if (a && a.시세 && a.사이클 && a.사이클.판정 !== "가능") out.push({ z, c, a, why: a.사이클.이유 }); }));
+  C.생활권.forEach(z => (C.단지[z.구][z.이름] || []).forEach(c => { const a = c[S.area]; if (a && a.시세 && a.사이클 && a.사이클.판정 !== "가능" && (a.사이클.이유 === "입주권") === !!jb) out.push({ z, c, a, why: a.사이클.이유 }); }));
   return out;
 }
+const lzLink = (z, tab) => `./?gu=${encodeURIComponent(z.구)}&lz=${encodeURIComponent(z.id || z.이름)}&tab=${tab}`;
 function cxList() {
   const out = [];
   C.생활권.forEach(z => (C.단지[z.구][z.이름] || []).forEach(c => {
@@ -101,18 +107,19 @@ function cxList() {
   return out;
 }
 function renderPhase() {
-  const L = cxList(), NA = cxNA(); const n1 = L.filter(x => x.cur > x.pk).length, n3 = L.filter(x => x.rec != null && x.rec < 40).length, n2 = L.length - n1 - n3, n4 = NA.length, all = L.length + n4;
+  const L = cxList(), NA = cxNA(false), JBL = cxNA(true); const n1 = L.filter(x => x.cur > x.pk).length, n3 = L.filter(x => x.rec != null && x.rec < 40).length, n2 = L.length - n1 - n3, n4 = NA.length, n5 = JBL.length, all = L.length + n4 + n5;
   $("phase").innerHTML = `<div class="p1"><small>전고점<br>돌파</small><b class="num" id="ph1">0</b></div>` +
     `<div class="p2"><small>회복 중<br>(40%~)</small><b class="num" id="ph2">0</b></div>` +
     `<div class="p3"><small>바닥권<br>(40% 미만)</small><b class="num" id="ph3">0</b></div>` +
     `<div class="p4"><small>판단<br>불가</small><b class="num" id="ph4">0</b></div>`;
   [["ph1", n1], ["ph2", n2], ["ph3", n3], ["ph4", n4]].forEach(([id, v]) => X.count($(id), v, x => Math.round(x)));
   const wc = {}; NA.forEach(x => wc[x.why] = (wc[x.why] || 0) + 1);
-  const WN = { "신축": "신축", "입주권": "입주권 위주(정비사업)", "거래부족": "거래 부족", "저≥고": "저≥고" };
-  $("phase").insertAdjacentHTML("beforeend", `<div style="grid-column:1/5;padding:8px 10px"><small>${S.area}㎡ 대표 단지 <b style="color:var(--ink)">${all}곳</b> = 돌파 ${n1} + 회복 중 ${n2} + 바닥권 ${n3} + 판단 불가 ${n4}</small>` +
-    `<div class="bar3"><i style="width:0;background:var(--up)"></i><i style="width:0;background:#c9ced4"></i><i style="width:0;background:var(--down)"></i><i style="width:0;background:#e4e6e9"></i></div>` +
-    (n4 ? `<div class="why">판단 불가 ${n4}곳: ${Object.keys(WN).filter(k => wc[k]).map(k => `${WN[k]} ${wc[k]}`).join(" · ")} <span style="color:var(--mute)">(아래 설명 참고)</span></div>` : "") + `</div>`);
-  requestAnimationFrame(() => { const is = $("phase").querySelectorAll(".bar3 i"); [n1, n2, n3, n4].forEach((v, i) => is[i].style.width = (v / all * 100) + "%"); });
+  const WN = { "신축": "신축·분양권만", "거래부족": "거래 2건 미만", "저≥고": "저≥고" };
+  $("phase").insertAdjacentHTML("beforeend", `<div style="grid-column:1/5;padding:8px 10px"><small>${S.area}㎡ 대표 단지 <b style="color:var(--ink)">${all}곳</b> = 돌파 ${n1} + 회복 중 ${n2} + 바닥권 ${n3} + 판단 불가 ${n4} + 정비사업 진행 ${n5}</small>` +
+    `<div class="bar3"><i style="width:0;background:var(--up)"></i><i style="width:0;background:#c9ced4"></i><i style="width:0;background:var(--down)"></i><i style="width:0;background:#e4e6e9"></i><i style="width:0;background:#b9bec6"></i></div>` +
+    (n4 ? `<div class="why">판단 불가 ${n4}곳: ${Object.keys(WN).filter(k => wc[k]).map(k => `${WN[k]} ${wc[k]}`).join(" · ")} <span style="color:var(--mute)">(아래 설명 참고)</span></div>` : "") +
+    (n5 ? `<div class="why">정비사업 진행 ${n5}곳: 거래 절반 이상이 입주권이라 순위·회복률에서 뺌 (단지별 목록 맨 아래)</div>` : "") + `</div>`);
+  { const is = $("phase").querySelectorAll(".bar3 i"); [n1, n2, n3, n4, n5].forEach((v, i) => is[i].style.width = (v / all * 100) + "%"); }
 }
 const AX = [60, 130];   // 전고점=100 기준 축
 const P = v => (v - AX[0]) / (AX[1] - AX[0]) * 100;
@@ -136,21 +143,23 @@ function renderCx() {
   $("segArea").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === S.area));
   $("segCx").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === S.cx));
   let L = cxList().filter(x => !S.gu || x.z.구 === S.gu);
-  const total = L.length, naN = cxNA().filter(x => !S.gu || x.z.구 === S.gu).length;
+  const total = L.length, naN = cxNA(false).filter(x => !S.gu || x.z.구 === S.gu).length, JB = cxNA(true).filter(x => !S.gu || x.z.구 === S.gu);
   if (S.cx === "break") L = L.filter(x => x.cur > x.pk).sort((a, b) => b.vs - a.vs);
   else if (S.cx === "lag") L = L.filter(x => x.cur <= x.pk).sort((a, b) => a.vs - b.vs);
   else L = L.sort((a, b) => b.vs - a.vs);
   $("cxSum").innerHTML = `${S.gu || "서울 전체"} ${S.area}㎡ 대표 단지 ${total}곳 중 <b style="color:var(--ink)">${L.length}곳</b>` +
     (S.cx === "break" ? " 전고점 돌파 (많이 넘은 순)" : S.cx === "lag" ? " 아직 전고점 아래 (많이 빠진 순)" : "") +
     (naN ? `<br><span style="font-size:12px;color:var(--mute)">판단 불가 ${naN}곳은 목록에서 뺐습니다</span>` : "");
-  if (!L.length) { $("cxRows").innerHTML = `<div class="empty">해당하는 단지가 없습니다.</div>`; return; }
+  const jbHtml = JB.length ? `<div class="jbl"><div class="jbt">정비사업 진행 <small>${JB.length}곳 · 거래 대부분이 입주권이라 순위·회복률에서 뺌 · 누르면 그 생활권 정비사업 탭</small></div>` +
+    JB.map(x => `<a class="tag jbtag" href="${lzLink(x.z, "jb")}">${X.esc(x.c.이름)} <small>${x.z.구}</small></a>`).join("") + `</div>` : "";
+  if (!L.length) { $("cxRows").innerHTML = `<div class="empty">해당하는 단지가 없습니다.</div>` + jbHtml; return; }
   $("cxRows").innerHTML = `<div class="scale">${scaleHtml()}</div>` + L.slice(0, LIMIT).map(x => {
     const cls = x.cur > x.pk ? "up" : "";
     return `<div class="row cx"><div class="nm"><b>${X.esc(x.c.이름)}</b>${x.a.확정전 ? ' <span class="tag old">이번 달 거래 포함</span>' : ""}<small>${x.z.구} ${X.esc(x.z.이름)} · ${x.c.준공 || "-"}년${x.c.세대수 ? " · " + x.c.세대수.toLocaleString() + "세대" : ""}</small></div>` +
       `<div class="v num ${cls}">${X.pct(x.vs, 0)}<small>고점대비</small></div>` +
       `<div class="dbw" style="grid-column:1/3"><span class="pk100" style="left:${P(100)}%"></span>${X.dumbbell(100, rel(x.pk, x.lo), rel(x.pk, x.cur), AX[0], AX[1]).replace('class="cur "', `class="cur ${cls}"`)}</div>` +
       `<div class="nums"><span>고 ${X.eok(x.pk)} <small>${X.ym(Math.floor(x.a.전고점[1] / 100))}</small></span><span>저 ${X.eok(x.lo)} <small>${X.ym(Math.floor(x.a.전저점[1] / 100))}</small></span><span><b style="color:var(--ink)">지금 ${X.eok(x.cur)}</b></span></div></div>`;
-  }).join("") + (L.length > LIMIT ? `<button class="more" id="more">더 보기 (${L.length - LIMIT}곳 더)</button>` : "");
+  }).join("") + (L.length > LIMIT ? `<button class="more" id="more">더 보기 (${L.length - LIMIT}곳 더)</button>` : "") + jbHtml;
   const m = $("more"); if (m) m.onclick = () => { LIMIT += 30; renderCx(); };
 }
 

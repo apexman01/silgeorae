@@ -20,19 +20,8 @@ const X = (() => {
   const seq = t => ramp(SEQ, t), div = t => ramp(DIV, (t + 1) / 2);   // div: -1 ~ 1
   const inkOn = hex => { const p = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)); return (p[0] * .299 + p[1] * .587 + p[2] * .114) > 150 ? "#1d1f23" : "#fff"; };
   // 숫자 올라가는 모션
-  function count(el, to, fmt, ms = 900) {
-    const from = +el.dataset.v || 0; el.dataset.v = to;
-    el.textContent = fmt(to);   // 최종값을 먼저 넣어 둠 (애니메이션이 멈춰도 맞는 값이 보이게)
-    if (to == null || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let t0 = null;
-    const step = now => {
-      if (t0 == null) t0 = now;   // 첫 화면 갱신 시각을 시작으로 (진행률이 0보다 작아지지 않게)
-      const t = Math.max(0, Math.min(1, (now - t0) / ms)), e = 1 - Math.pow(1 - t, 3);
-      el.textContent = fmt(t < 1 ? from + (to - from) * e : to);
-      if (t < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
+  // 숫자 표시: 처음부터 최종값만 (애니메이션 없음 — 외부에서 읽어도 맞는 값이 보이게)
+  function count(el, to, fmt) { el.dataset.v = to; el.textContent = fmt(to); }
   // 작은 선 그래프 (series: [[x, y], ...]) — 선이 그려지는 모션
   function spark(series, o = {}) {
     const W = o.w || 320, H = o.h || 90, pad = o.pad || 6;
