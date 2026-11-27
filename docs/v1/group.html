@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시세 그룹 v1</title>
+<style>
+  :root{
+    --ink:#1d1f23; --sub:#5b616b; --mute:#9aa0a8; --line:#e6e8eb; --bg:#f6f7f9; --card:#fff;
+    --accent:#2a6fdb; --accent-soft:#e3ecfb; --warm:#c2551f; --up:#7a4fd6; --up-soft:#efe9fb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 16px 48px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  header h1{font-size:21px;margin:0;letter-spacing:-.3px}
+  header a{font-size:13px;color:var(--accent);text-decoration:none}
+  .lead{color:var(--sub);font-size:13px;margin:4px 0 0;line-height:1.5}
+  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:#eef1f5;color:#4a5260;font-weight:500;vertical-align:1px}
+  .tag.pre{background:#fff1e8;color:var(--warm);font-weight:600}
+  .tag.old{background:#f1f2f4;color:var(--mute)}
+  .tag.up{background:var(--up-soft);color:var(--up);font-weight:600}
+  button{font:inherit;cursor:pointer}
+
+  /* 설정 */
+  .controls{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0 10px}
+  .mode{display:flex;background:#eef0f3;border-radius:10px;padding:3px;margin-bottom:10px}
+  .mode button{flex:1;border:0;background:transparent;border-radius:8px;padding:8px 4px;font-size:14px;font-weight:600;color:var(--sub);min-height:38px}
+  .mode button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .lbl{display:block;font-size:12px;color:var(--sub);font-weight:600;margin-bottom:5px}
+  .price{display:flex;align-items:center;gap:6px}
+  .price input{font:inherit;font-size:20px;font-weight:700;width:88px;padding:5px 8px;border:1px solid #d5d9de;border-radius:8px;text-align:right}
+  .price span{font-size:16px;font-weight:600}
+  .price .rng{margin-left:auto;font-size:13px;color:var(--sub);font-weight:500;text-align:right}
+  .chips{display:flex;gap:5px;overflow-x:auto;margin:7px 0 10px;padding-bottom:2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chips button{flex:none;font-size:13px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:5px 11px;color:var(--sub)}
+  .chips button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .seg{display:flex;border:1px solid #d5d9de;border-radius:8px;overflow:hidden}
+  .seg button{flex:1;font-size:13px;border:0;background:#fff;padding:7px 2px;color:var(--sub);min-height:36px;white-space:nowrap}
+  .seg button+button{border-left:1px solid #d5d9de}
+  .seg button.on{background:var(--ink);color:#fff}
+  details.more{margin-top:10px;font-size:13px}
+  details.more summary{color:var(--sub);cursor:pointer;list-style:none}
+  details.more summary::-webkit-details-marker{display:none}
+  details.more summary::before{content:"▸ ";}
+  details.more[open] summary::before{content:"▾ ";}
+  .morebox{padding-top:8px}
+  .chk{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:6px;margin:8px 0 2px}
+  .gus{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .gus button{font-size:12px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:3px 9px;color:var(--ink)}
+  .gus button.off{color:#b0b5bc;background:#f3f4f6;border-style:dashed;text-decoration:line-through}
+
+  /* 결론 */
+  .best{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .best h3{font-size:14px;margin:0 0 8px;color:var(--sub);font-weight:600}
+  .best h3 b{color:var(--ink);font-size:15px}
+  .pick{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+  .pick:first-of-type{border-top:0;padding-top:2px}
+  .rk{flex:none;min-width:40px;text-align:center;font-size:12px;font-weight:700;color:#fff;background:var(--accent);border-radius:6px;padding:3px 4px}
+  .rk.up{background:var(--up)}
+  .rk.gray{background:#c2c7ce}
+  .pick .nm{flex:1;min-width:0;font-size:14px;line-height:1.35}
+  .pick .nm b{font-size:15px}
+  .pick .nm small{display:block;color:var(--sub);font-size:12px}
+  .pick .v{flex:none;text-align:right;font-size:12px;color:var(--sub);line-height:1.35}
+  .pick .v b{display:block;font-size:15px;color:var(--ink)}
+  .pick .v b.up{color:var(--up)}
+  .uph{font-size:13px;font-weight:600;color:var(--up);margin:12px 0 0;padding-top:10px;border-top:1px dashed #d8cdf2}
+
+  /* 보기 탭 */
+  .vtabs{display:flex;gap:4px;margin:14px 0 8px}
+  .vtabs button{flex:1;border:1px solid #d5d9de;background:#eef0f3;color:var(--sub);border-radius:8px;padding:8px 2px;font-size:13.5px;font-weight:600;min-height:38px}
+  .vtabs button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .sum{font-size:13px;color:var(--sub);margin:0 2px 8px;line-height:1.5}
+  .sum b{color:var(--ink)}
+
+  /* 서열 사다리 */
+  .ladder{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px 8px}
+  .axis{position:relative;height:18px;margin-left:var(--lw);font-size:10.5px;color:var(--mute)}
+  .axis span{position:absolute;transform:translateX(-50%);top:2px;white-space:nowrap}
+  .lrow{border-top:1px solid var(--line)}
+  .lrow summary{display:flex;align-items:center;gap:0;padding:7px 0;list-style:none;cursor:pointer}
+  .lrow summary::-webkit-details-marker{display:none}
+  .lname{flex:none;width:var(--lw);padding-right:8px;display:flex;align-items:center;gap:6px;min-width:0}
+  .lname .rk{min-width:34px;font-size:11px;padding:2px 3px}
+  .lname div{min-width:0;font-size:12.5px;line-height:1.25}
+  .lname div b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lname div small{color:var(--mute);font-size:11px}
+  .track{position:relative;flex:1;height:26px}
+  .track .base{position:absolute;left:0;right:0;top:12px;height:2px;background:#eceef1;border-radius:1px}
+  .track .band{position:absolute;top:0;bottom:0;background:var(--accent-soft);border-left:1.5px solid #9cbcf0;border-right:1.5px solid #9cbcf0}
+  .track .bud{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--accent)}
+  .track i{position:absolute;top:7px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#fff;border:2px solid #b8bec6;animation:dotIn .55s cubic-bezier(.2,.8,.2,1.3) both}
+  @keyframes dotIn{from{transform:scale(0);opacity:0}}
+  @media (prefers-reduced-motion:reduce){.track i{animation:none}}
+  .track i.in{background:var(--accent);border-color:var(--accent)}
+  .track i.cheap{background:#fff;border-color:var(--accent)}
+  .track i.clip{opacity:.45}
+  .lrow.upz .lname div b{color:var(--up)}
+  .lrow .lst{padding:0 0 6px}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--sub);margin:4px 2px 8px}
+  .legend span{display:inline-flex;align-items:center;gap:4px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid #b8bec6;background:#fff}
+  .legend i.in{background:var(--accent);border-color:var(--accent)}
+  .legend i.cheap{border-color:var(--accent)}
+  .legend em{display:inline-block;width:14px;height:10px;background:var(--accent-soft);border-left:1.5px solid #9cbcf0;border-right:1.5px solid #9cbcf0}
+
+  /* 단지 목록 */
+  .zone{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  .zh{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f2f5fa;border-bottom:1px solid var(--line)}
+  .zh .zn{flex:1;min-width:0}
+  .zh .zn b{font-size:15px}
+  .zh .zn small{display:block;font-size:12px;color:var(--sub);margin-top:1px}
+  .zh .top{flex:none;text-align:right;font-size:11.5px;color:var(--sub);line-height:1.35}
+  .zh .top b{display:block;font-size:13px;color:var(--ink)}
+  .it{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line)}
+  .lst .it{padding:8px 2px}
+  .zone .it:first-of-type,.flat .it:first-child,.lst .it:first-child{border-top:0}
+  .it .nm{flex:1;min-width:0}
+  .it .nm b{font-size:14.5px;font-weight:600}
+  .it .nm small{display:block;font-size:12px;color:var(--mute);margin-top:2px}
+  .it .pr{flex:none;text-align:right}
+  .it .pr b{font-size:15.5px}
+  .it .pr small{display:block;font-size:11.5px;color:var(--mute);margin-top:1px}
+  .it.out{opacity:.5}
+  .it.old .pr b{color:var(--mute)}
+  .flat{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .zt{font-size:12px;color:var(--accent);font-weight:600}
+  .empty{background:var(--card);border:1px dashed #cfd4da;border-radius:12px;padding:22px 14px;text-align:center;color:var(--sub);font-size:14px;line-height:1.6}
+  .foot{color:var(--mute);font-size:12px;line-height:1.6;margin-top:14px}
+  .hint{font-size:12px;color:var(--mute);margin:6px 0 0;line-height:1.5}
+  .acts{display:flex;gap:6px;margin-top:6px}
+  .acts a,.acts button{white-space:nowrap;font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px;text-decoration:none;border:1px solid #d5d9de;background:#fff;color:var(--sub)}
+  .acts a.nv{border-color:#bfe6cf;background:#eefaf3;color:#11873f}
+  .acts button.has{border-color:#e9c9a8;background:#fff6ee;color:var(--warm)}
+  .tag.cf{background:#f1f2f4;color:#7b828b}
+  .tag.hg{background:#fff6ee;color:var(--warm);font-weight:600}
+  .cxq{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d5d9de;border-radius:10px;background:#fff}
+  .cxl{margin-top:8px}
+  .crumb{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--sub);margin:0 0 8px;flex-wrap:wrap}
+  .crumb button{border:0;background:none;color:var(--accent);font-weight:600;padding:2px 0;font-size:13px}
+  .crumb span{color:var(--mute)}
+  .gugrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .gugrid button{border:1px solid #d5d9de;background:#fff;border-radius:8px;padding:8px 2px;font-size:13px;color:var(--ink)}
+  .zgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .zgrid button{border:1px solid #d5d9de;background:#fff;border-radius:10px;padding:8px;text-align:left;font-size:13.5px;color:var(--ink);line-height:1.3}
+  .zgrid button small{display:block;font-size:11.5px;color:var(--mute)}
+  .zgrid button b{color:var(--accent);font-size:11.5px;margin-right:3px}
+  .crow{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+  .crow:first-child{border-top:0}
+  .crow .nm{flex:1;min-width:0;font-size:14px;font-weight:600}
+  .crow .nm small{display:block;font-size:11.5px;color:var(--mute);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow .ab{flex:none;display:flex;gap:4px}
+  .crow .ab button{border:1px solid #cfdcf3;background:#f2f6fd;color:var(--accent);border-radius:8px;padding:5px 7px;font-size:12px;font-weight:600;line-height:1.25;text-align:center}
+  .crow .ab button small{display:block;font-size:11px;color:var(--ink);font-weight:700}
+  .qh{font-size:12px;color:var(--sub);font-weight:600;margin:0 0 4px}
+  .selc{display:flex;align-items:center;gap:10px;background:#fffbea;border:1px solid #f1dc9c;border-radius:12px;padding:10px 12px}
+  .selc .nm{flex:1;min-width:0;font-size:15px;font-weight:700}
+  .selc .nm small{display:block;font-size:12px;color:var(--sub);font-weight:500}
+  .selc .v{flex:none;text-align:right;font-size:12px;color:var(--sub)}
+  .selc .v b{display:block;font-size:17px;color:var(--ink)}
+  .selc .ch{flex:none;border:1px solid #d5d9de;background:#fff;border-radius:8px;padding:6px 9px;font-size:12.5px;color:var(--sub)}
+  .selar{display:flex;gap:6px;margin-top:8px}
+  .selar button{flex:1;border:1px solid #d5d9de;background:#fff;border-radius:8px;padding:6px;font-size:13px;color:var(--sub)}
+  .selar button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .it.base{background:#fffbea}
+  .tag.me{background:#f0a500;color:#fff;font-weight:700}
+  .track i.me{background:#f0a500;border-color:#f0a500;box-shadow:0 0 0 3px rgba(240,165,0,.3);z-index:2}
+  .legend i.me{background:#f0a500;border-color:#f0a500}
+  /* 스크롤해도 기준이 보이는 띠 (설정 칸이 화면 밖으로 나가면 나타남) */
+  .stick{position:fixed;left:0;right:0;top:0;z-index:30;padding:8px max(16px, calc((100% - 720px) / 2 + 16px));box-shadow:0 2px 10px rgba(0,0,0,.06);background:rgba(255,255,255,.96);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;
+    opacity:0;transform:translateY(-100%);pointer-events:none;transition:opacity .2s,transform .2s}
+  .stick.show{opacity:1;transform:none;pointer-events:auto}
+  .stick .k{flex:none;font-size:11px;font-weight:700;color:#fff;background:#f0a500;border-radius:5px;padding:2px 6px}
+  .stick .k.p{background:var(--ink)}
+  .stick .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stick .t b{font-size:14.5px;display:block;overflow:hidden;text-overflow:ellipsis}
+  .stick .t small{display:block;font-size:11.5px;color:var(--sub)}
+  .stick .r{flex:none;text-align:right;font-size:11px;color:var(--sub);line-height:1.3}
+  .stick .r b{display:block;font-size:15px;color:var(--ink)}
+  .stick .go{flex:none;font-size:11.5px;color:var(--accent);font-weight:600}
+  .dl{display:block;font-size:11.5px;font-weight:700;margin-top:1px}
+  .dl.pl{color:#d9443a} .dl.mi{color:#2a6fdb} .dl.eq{color:#b07a00}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>시세 그룹 <span class="tag pre">v1</span></h1>
+    <a href="home.html">서울 지도 →</a>
+  </header>
+  <p class="lead">내 돈으로 갈 수 있는 <b>가장 높은 서열의 생활권</b>을 찾고, 한 단계 위로 가려면 얼마가 더 필요한지 봅니다.</p>
+
+  <div class="controls">
+    <div class="mode" id="segMode"><button data-v="sale">매매가</button><button data-v="gap">투자금(갭)</button><button data-v="cx">단지 기준</button></div>
+    <div id="cxBox" hidden>
+      <div id="cxSel"></div>
+      <div id="cxPick">
+        <input id="cxQ" class="cxq" type="search" placeholder="단지 이름·초성 (예: 고덕, ㄱㄷㄱㄹ)" autocomplete="off" enterkeyhint="search">
+        <div id="cxList" class="cxl"></div>
+      </div>
+      <div style="margin:10px 0"><span class="lbl">이 단지의 무엇과 같은 가격대?</span>
+        <div class="seg" id="segCxVal"><button data-v="sale">매매가</button><button data-v="gap">투자금(갭)</button></div></div>
+    </div>
+    <div id="priceBox">
+    <label class="lbl" for="inPrice" id="priceLbl">가용 금액</label>
+    <div class="price"><input id="inPrice" type="number" inputmode="decimal" min="0.5" max="200" step="0.5"><span>억</span><span class="rng" id="rng"></span></div>
+    <div class="chips" id="chips"></div>
+    </div>
+    <div class="two">
+      <div><span class="lbl">여유 범위</span><div class="seg" id="segTol"><button data-v="0">0%</button><button data-v="10">±10%</button><button data-v="20">±20%</button></div></div>
+      <div id="areaCol"><span class="lbl">평형</span><div class="seg" id="segArea"><button data-v="59">59㎡</button><button data-v="84">84㎡</button><button data-v="all">모두</button></div></div>
+    </div>
+    <details class="more" id="more"><summary>설정 더보기 (기준 가격 · 서열 기준 · 구 고르기)</summary>
+      <div class="morebox">
+        <span class="lbl">매매 기준 가격</span>
+        <div class="seg" id="segBasis"><button data-v="mid">시세(3건 중간)</button><button data-v="last">최근 1건</button><button data-v="hoga">내 호가</button></div>
+        <p class="hint" id="basisHint"></p>
+        <span class="lbl" style="margin-top:10px">생활권 서열 기준</span>
+        <div class="seg" id="segRank"><button data-v="중간">대표 단지 중간값</button><button data-v="대장">대장 단지</button></div>
+        <label class="chk"><input type="checkbox" id="chkOld"> 6개월 넘은 거래는 빼기</label>
+        <span class="lbl" style="margin-top:10px">구 고르기 <small style="font-weight:400;color:var(--mute)">— 눌러서 빼기/넣기</small></span>
+        <div class="gus" id="gus"></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="stick" id="stick" role="button" tabindex="0" aria-label="기준 다시 보기"></div>
+  <div id="out"><div class="empty">자료를 불러오는 중…</div></div>
+  <p class="foot" id="foot"></p>
+</div>
+
+<script src="x.js"></script>
+<script src="nav.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const KEY = "silgeorae_group_v3", HKEY = "silgeorae_hoga_v1";
+const q = X.qs();
+const S = Object.assign({ mode: "sale", pSale: 10, pGap: 5, tol: "10", area: "84", basis: "mid", rank: "중간", view: "ladder", noOld: false, exGu: [], cxId: null, cxA: "84", cxVal: "sale", cxRecent: [] }, X.store.get(KEY, {}));
+const HOGA = X.store.get(HKEY, {});
+if (q.a && ["59", "84", "all"].includes(q.a)) S.area = q.a;
+if (q.p && +q.p > 0) { S.mode = "sale"; S.pSale = +q.p; }
+if (q.cx) { S.mode = "cx"; S.cxVal = "sale"; S.cxId = q.cx; if (q.a === "59" || q.a === "84") S.cxA = q.a; }
+function save() { X.store.set(KEY, S); }
+const CHIPS = { sale: [5, 7, 8, 10, 12, 15, 18, 20, 25, 30], gap: [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15] };
+let ITEMS = [], ZONES = [], GUS = [], META = {};
+const OPEN = new Set();   // 사다리에서 펼친 생활권 (다시 그려도 유지)
+const eok = X.eok, eok1 = X.eok1;
+const ymNum = ym => Math.floor(ym / 100) * 12 + (ym % 100);
+const isCx = () => S.mode === "cx";
+const useGap = () => S.mode === "gap" || (isCx() && S.cxVal === "gap");
+const AREA = () => isCx() ? S.cxA : S.area;
+function baseRow() { if (!isCx() || !S.cxId) return null; const x = ITEMS.find(i => i.id === S.cxId + "|" + S.cxA); return x ? calc(x) : null; }
+const price = () => isCx() ? ((baseRow() || {}).v || 0) / 10000 : (+(S.mode === "gap" ? S.pGap : S.pSale) || 0);
+// 초성 검색: "ㄱㄷㄱㄹ" → 고덕그라시움
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const cho = t => [...t].map(ch => { const k = ch.charCodeAt(0) - 0xAC00; return k >= 0 && k < 11172 ? CHO[Math.floor(k / 588)] : ch; }).join("");
+const nz = t => String(t || "").replace(/\s+/g, "").toLowerCase();
+let CXS = [];   // 단지 목록(평형 묶음)
+const PK = { open: false, gu: null, zone: null };
+const rk = z => z[S.rank + "순위"] || null;
+
+X.get("data/x/cx.json").then(c => {
+  META = c; ZONES = c.생활권;
+  GUS = [...new Set(ZONES.map(z => z.구))].sort();
+  ZONES.forEach(z => (c.단지[z.구][z.이름] || []).forEach(x => ["59", "84"].forEach(a => { if (x[a]) ITEMS.push({ zone: z, c: x, a, d: x[a], id: z.구 + "|" + z.이름 + "|" + x.이름 + "|" + a }); })));
+  ZONES.forEach(z => (c.단지[z.구][z.이름] || []).forEach(x => CXS.push({ z, c: x, id: z.구 + "|" + z.이름 + "|" + x.이름, key: nz(x.이름 + x.검색명), ch: cho(nz(x.이름 + x.검색명)) })));
+  PK.open = !S.cxId || !CXS.some(x => x.id === S.cxId);
+  if (q.gu && c.단지[q.gu]) {   // 지도에서 넘어온 경우: 그 구 84㎡ 대표 단지 시세 중간값으로 서울 비교
+    const v = ITEMS.filter(x => x.zone.구 === q.gu && x.a === "84" && x.d.시세).map(x => x.d.시세).sort((p, r) => p - r);
+    if (v.length) { S.mode = "sale"; S.area = "84"; S.pSale = Math.round(v[v.length >> 1] / 5000) / 2; }
+  }
+  $("foot").innerHTML = `자료: 국토부 실거래가 · 기준월 ${X.ym(c.기준월)} (갱신 ${c.자료갱신})<br>` +
+    `· 생활권마다 세대수가 많은 대표 단지(약 5개)만 담았습니다. 서울 ${ZONES.length}개 생활권, ${new Set(ITEMS.map(x => x.c)).size}개 단지.<br>` +
+    `· <b>시세</b> = 4층 이상 매매(분양권·입주권 포함) 최근 12개월 중 최근 3건 중간값(4층 이상이 없으면 전체 층). 튀는 거래 1건에 덜 흔들립니다.<br>` +
+    `· <b>생활권 서열</b> = 대표 단지 중간값: 대표 단지 84㎡ 시세의 중간값 순 / 대장 단지: 84㎡ 최근 12개월 월 중간값 중 최고 순.<br>` +
+    `· <b>투자금(갭)</b> = 매매 − 전세. 전세 = 같은 평형 신규 계약 4층 이상 최근 6개월 중간값(적으면 12개월), 단지 안 임대 물량은 뺌. 세금·중개비 제외.<br>` +
+    `· <b>내 호가</b>는 단지 줄의 "호가" 버튼으로 직접 적은 값이며 이 기기에만 저장됩니다. 네이버 호가는 링크로만 열립니다(자동으로 가져오지 않음).<br>` +
+    `· "이번 달" 표시 = 기준월에 신고된 거래로, 해제(취소)되면 다음 갱신 때 빠집니다.`;
+  render();
+}).catch(e => { $("out").innerHTML = `<div class="empty">자료를 불러오지 못했습니다. 새로고침해 주세요.</div>`; console.error(e); });
+
+function range() {
+  const p = price() * 10000, t = +S.tol;
+  if (!p) return [0, 0];
+  if (t === 0) { const lo = Math.floor(p / 10000) * 10000; return [lo, lo + 9999]; }
+  return [Math.round(p * (1 - t / 100)), Math.round(p * (1 + t / 100))];
+}
+// 단지 하나의 비교값
+function calc(x) {
+    const base = ymNum(META.기준월);
+    const g = x.d.시세근거; if (!g) return null;
+    const last = g.거래[g.거래.length - 1];
+    let p = x.d.시세, date = g.최근, kind = "시세", src = null;
+    if (S.basis === "last") { p = last[1]; kind = "최근"; src = last; }
+    if (S.basis === "hoga") { if (HOGA[x.id]) { p = HOGA[x.id]; kind = "호가"; } }
+    const old = base - ymNum(Math.floor(date / 100)) >= 6;
+    let v = p;
+    if (useGap()) { if (!x.d.전세) return null; v = p - x.d.전세[0]; }
+    return { ...x, p, v, date, kind, src, old, cf: x.d.확정전 };
+}
+function valued() {
+  const bid = isCx() && S.cxId ? S.cxId + "|" + S.cxA : null;
+  return ITEMS.filter(x => (AREA() === "all" || x.a === AREA()) && (!S.exGu.includes(x.zone.구) || x.id === bid)).map(calc)
+    .filter(r => r && !(S.noOld && r.old && r.kind !== "호가" && r.id !== bid));
+}
+
+function render() {
+  const on = (id, val) => $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(val)));
+  on("segMode", S.mode); on("segTol", S.tol); on("segArea", S.area); on("segBasis", S.basis); on("segRank", S.rank); on("segCxVal", S.cxVal);
+  $("cxBox").hidden = !isCx(); $("priceBox").hidden = isCx(); $("areaCol").hidden = isCx();
+  if (isCx()) renderPick();
+  $("priceLbl").textContent = S.mode === "gap" ? "가용 투자금 (매매가 − 전세가)" : "가용 금액 (매매가)";
+  if (document.activeElement !== $("inPrice") && !isCx()) $("inPrice").value = price();
+  $("chips").innerHTML = (CHIPS[S.mode] || []).map(v => `<button data-v="${v}" class="${v === price() ? "on" : ""}">${v}억</button>`).join("");
+  $("chkOld").checked = S.noOld;
+  $("gus").innerHTML = GUS.map(g => `<button data-g="${g}" class="${S.exGu.includes(g) ? "off" : ""}">${g}</button>`).join("");
+  const nH = Object.keys(HOGA).length;
+  $("basisHint").textContent = S.basis === "mid" ? "4층 이상 최근 3건의 중간값 (기본, 가장 안정적)" : S.basis === "last" ? "4층 이상 가장 최근 거래 1건" :
+    `직접 적은 호가 ${nH}건 사용, 없는 단지는 시세(3건 중간)로 대신합니다. 단지 줄을 펼쳐 "호가" 버튼으로 적으세요.`;
+  const [lo, hi] = range();
+  const rngTxt = lo ? (S.tol === "0" ? `${eok(lo)}대` : `${eok(lo)} ~ ${eok(hi)}`) : "";
+  $("rng").textContent = S.tol === "0" && lo ? `${eok(lo)} 이상 ${eok(lo + 10000)} 미만` : rngTxt;
+  if (!ITEMS.length) return;
+
+  const out = $("out");
+  const B = baseRow();
+  if (isCx() && !B) { out.innerHTML = `<div class="empty">${S.cxId && ITEMS.some(i => i.id === S.cxId + "|" + S.cxA) ? "이 단지는 전세 거래가 없어 투자금(갭)으로 비교할 수 없습니다.<br>비교 기준을 매매가로 바꿔 보세요." : "위에서 기준이 될 단지를 고르세요."}</div>`; return; }
+  const all = valued();
+  const rows = all.filter(r => r.v >= lo && r.v <= hi);
+  if (!lo || !rows.length) { out.innerHTML = `<div class="empty">이 범위에 해당하는 단지가 없습니다.<br>여유 범위를 넓히거나 평형·금액을 바꿔 보세요.</div>`; return; }
+  const what = useGap() ? "투자금" : "매매가";
+  const areaTxt = AREA() === "all" ? "59·84㎡" : AREA() + "㎡";
+  const byRank = (a, b) => (rk(a) || 999) - (rk(b) || 999);
+  const zs = [...new Set(rows.map(r => r.zone))].sort(byRank);
+  const bestRank = rk(zs[0]) || 999;
+
+  let h = B ? `<div class="best"><h3><b>${X.esc(B.c.이름)} ${areaTxt}</b>(${what} ${eok(B.v)}, ${B.zone.구} ${X.esc(B.zone.이름)} ${rk(B.zone) || "-"}위)와 <b>같은 가격대 ${rngTxt}</b>에서 서열이 가장 높은 생활권</h3>`
+    : `<div class="best"><h3><b>${areaTxt} ${what} ${rngTxt}</b>으로 갈 수 있는 최상위 생활권</h3>`;
+  zs.slice(0, 3).forEach(z => {
+    const r = rows.filter(x => x.zone === z).sort((a, b) => b.v - a.v)[0];
+    h += `<div class="pick"><span class="rk">${rk(z) || "-"}위</span><div class="nm"><b>${z.구} ${X.esc(z.이름)}</b><small>${X.esc(r.c.이름)}${AREA() === "all" ? " " + r.a + "㎡" : ""}${B && r.id === B.id ? ' <span class="tag me">기준</span>' : ""}</small></div>` +
+      `<div class="v"><b>${eok(r.v)}</b>${useGap() ? `매매 ${eok(r.p)} · 전세 ${eok(r.d.전세[0])}` : r.kind === "호가" ? "내 호가" : `${X.ym(Math.floor(r.date / 100))} 기준`}</div></div>`;
+  });
+  const ups = ZONES.filter(z => rk(z) && rk(z) < bestRank).map(z => {
+    const its = all.filter(x => x.zone === z); if (!its.length) return null;
+    const m = its.reduce((a, b) => (b.v < a.v ? b : a));
+    return m.v > hi ? { z, m } : null;
+  }).filter(Boolean).sort((a, b) => rk(b.z) - rk(a.z)).slice(0, 3);
+  if (ups.length) {
+    h += `<div class="uph">한 단계 위로 가려면 (가장 싼 단지 기준)</div>`;
+    ups.forEach(({ z, m }) => {
+      h += `<div class="pick"><span class="rk up">${rk(z)}위</span><div class="nm"><b>${z.구} ${X.esc(z.이름)}</b><small>${X.esc(m.c.이름)}${AREA() === "all" ? " " + m.a + "㎡" : ""} · ${what} ${eok(m.v)}</small></div>` +
+        `<div class="v"><b class="up">+${eok1(m.v - price() * 10000)}</b>더 필요</div></div>`;
+    });
+  }
+  h += `</div>`;
+  h += `<div class="vtabs" id="vtabs">` + [["ladder", "서열 사다리"], ["zone", "생활권별"], ["price", "가격순"]]
+    .map(([v, t]) => `<button data-v="${v}" class="${S.view === v ? "on" : ""}">${t}</button>`).join("") + `</div>`;
+  const nCx = new Set(rows.map(r => r.c)).size, nGu = new Set(rows.map(r => r.zone.구)).size;
+  const skipped = useGap() ? ITEMS.filter(x => (AREA() === "all" || x.a === AREA()) && !x.d.전세).length : 0;
+  h += `<p class="sum">범위 안 <b>단지 ${nCx}곳 · 생활권 ${zs.length}곳 · ${nGu}개 구</b>${skipped ? ` <span style="color:var(--mute)">(전세 거래가 없어 뺀 단지 ${skipped}곳)</span>` : ""}</p>`;
+  if (S.view === "ladder") h += ladder(zs, ups.map(u => u.z), all, lo, hi);
+  else if (S.view === "zone") {
+    zs.forEach(z => {
+      const rs = rows.filter(r => r.zone === z).sort((a, b) => b.v - a.v);
+      h += `<div class="zone"><div class="zh"><span class="rk">${rk(z) ? rk(z) + "위" : "-"}</span><div class="zn"><b>${z.구} ${X.esc(z.이름)}</b><small>${X.esc(z.설명)}</small></div>` +
+        (z[S.rank] ? `<div class="top">${S.rank === "중간" ? "대표 단지 중간" : "대장"} 84㎡<b>${eok(z[S.rank])}</b></div>` : "") + `</div>` + rs.map(r => item(r)).join("") + `</div>`;
+    });
+  } else h += `<div class="flat">` + rows.slice().sort((a, b) => b.v - a.v || byRank(a.zone, b.zone)).map(r => item(r, true)).join("") + `</div>`;
+  out.innerHTML = h;
+  // 기준 띠
+  const st = $("stick");
+  st.innerHTML = B
+    ? `<span class="k">기준</span><span class="t"><b>${X.esc(B.c.이름)}</b><small>${AREA()}㎡ · 범위 ${eok1(lo)}~${eok1(hi)}</small></span><span class="r">${what}<b>${eok(B.v)}</b></span><span class="go">바꾸기</span>`
+    : `<span class="k p">${what}</span><span class="t"><b>${eok(price() * 10000)}</b><small>${areaTxt} · 범위 ${S.tol === "0" ? eok1(lo) + "대" : eok1(lo) + "~" + eok1(hi)}</small></span><span class="go">바꾸기</span>`;
+  $("vtabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.view = b.dataset.v; save(); render(); };
+}
+
+function ladder(zs, upZones, all, lo, hi) {
+  const show = upZones.slice().sort((a, b) => rk(a) - rk(b)).concat(zs);
+  const vals = all.filter(x => show.includes(x.zone)).map(x => x.v);
+  const span = hi - lo || 10000;
+  let dmin = Math.max(0, Math.min(Math.min(...vals), lo - span * 0.6)), dmax = Math.max(Math.max(...vals), hi + span * 0.6);
+  dmin = Math.max(dmin, lo - span * 2.5); dmax = Math.min(dmax, hi + span * 2.5);
+  const pos = v => Math.max(0, Math.min(100, (v - dmin) / (dmax - dmin) * 100));
+  const step = [0.5, 1, 2, 5, 10, 20].map(x => x * 10000).find(s => (dmax - dmin) / s <= 5) || 50000;
+  let ticks = ""; for (let t = Math.ceil(dmin / step) * step; t <= dmax; t += step) ticks += `<span style="left:${pos(t)}%">${eok1(t)}</span>`;
+  const bud = price() * 10000;
+  const bid = isCx() && S.cxId ? S.cxId + "|" + S.cxA : null;
+  let h = `<div class="legend">${bid ? '<span><i class="me"></i>기준 단지</span>' : ""}<span><em></em>${bid ? "같은 가격대" : "내 범위"}</span><span><i class="in"></i>범위 안</span><span><i class="cheap"></i>범위보다 쌈</span><span><i></i>범위 밖(비쌈)</span></div>`;
+  h += `<div class="ladder" style="--lw:44%"><div class="axis">${ticks}</div>`;
+  show.forEach((z, k) => {
+    const its = all.filter(x => x.zone === z).sort((a, b) => b.v - a.v);
+    const up = upZones.includes(z);
+    const dots = its.map(x => `<i class="${x.v >= lo && x.v <= hi ? "in" : x.v < lo ? "cheap" : ""}${x.v < dmin || x.v > dmax ? " clip" : ""}${x.id === bid ? " me" : ""}" style="left:${pos(x.v)}%;animation-delay:${k * 25}ms" title="${X.esc(x.c.이름)} ${eok(x.v)}"></i>`).join("");
+    const zk = z.구 + "|" + z.이름;
+    h += `<details class="lrow${up ? " upz" : ""}" data-z="${X.esc(zk)}"${OPEN.has(zk) ? " open" : ""}><summary><div class="lname"><span class="rk${up ? " up" : ""}">${rk(z) || "-"}위</span><div><b>${X.esc(z.이름)}</b><small>${z.구}${up ? " · 한 단계 위" : ""}${its.some(x => x.id === bid) ? " · 기준 단지" : ""}</small></div></div>` +
+      `<div class="track"><div class="base"></div><div class="band" style="left:${pos(lo)}%;width:${pos(hi) - pos(lo)}%"></div>` +
+      (S.tol !== "0" ? `<div class="bud" style="left:${pos(bud)}%"></div>` : "") + dots + `</div></summary>` +
+      `<div class="lst">${its.map(x => item(x, false, !(x.v >= lo && x.v <= hi))).join("")}</div></details>`;
+  });
+  return h + `</div><p class="sum" style="margin-top:8px">줄을 누르면 그 생활권 단지 목록이 펼쳐집니다. 위쪽일수록 서열이 높은 생활권입니다.</p>`;
+}
+
+function item(r, showZone, outOfRange) {
+  const c = r.c, n12 = r.d.건수12;
+  const info = [c.준공 ? c.준공 + "년" : "", c.세대수 ? c.세대수.toLocaleString() + "세대" : "", n12 ? `12개월 ${n12}건` : ""].filter(Boolean).join(" · ");
+  const lastT = r.d.시세근거.거래[r.d.시세근거.거래.length - 1];
+  const me = isCx() && S.cxId && r.id === S.cxId + "|" + S.cxA;
+  const tags = (me ? ` <span class="tag me">기준</span>` : "") + (AREA() === "all" || showZone === false ? ` <span class="tag">${r.a}㎡</span>` : "") +
+    (r.kind === "호가" ? ` <span class="tag hg">내 호가</span>` : "") +
+    (lastT[3] !== "매매" && r.kind !== "호가" ? ` <span class="tag pre">${lastT[3]}</span>` : "") +
+    (r.cf && r.kind !== "호가" ? ` <span class="tag cf">이번 달</span>` : "") + (r.old && r.kind !== "호가" ? ` <span class="tag old">오래됨</span>` : "");
+  const basisTxt = r.kind === "호가" ? "내가 적은 호가" : r.kind === "최근" ? `${X.ymd(lastT[0])} · ${lastT[2]}층` : `${r.d.시세근거.층조건} ${r.d.시세근거.건수}건 중간 · ~${X.ymd(r.date)}`;
+  const center = price() * 10000, df = r.v - center;
+  const dl = me ? `<span class="dl eq">기준</span>` : center ? `<span class="dl ${Math.abs(df) < 50 ? "eq" : df > 0 ? "pl" : "mi"}">${Math.abs(df) < 50 ? "기준과 같음" : (isCx() ? "기준보다 " : "") + (df > 0 ? "+" : "−") + eok(Math.abs(df))}</span>` : "";
+  const right = useGap() ? `<b>${eok(r.v)}</b>${dl}<small>매매 ${eok(r.p)} − 전세 ${eok(r.d.전세[0])}</small>` : `<b>${eok(r.p)}</b>${dl}<small>${basisTxt}</small>`;
+  const hg = HOGA[r.id];
+  return `<div class="it${r.old ? " old" : ""}${outOfRange ? " out" : ""}${me ? " base" : ""}"><div class="nm">` +
+    (showZone ? `<span class="zt">${rk(r.zone) ? rk(r.zone) + "위 " : ""}${r.zone.구} ${X.esc(r.zone.이름)}</span><br>` : "") +
+    `<b>${X.esc(c.이름)}</b>${tags}<small>${info}</small>` +
+    `<div class="acts"><a class="nv" href="${X.naver(c.검색명)}" target="_blank" rel="noopener">네이버 호가 ↗</a><button data-hoga="${X.esc(r.id)}" class="${hg ? "has" : ""}">${hg ? "호가 " + eok(hg) : "호가 입력"}</button></div></div>` +
+    `<div class="pr">${right}</div></div>`;
+}
+
+// 단지 고르기: 검색(이름·초성) + 구 → 생활권 → 단지 따라가기, 최근·내 집 바로가기
+function areaBtns(x) {
+  return `<div class="ab">${["59", "84"].filter(a => x.c[a] && x.c[a].시세).map(a => `<button data-pick="${X.esc(x.id)}" data-a="${a}">${a}㎡<small>${eok1(x.c[a].시세)}</small></button>`).join("") || '<span style="font-size:12px;color:var(--mute)">최근 거래 없음</span>'}</div>`;
+}
+function crow(x, sub) { return `<div class="crow"><div class="nm">${X.esc(x.c.이름)}<small>${sub || x.z.구 + " " + X.esc(x.z.이름)}${x.c.준공 ? " · " + x.c.준공 + "년" : ""}${x.c.세대수 ? " · " + x.c.세대수.toLocaleString() + "세대" : ""}</small></div>${areaBtns(x)}</div>`; }
+function renderPick() {
+  const sel = CXS.find(x => x.id === S.cxId);
+  if (sel && !PK.open) {
+    const b = baseRow();
+    $("cxSel").innerHTML = `<div class="selc"><div class="nm">${X.esc(sel.c.이름)}<small>${sel.z.구} ${X.esc(sel.z.이름)} · 서열 ${rk(sel.z) || "-"}위</small></div>` +
+      `<div class="v">${useGap() ? "투자금" : "시세"}<b>${b ? eok(b.v) : "-"}</b></div><button class="ch" id="cxChg">바꾸기</button></div>` +
+      `<div class="selar">${["59", "84"].filter(a => sel.c[a] && sel.c[a].시세).map(a => `<button data-a="${a}" class="${a === S.cxA ? "on" : ""}">${a}㎡ ${eok1(sel.c[a].시세)}</button>`).join("")}</div>`;
+    $("cxPick").hidden = true;
+    return;
+  }
+  $("cxSel").innerHTML = ""; $("cxPick").hidden = false;
+  const t = nz($("cxQ").value);
+  let h = "";
+  if (t) {
+    const isC = /^[ㄱ-ㅎ]+$/.test(t);
+    const r = CXS.filter(x => isC ? x.ch.includes(t) : (x.key.includes(t) || nz(x.z.이름).includes(t))).slice(0, 15);
+    h = r.length ? r.map(x => crow(x)).join("") : `<div style="font-size:13px;color:var(--sub);padding:8px 0">찾는 단지가 없습니다. 생활권 대표 단지(약 5곳씩)만 들어 있습니다.</div>`;
+  } else if (!PK.gu) {
+    const rec = (S.cxRecent || []).map(id => CXS.find(x => x.id === id)).filter(Boolean).slice(0, 3);
+    const mine = X.store.get("silgeorae_mine_v1", null), mx = mine && CXS.find(x => x.id === mine.id);
+    if (mx || rec.length) h += `<div class="qh">바로 고르기</div>` + (mx ? crow(mx, "내 집 · " + mx.z.구 + " " + X.esc(mx.z.이름)) : "") + rec.filter(x => x !== mx).map(x => crow(x, "최근 · " + x.z.구 + " " + X.esc(x.z.이름))).join("") + `<div style="height:10px"></div>`;
+    h += `<div class="qh">또는 구 → 생활권 → 단지</div><div class="gugrid">${GUS.map(g => `<button data-gu="${g}">${g.replace(/구$/, "")}</button>`).join("")}</div>`;
+  } else if (!PK.zone) {
+    const zs = ZONES.filter(z => z.구 === PK.gu).sort((a, b) => (rk(a) || 999) - (rk(b) || 999));
+    h = `<div class="crumb"><button data-back="0">서울</button><span>›</span>${PK.gu}</div><div class="zgrid">${zs.map(z => `<button data-zone="${X.esc(z.이름)}"><b>${rk(z) || "-"}위</b>${X.esc(z.이름)}<small>${X.esc(z.설명)}</small></button>`).join("")}</div>`;
+  } else {
+    const xs = CXS.filter(x => x.z.구 === PK.gu && x.z.이름 === PK.zone);
+    h = `<div class="crumb"><button data-back="0">서울</button><span>›</span><button data-back="1">${PK.gu}</button><span>›</span>${X.esc(PK.zone)}</div>` + xs.map(x => crow(x, "")).join("");
+  }
+  if (S.cxId && CXS.some(x => x.id === S.cxId)) h += `<button class="more" id="cxCancel" style="margin-top:8px;width:100%;border:1px solid #d5d9de;background:#fff;border-radius:10px;padding:8px;color:var(--sub)">닫기</button>`;
+  $("cxList").innerHTML = h;
+}
+function choose(id, a) {
+  S.cxId = id; S.cxA = a; S.cxRecent = [id].concat((S.cxRecent || []).filter(x => x !== id)).slice(0, 5);
+  PK.open = false; PK.gu = PK.zone = null; $("cxQ").value = ""; save(); render();
+}
+$("cxQ").oninput = () => renderPick();
+$("cxBox").addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.pick) return choose(t.dataset.pick, t.dataset.a);
+  if (t.dataset.gu) { PK.gu = t.dataset.gu; PK.zone = null; return renderPick(); }
+  if (t.dataset.zone) { PK.zone = t.dataset.zone; return renderPick(); }
+  if (t.dataset.back) { if (t.dataset.back === "0") PK.gu = null; PK.zone = null; return renderPick(); }
+  if (t.id === "cxChg") { PK.open = true; renderPick(); $("cxQ").focus(); return; }
+  if (t.id === "cxCancel") { PK.open = false; return renderPick(); }
+  if (t.closest(".selar")) { S.cxA = t.dataset.a; save(); return render(); }
+});
+
+// 기준 띠: 설정 칸이 화면에서 사라지면 보이기, 누르면 설정 칸으로
+const ctlBox = document.querySelector(".controls");
+if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => $("stick").classList.toggle("show", !e.isIntersecting && e.boundingClientRect.bottom < 0 && !!$("stick").innerHTML)), { threshold: 0 }).observe(ctlBox);
+const goTop = () => ctlBox.scrollIntoView({ behavior: "smooth", block: "start" });
+$("stick").onclick = goTop; $("stick").onkeydown = e => { if (e.key === "Enter") goTop(); };
+
+// 설정 연결
+const pick = (id, k) => $(id).onclick = e => { const b = e.target.closest("button"); if (!b) return; S[k] = b.dataset.v; save(); render(); };
+pick("segMode", "mode"); pick("segCxVal", "cxVal"); pick("segTol", "tol"); pick("segArea", "area"); pick("segBasis", "basis"); pick("segRank", "rank");
+$("chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; S[S.mode === "gap" ? "pGap" : "pSale"] = +b.dataset.v; save(); render(); };
+$("inPrice").oninput = e => { S[S.mode === "gap" ? "pGap" : "pSale"] = +e.target.value; save(); render(); };
+$("chkOld").onchange = e => { S.noOld = e.target.checked; save(); render(); };
+$("gus").onclick = e => { const b = e.target.closest("button"); if (!b) return; const g = b.dataset.g;
+  S.exGu = S.exGu.includes(g) ? S.exGu.filter(x => x !== g) : S.exGu.concat(g); save(); render(); };
+$("out").addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.z) d.open ? OPEN.add(d.dataset.z) : OPEN.delete(d.dataset.z); }, true);
+$("out").addEventListener("click", e => {
+  const b = e.target.closest("button[data-hoga]"); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const id = b.dataset.hoga, [gu, zn, nm, a] = id.split("|"), cur = HOGA[id];
+  const v = prompt(`${nm} ${a}㎡ 호가 (억 단위, 예: 15.5)\n비우면 지웁니다.`, cur ? cur / 10000 : "");
+  if (v === null) return;
+  const n = parseFloat(String(v).replace(/[^\d.]/g, ""));
+  if (n > 0) HOGA[id] = Math.round(n * 10000); else delete HOGA[id];
+  X.store.set(HKEY, HOGA); render();
+});
+
+</script>
+</body>
+</html>

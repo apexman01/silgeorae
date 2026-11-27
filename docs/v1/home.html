@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서울 아파트 지도 v1</title>
+<link rel="stylesheet" href="x.css">
+<style>
+  .hero{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 0}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 10px 9px}
+  .tile small{display:block;font-size:11.5px;color:var(--sub);line-height:1.3}
+  .tile b{display:block;font-size:20px;letter-spacing:-.4px;margin-top:3px}
+  .tile em{font-style:normal;font-size:11px;color:var(--mute)}
+  .mapcard{padding:10px 10px 12px;position:relative;overflow:hidden}
+  .mapcard .chips{margin:0 0 6px}
+  .mapbox{position:relative}
+  #map{width:100%;height:auto;display:block;touch-action:manipulation}
+  #map path{stroke:#fff;stroke-width:2.2;stroke-linejoin:round;cursor:pointer;transition:fill .5s ease,opacity .3s}
+  #map path.in{animation:guIn .7s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes guIn{from{opacity:0;transform:scale(.92)}}
+  #map path.sel{stroke:#1d1f23;stroke-width:4}
+  #map text{pointer-events:none;font-weight:700;paint-order:stroke;stroke-linejoin:round}
+  #map text.n{font-size:25px}
+  #map text.v{font-size:22px;font-weight:600}
+  .ymbig{position:absolute;left:8px;top:2px;font-size:28px;font-weight:800;letter-spacing:-1px;color:#1d1f23;opacity:0;transition:opacity .3s;font-variant-numeric:tabular-nums}
+  .ymbig.show{opacity:.9}
+  .legend{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);margin:4px 2px 0}
+  .legend .bar{flex:1;height:8px;border-radius:4px}
+  .play{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .play button{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--ink);color:#fff;display:grid;place-items:center}
+  .play button svg{width:18px;height:18px;fill:#fff}
+  .play .tl{flex:1;min-width:0}
+  .play .tl small{display:block;font-size:11.5px;color:var(--sub);margin-bottom:2px}
+  .play input[type=range]{width:100%;accent-color:var(--ink);margin:0}
+  .play .sp{height:34px;margin-top:2px;position:relative}
+  .play .ph{position:absolute;top:0;bottom:0;width:2px;background:var(--up);border-radius:1px;transition:left .12s linear}
+  .det .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .det .hd h2{margin:0;font-size:19px}
+  .det .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+  .det .kpi div{background:var(--bg);border-radius:10px;padding:8px}
+  .det .kpi small{display:block;font-size:11px;color:var(--sub)}
+  .det .kpi b{font-size:16px}
+  .det .cyc{margin:6px 0 2px;font-size:12px;color:var(--sub)}
+  .det .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:2px}
+  .det .lg{display:flex;gap:12px;font-size:11.5px;color:var(--sub);margin:6px 0 2px}
+  .det .lg i{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+  .zl{margin-top:10px}
+  .zl .z{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+  .zl .z .rk{flex:none;min-width:40px;text-align:center;font-size:11.5px;font-weight:700;color:#fff;background:var(--accent);border-radius:6px;padding:3px 4px}
+  .zl .z .nm{flex:1;min-width:0}
+  .zl .z .nm small{display:block;font-size:11.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .zl .z b{flex:none}
+  .acts{display:flex;gap:6px;margin-top:10px}
+  .acts a{flex:1;text-align:center;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #cfdcf3;background:#f2f6fd;border-radius:10px;padding:9px 4px}
+  .rank .r{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer}
+  .rank .r .no{flex:none;width:20px;text-align:right;color:var(--mute);font-size:12px}
+  .rank .r .nm{flex:none;width:62px}
+  .rank .r .bw{flex:1;height:16px;background:#f1f3f5;border-radius:4px;position:relative;overflow:hidden}
+  .rank .r .bw i{position:absolute;top:0;bottom:0;border-radius:4px;transition:width .8s cubic-bezier(.2,.7,.2,1),left .8s cubic-bezier(.2,.7,.2,1),background .5s}
+  .rank .r .bw .mid{position:absolute;top:0;bottom:0;width:1px;background:#c9ced4}
+  .rank .r b{flex:none;width:64px;text-align:right;font-size:13px}
+  .rank .r.sel{background:var(--accent-soft);border-radius:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>서울 아파트 지도 <span class="tag pre">v1</span></h1><span class="meta" id="meta"></span></div>
+  <p class="lead">25개 구의 84㎡ 실거래 시세를 지도로 봅니다. ▶를 누르면 2021년부터 지금까지 시세 변화가 지도 위에서 재생됩니다.</p>
+
+  <div class="hero">
+    <div class="tile rise"><small>서울 84㎡ 시세<br><em>25개 구 중간값</em></small><b class="num" id="hSeoul">-</b></div>
+    <div class="tile rise" style="animation-delay:.08s"><small>최근 6개월<br><em>서울 시세 변화</em></small><b class="num" id="hChg">-</b></div>
+    <div class="tile rise" style="animation-delay:.16s"><small>전고점 넘은 구<br><em>2021~22 최고 대비</em></small><b class="num" id="hPeak">-</b></div>
+  </div>
+
+  <div class="card mapcard rise" style="animation-delay:.2s">
+    <div class="chips" id="metrics"></div>
+    <div class="mapbox"><div class="ymbig" id="ymBig"></div><svg id="map" role="img" aria-label="서울 구별 지도"></svg></div>
+    <div class="legend" id="legend"></div>
+    <div class="play">
+      <button id="btnPlay" aria-label="재생"><svg viewBox="0 0 24 24" id="icPlay"><path d="M7 4v16l13-8z"/></svg></button>
+      <div class="tl"><small id="tlLbl">시세 타임랩스 · 84㎡ (3개월 이동 중간값)</small>
+        <input type="range" id="tl" min="0" max="0" value="0" aria-label="연월">
+        <div class="sp" id="tlSpark"></div></div>
+    </div>
+  </div>
+
+  <div class="card det rise" id="det" style="animation-delay:.26s"></div>
+
+  <div class="card rank rise" style="animation-delay:.3s"><h2 id="rankTitle">구별 순위</h2><div id="rank"></div></div>
+
+  <p class="foot" id="foot"></p>
+</div>
+<script src="x.js"></script>
+<script src="nav.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const METRICS = [
+  { k: "cur", t: "84㎡ 시세", fmt: v => X.eok1(v), kind: "seq" },
+  { k: "chg6", t: "6개월 변화", fmt: v => X.pct(v), kind: "div" },
+  { k: "peak", t: "전고점 대비", fmt: v => X.pct(v), kind: "div" },
+  { k: "jr", t: "전세가율", fmt: v => v == null ? "-" : v.toFixed(0) + "%", kind: "seq" },
+];
+const S = Object.assign({ m: "cur", gu: null }, X.store.get("silgeorae_home_v1", {}));
+const save = () => X.store.set("silgeorae_home_v1", { m: S.m, gu: S.gu });
+let MAP, G, CX, MONTHS, ROWS = [], playing = false, tIdx = null, timer = null;
+
+Promise.all([X.get("data/x/map.json"), X.get("data/x/gu.json"), X.get("data/x/cx.json")]).then(([m, g, c]) => {
+  MAP = m; G = g; CX = c; MONTHS = g.월;
+  $("meta").textContent = `기준 ${X.ym(g.기준월)} · 갱신 ${g.자료갱신}`;
+  const last = MONTHS.length - 1;
+  ROWS = Object.entries(g.구).map(([gu, d]) => {
+    let i = last; while (i >= 0 && d.매매[i] == null) i--;
+    const p6 = d.매매[i - 6];
+    let lastV = null; const ff = d.매매.map(v => (v == null ? lastV : (lastV = v)));   // 거래 적은 달은 앞 달 값으로 이어 보기
+    return { gu, d, ff, cur: d.매매[i], chg6: p6 ? (d.매매[i] / p6 - 1) * 100 : null, peak: d.고점대비, jr: d.전세가율 };
+  });
+  // 위 숫자
+  const seoul = MONTHS.map((_, i) => { const v = ROWS.map(r => r.d.매매[i]).filter(x => x != null).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : null; });
+  const sNow = seoul[last], s6 = seoul[last - 6];
+  X.count($("hSeoul"), sNow, v => X.eok1(v));
+  X.count($("hChg"), (sNow / s6 - 1) * 100, v => X.pct(v));
+  $("hChg").className = "num " + (sNow >= s6 ? "up" : "down");
+  X.count($("hPeak"), ROWS.filter(r => r.peak > 0).length, v => Math.round(v) + " / 25");
+  // 타임랩스 바
+  $("tl").max = last; $("tl").value = last;
+  $("tlSpark").innerHTML = X.spark(seoul.map((v, i) => [i, v]), { w: 600, h: 34, pad: 2, c: "#9aa0a8", sw: 1.5, dot: false }) + `<div class="ph" id="ph"></div>`;
+  $("foot").innerHTML = `자료: 국토부 실거래가(${X.ym(MONTHS[0])}~${X.ym(g.기준월)}), 매매는 해제·직거래 제외, 전세는 신규 계약.<br>` +
+    `· 구 시세 = 구 전체 84㎡(전용 80~90㎡) 거래의 3개월 이동 중간값.<br>· 전고점 = 2021~22년 중 가장 높았던 시세, 전저점 = 그 뒤 가장 낮았던 시세. 전세가율 = 전세 ÷ 매매.<br>· 지도 경계: 통계청 2013년 행정구역(southkorea/seoul-maps).`;
+  drawMap(); render(); renderDet();
+}).catch(e => { $("det").innerHTML = `<div class="empty">자료를 불러오지 못했습니다. 새로고침해 주세요.</div>`; console.error(e); });
+
+function metric() { return METRICS.find(m => m.k === S.m) || METRICS[0]; }
+function valOf(r) {
+  if (tIdx == null) return r[S.m];
+  return r.ff[tIdx];   // 재생 중에는 그달 시세 (거래 적은 달은 앞 달 값)
+}
+function colorFn(rows) {
+  const m = tIdx == null ? metric() : METRICS[0];
+  if (tIdx != null) {   // 재생: 모든 달에 같은 눈금
+    const all = ROWS.flatMap(r => r.d.매매.filter(v => v != null)); const lo = Math.min(...all), hi = Math.max(...all);
+    return { f: v => v == null ? "#e9ebee" : X.seq(Math.sqrt((v - lo) / (hi - lo))), lo, hi, m };
+  }
+  const vs = rows.map(r => r[m.k]).filter(v => v != null);
+  if (m.kind === "div") { const a = Math.max(...vs.map(Math.abs)) || 1; return { f: v => v == null ? "#e9ebee" : X.div(v / a), lo: -a, hi: a, m }; }
+  const lo = Math.min(...vs), hi = Math.max(...vs);
+  return { f: v => v == null ? "#e9ebee" : X.seq((v - lo) / (hi - lo || 1)), lo, hi, m };
+}
+
+function drawMap() {
+  const svg = $("map"); svg.setAttribute("viewBox", MAP.viewBox);
+  const order = Object.keys(MAP.구).sort((a, b) => MAP.구[a].cy - MAP.구[b].cy || MAP.구[a].cx - MAP.구[b].cx);
+  svg.innerHTML = order.map((gu, i) => `<path class="in" data-gu="${gu}" d="${MAP.구[gu].d}" style="animation-delay:${i * 28}ms;transform-origin:${MAP.구[gu].cx}px ${MAP.구[gu].cy}px"><title>${gu}</title></path>`).join("") +
+    order.map(gu => { const p = MAP.구[gu]; return `<text class="n" data-gu="${gu}" x="${p.cx}" y="${p.cy - 4}" text-anchor="middle">${gu.replace(/구$/, "")}</text><text class="v num" data-gv="${gu}" x="${p.cx}" y="${p.cy + 22}" text-anchor="middle"></text>`; }).join("");
+  svg.onclick = e => { const p = e.target.closest("path"); if (!p) return; pick(p.dataset.gu); };
+}
+function pick(gu) {
+  S.gu = S.gu === gu ? null : gu; save(); render(); renderDet();
+  if (S.gu) $("det").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function render() {
+  $("metrics").innerHTML = METRICS.map(m => `<button data-k="${m.k}" class="${m.k === S.m && tIdx == null ? "on" : ""}">${m.t}</button>`).join("");
+  $("metrics").onclick = e => { const b = e.target.closest("button"); if (!b) return; stop(); S.m = b.dataset.k; save(); render(); };
+  const C = colorFn(ROWS), m = C.m;
+  ROWS.forEach(r => {
+    const v = valOf(r), fill = C.f(v);
+    const p = document.querySelector(`#map path[data-gu="${r.gu}"]`); if (!p) return;
+    p.style.fill = fill; p.classList.toggle("sel", S.gu === r.gu);
+    if (S.gu === r.gu) p.parentNode.insertBefore(p, p.parentNode.querySelector("text"));   // 선택한 구 테두리를 위로
+    const ink = X.inkOn(fill);
+    document.querySelectorAll(`#map text[data-gu="${r.gu}"],#map text[data-gv="${r.gu}"]`).forEach(t => { t.setAttribute("fill", ink); t.setAttribute("stroke", ink === "#fff" ? "rgba(0,0,0,.25)" : "rgba(255,255,255,.7)"); t.setAttribute("stroke-width", "3"); });
+    const tv = document.querySelector(`#map text[data-gv="${r.gu}"]`); if (tv) tv.textContent = m.fmt(v);
+  });
+  $("map").classList.toggle("picked", !!S.gu);
+  // 범례
+  const stops = [0, .25, .5, .75, 1].map(t => m.kind === "div" && tIdx == null ? X.div(t * 2 - 1) : X.seq(t));
+  $("legend").innerHTML = `<span>${m.fmt(C.lo)}</span><span class="bar" style="background:linear-gradient(90deg,${stops.join(",")})"></span><span>${m.fmt(C.hi)}</span>`;
+  // 재생 표시
+  const i = tIdx == null ? MONTHS.length - 1 : tIdx;
+  $("ymBig").textContent = "20" + X.ym(MONTHS[i]).replace(".", ".");
+  $("ymBig").classList.toggle("show", tIdx != null);
+  const ph = $("ph"); if (ph) ph.style.left = `calc(${(i / (MONTHS.length - 1)) * 100}% - 1px)`;
+  $("tl").value = i;
+  // 순위
+  const rk = ROWS.slice().sort((a, b) => (valOf(b) ?? -1e9) - (valOf(a) ?? -1e9));
+  $("rankTitle").innerHTML = `구별 순위 <small>${tIdx == null ? m.t : "84㎡ 시세 · 20" + X.ym(MONTHS[i])}</small>`;
+  const vs = rk.map(valOf).filter(v => v != null), hi = Math.max(...vs.map(Math.abs)) || 1, isDiv = m.kind === "div" && tIdx == null;
+  $("rank").innerHTML = rk.map((r, k) => {
+    const v = valOf(r); const w = v == null ? 0 : isDiv ? Math.abs(v) / hi * 50 : v / hi * 100;
+    const left = isDiv ? (v < 0 ? 50 - w : 50) : 0;
+    return `<div class="r${S.gu === r.gu ? " sel" : ""}" data-gu="${r.gu}"><span class="no">${k + 1}</span><span class="nm">${r.gu}</span>` +
+      `<span class="bw">${isDiv ? '<span class="mid" style="left:50%"></span>' : ""}<i style="left:${left}%;width:${w}%;background:${C.f(v)}"></i></span><b class="num ${isDiv ? (v > 0 ? "up" : "down") : ""}">${m.fmt(v)}</b></div>`;
+  }).join("");
+  $("rank").onclick = e => { const r = e.target.closest(".r"); if (r) pick(r.dataset.gu); };
+}
+
+function renderDet() {
+  const el = $("det");
+  if (!S.gu) { el.innerHTML = `<div style="font-size:14px;color:var(--sub);text-align:center;padding:6px 0">지도에서 구를 누르면 시세 흐름과 생활권 서열이 나옵니다.</div>`; return; }
+  const r = ROWS.find(x => x.gu === S.gu), d = r.d;
+  const ser = MONTHS.map((m, i) => [i, d.매매[i]]), jser = MONTHS.map((m, i) => [i, d.전세[i]]);
+  const lo = Math.min(d.전저점 || d.현재, d.현재) * 0.95, hi = Math.max(d.전고점, d.현재) * 1.03;
+  const zones = CX.생활권.filter(z => z.구 === S.gu).sort((a, b) => (a.중간순위 || 999) - (b.중간순위 || 999));
+  const w = 600, h = 120;
+  el.innerHTML = `<div class="hd"><h2>${S.gu}</h2><span class="tag ${r.peak > 0 ? "up" : "down"}">전고점 대비 ${X.pct(r.peak)}</span></div>` +
+    `<div class="kpi"><div><small>84㎡ 시세</small><b class="num">${X.eok1(r.cur)}</b></div><div><small>6개월 변화</small><b class="num ${r.chg6 > 0 ? "up" : "down"}">${X.pct(r.chg6)}</b></div><div><small>전세가율</small><b class="num">${r.jr == null ? "-" : r.jr.toFixed(0) + "%"}</b></div></div>` +
+    `<div class="lg"><span><i style="background:#2a6fdb"></i>매매</span><span><i style="background:#1f9d6b"></i>전세(신규)</span></div>` +
+    `<div style="position:relative">${X.spark(ser, { w, h, c: "#2a6fdb", fill: "#e3ecfb", extra: d.전세.filter(v => v != null), lines: [{ y: d.전고점, c: "#d9443a", t: "전고점 " + X.eok1(d.전고점) }] })}` +
+    `<div style="position:absolute;inset:0">${X.spark(jser, { w, h, c: "#1f9d6b", extra: d.매매.filter(v => v != null), dot: true })}</div></div>` +
+    `<div class="cyc">전저점 ${X.eok1(d.전저점)}(${X.ym(d.전저점월)}) → 지금 ${X.eok1(d.현재)} · 하락분의 <b>${d.회복률 == null ? "-" : d.회복률.toFixed(0) + "%"}</b> 회복</div>` +
+    X.dumbbell(d.전고점, d.전저점, d.현재, lo, hi) +
+    `<div class="cyc lab"><span>${X.ym(MONTHS[0])}</span><span>${X.ym(G.기준월)}</span></div>` +
+    `<div class="zl"><div class="lbl" style="margin-top:4px">생활권 서열 <small style="font-weight:400;color:var(--mute)">서울 101곳 중 · 대표 단지 84㎡ 시세 중간값 순</small></div>` +
+    zones.map(z => `<div class="z"><span class="rk">${z.중간순위 || "-"}위</span><div class="nm">${X.esc(z.이름)}<small>${X.esc(z.설명)}</small></div><b class="num">${X.eok1(z.중간)}</b></div>`).join("") + `</div>` +
+    `<div class="acts"><a href="group.html?gu=${encodeURIComponent(S.gu)}">시세 그룹</a><a href="cycle.html?gu=${encodeURIComponent(S.gu)}">상승·하락</a><a href="./">생활권 그래프</a></div>`;
+}
+
+// 타임랩스
+function stop() { playing = false; clearInterval(timer); tIdx = null; $("icPlay").innerHTML = '<path d="M7 4v16l13-8z"/>'; $("btnPlay").setAttribute("aria-label", "재생"); }
+$("btnPlay").onclick = () => {
+  if (playing) { playing = false; clearInterval(timer); $("icPlay").innerHTML = '<path d="M7 4v16l13-8z"/>'; return; }
+  playing = true; $("icPlay").innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>'; $("btnPlay").setAttribute("aria-label", "멈춤");
+  if (tIdx == null || tIdx >= MONTHS.length - 1) tIdx = 2;
+  render();
+  timer = setInterval(() => { tIdx++; if (tIdx >= MONTHS.length - 1) { tIdx = MONTHS.length - 1; render(); playing = false; clearInterval(timer); $("icPlay").innerHTML = '<path d="M7 4v16l13-8z"/>'; return; } render(); }, 260);
+};
+$("tl").oninput = e => { playing = false; clearInterval(timer); $("icPlay").innerHTML = '<path d="M7 4v16l13-8z"/>'; const v = +e.target.value; tIdx = v >= MONTHS.length - 1 ? null : v; render(); };
+</script>
+</body>
+</html>
