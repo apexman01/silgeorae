@@ -49,6 +49,9 @@ const X = (() => {
   }
   const naver = (name, dong) => "https://m.land.naver.com/search/result/" + encodeURIComponent(name);
   const qs = () => Object.fromEntries(new URLSearchParams(location.search));
+  const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+  const cho = t => [...String(t)].map(c => { const k = c.charCodeAt(0) - 0xAC00; return k >= 0 && k < 11172 ? CHO[Math.floor(k / 588)] : c; }).join("");   // 초성 검색: 고덕그라시움 → ㄱㄷㄱㄹㅅㅇ
+  const nz = t => String(t || "").replace(/\s+/g, "").toLowerCase();
   function toast(msg) {
     let t = document.getElementById("xToast");
     if (!t) { t = document.createElement("div"); t.id = "xToast"; t.style.cssText = "position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1d1f23;color:#fff;font-size:14px;padding:10px 16px;border-radius:999px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.2);opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center"; document.body.appendChild(t); }
@@ -59,7 +62,7 @@ const X = (() => {
     try { await navigator.clipboard.writeText(url); toast((label ? label + " " : "") + "링크를 복사했어요"); }
     catch (e) { window.prompt("아래 주소를 길게 눌러 복사하세요", url); }
   }
-  return { get, toast, share, eok, eok1, ym, ymd, pct, esc, store, seq, div, inkOn, count, spark, dumbbell, naver, qs };
+  return { get, toast, share, cho, nz, eok, eok1, ym, ymd, pct, esc, store, seq, div, inkOn, count, spark, dumbbell, naver, qs };
 })();
 // 선 그리기 모션
 (() => { const s = document.createElement("style"); s.textContent = `.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.1s cubic-bezier(.4,.1,.2,1) forwards}@keyframes draw{to{stroke-dashoffset:0}}@media (prefers-reduced-motion:reduce){.draw{animation:none;stroke-dashoffset:0}}`; document.head.appendChild(s); })();

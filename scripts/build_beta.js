@@ -13,6 +13,7 @@
  *       전고점 = 2021~2022년 일반 매매 최고가, 전저점 = 전고점 이후 일반 매매 최저가(2건 이상이면 가장 낮은 1건은 급매로 보고 제외)
  *         분양권·입주권은 분양가·조합원 가격이라 사이클 판단에서 뺌. 판단 못 하면 사이클 = {판정:"불가", 이유}
  *         이유: 신축(21~22 일반 매매 2건 미만 + 분양권 거래 있음/2021년 이후 준공) · 입주권(거래의 절반 이상이 입주권)
+ *               · 신축입주권(입주권 위주였지만 이미 준공: 준공 연도가 올해 이전이거나 일반 매매가 있음)
  *               · 거래부족(구축인데 21~22 일반 매매 2건 미만, 또는 전고점 뒤 거래 없음) · 저≥고
  *  - 마지막 달(자료의 마지막 월)은 신고기한(30일)이 남아 '잠정'. 구 대표 숫자(현재·회복률·전세가율)는 그 직전 달(확정월) 기준
  *       전세 = 신규 계약 4층 이상 최근 6개월 중간값(3건 미만이면 12개월, 같은 보증금 3건 이상 반복=임대 물량 제외)
@@ -103,7 +104,7 @@ function peakTrough(series) {   // 월별 값 [..] → 전고점(21~22) · 이�
   };
 }
 function cleanJeonse(rs) { const c = {}; rs.forEach(r => c[r[4]] = (c[r[4]] || 0) + 1); const k = rs.filter(r => c[r[4]] < 3); return k.length ? k : rs; }
-function cxArea(sale, jeon, lo, hi, built) {
+function cxArea(sale, jeon, lo, hi, built, win) {
   const rs = sale.filter(r => r[1] >= lo && r[1] < hi).sort((a, b) => key(a) - key(b));
   if (!rs.length) return null;
   const out = {};
@@ -124,7 +125,11 @@ function cxArea(sale, jeon, lo, hi, built) {
   const nIp = rs.filter(r => r[6] === "입주권").length;
   let why = null;
   if (pk.length < 2) {
-    if (nIp / rs.length >= 0.5) why = "입주권";
+    if (nIp / rs.length >= 0.5) {
+      // 입주권 위주: 이미 준공(준공 연도가 올해 이전이거나 일반 매매가 있음)이면 '신축(입주권 시절)', 아직이면 '정비사업 진행'
+      const done = (built && +built < +String(lastYm).slice(0, 4)) || gen.length > 0;
+      why = done ? "신축입주권" : "입주권";
+    }
     else if (rs.some(r => r[6] === "분양권" && r[2] <= PEAK_TO) || (built && +built >= 2021)) why = "신축";
     else why = "거래부족";
   } else {
@@ -139,6 +144,12 @@ function cxArea(sale, jeon, lo, hi, built) {
     }
   }
   out.사이클 = why ? { 판정: "불가", 이유: why } : { 판정: "가능" };
+  // 하락기(서울 84㎡ 시세의 전고점 달 ~ 전저점 달, 데이터로 정함) 일반 매매 건수 — 모든 단지를 같은 구간으로 비교
+  if (win && win[0] && win[1]) out.하락기 = { 구간: win, 거래: gen.filter(r => r[2] >= win[0] && r[2] <= win[1]).length };
+  if (!why && out.시세) {
+    out.낙폭 = Math.round((out.전저점[0] / out.전고점[0] - 1) * 1000) / 10;      // 전고점 → 전저점 (%)
+    out.상승률 = Math.round((out.시세 / out.전저점[0] - 1) * 1000) / 10;          // 전저점 → 지금 (%)
+  }
   // 전세
   const js = jeon.filter(r => r[1] >= lo && r[1] < hi && !r[6]);
   const jup = js.filter(r => r[5] >= 4).length >= 3 ? js.filter(r => r[5] >= 4) : js;
@@ -152,6 +163,18 @@ function cxArea(sale, jeon, lo, hi, built) {
   return out;
 }
 
+// 서울 하락기: 25개 구 84㎡ 시세(3개월 이동 중간값)의 중간값으로 만든 서울 시세의 2021~22 전고점 달 ~ 그 뒤 전저점 달
+function seoulWindow() {
+  const per = [];
+  for (const [gu, code] of Object.entries(INDEX.regions["서울특별시"])) {
+    if (!fs.existsSync(path.join(ROOT, `docs/data/${code}.js`))) continue;
+    const w = {}; runInto(w, `docs/data/${code}.js`); per.push(rolling(w.DATA_GU[gu].sale, AREAS["84"]));
+  }
+  const se = months.map((_, i) => { const v = per.map(s => s[i]).filter(x => x != null).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : null; });
+  const pt = peakTrough(se);
+  return pt ? [pt.전고점월, pt.전저점월] : null;
+}
+const SEOUL_WIN = seoulWindow();
 function buildData() {
   const GU = {}, CX = {}, ZONES = [];
   for (const [gu, code] of Object.entries(INDEX.regions["서울특별시"])) {
@@ -187,7 +210,8 @@ function buildData() {
         cxs.forEach(x => { (byIdx.get(x.i) || []).forEach(r => sale.push(r)); (jbIdx.get(x.i) || []).forEach(r => jeon.push(r)); });
         const mx = MASTER[gu + "|" + z.name + "|" + base] || {};
         const item = { id: mx.id || null, 이름: base, 검색명: cxs[0].name, 준공: info.준공 || null, 세대수: info.세대수 || mx.세대수 || null, 법정동: info.법정동 || cxs[0].dong };
-        for (const [a, [lo, hi]] of Object.entries(AREAS)) { const v = cxArea(sale, jeon, lo, hi, item.준공 || D.complexes[cxs[0].i][4]); if (v) item[a] = v; }
+        const win = SEOUL_WIN;
+        for (const [a, [lo, hi]] of Object.entries(AREAS)) { const v = cxArea(sale, jeon, lo, hi, item.준공 || D.complexes[cxs[0].i][4], win); if (v) item[a] = v; }
         list.push(item);
       });
       list.sort((a, b) => (b.세대수 || 0) - (a.세대수 || 0));
@@ -213,5 +237,25 @@ const meta = { 기준월: lastYm, 확정월: months[LAST_OK], 잠정월: lastYm,
 fs.writeFileSync(path.join(OUT, "map.json"), JSON.stringify(buildMap()));
 const { GU, CX, ZONES } = buildData();
 fs.writeFileSync(path.join(OUT, "gu.json"), JSON.stringify({ ...meta, 설명: "구별 84㎡ 3개월 이동 중간값(만원). 매매=해제·직거래 제외, 전세=신규 계약. 전고점=2021~22년 최고, 전저점=그 뒤 최저.", 구: GU }));
+// 생활권 화면용 작은 파일: 생활권마다 사이클 성적(하락기 거래·낙폭·상승률·회복률)과 '하락기에도 잘 팔린 단지' 상위 3
+const CY = {};
+ZONES.forEach(z => {
+  const list = CX[z.구][z.이름] || [], g = GU[z.구];
+  const one = {};
+  ["84", "59"].forEach(A => {
+    const L = list.filter(c => c[A] && c[A].사이클 && c[A].사이클.판정 === "가능" && c[A].하락기).map(c => {
+      const a = c[A], rec = (a.시세 - a.전저점[0]) / (a.전고점[0] - a.전저점[0]) * 100;
+      return { id: c.id, 이름: c.이름, 세대수: c.세대수, 거래: a.하락기.거래, 낙폭: a.낙폭, 상승률: a.상승률, 회복률: Math.round(rec), 고: a.전고점[0], 저: a.전저점[0], 지금: a.시세 };
+    });
+    if (!L.length) return;
+    const rankOf = (key, desc) => { const s = L.slice().sort((x, y) => desc ? y[key] - x[key] : x[key] - y[key]); L.forEach(x => x[key + "순위"] = s.findIndex(y => y[key] === x[key]) + 1); };
+    rankOf("거래", true); rankOf("낙폭", true); rankOf("상승률", true);   // 낙폭은 음수라 큰 값(덜 빠짐)이 1위
+    const avg = k => Math.round(L.reduce((t, x) => t + x[k], 0) / L.length * 10) / 10;
+    const best = L.length >= 2 ? L.slice().sort((x, y) => (x.거래순위 + x.낙폭순위) - (y.거래순위 + y.낙폭순위) || y.거래 - x.거래).slice(0, 3).map(x => x.id) : [];
+    one[A] = { 단지: L, 평균: { 거래: avg("거래"), 낙폭: avg("낙폭"), 상승률: avg("상승률"), 회복률: avg("회복률") }, 잘팔린: best };
+  });
+  if (Object.keys(one).length) CY[z.id || z.구 + "|" + z.이름] = { 구: z.구, 이름: z.이름, ...one };
+});
+fs.writeFileSync(path.join(OUT, "cycle.json"), JSON.stringify({ ...meta, 월: undefined, 하락기: SEOUL_WIN, 설명: "생활권별 사이클 성적. 하락기 = 서울 84㎡ 시세(25개 구 3개월 이동 중간값의 중간값)의 2021~22 전고점 달 ~ 그 뒤 전저점 달. 거래 = 그 구간 일반 매매 건수. 낙폭 = 단지 전고점→전저점(%), 상승률 = 전저점→지금 시세(%), 회복률 = (지금-저)/(고-저). 잘팔린 = 거래 순위 + 낙폭 순위 합이 작은 상위 3(단지 2곳 이상일 때).", 생활권: CY }));
 fs.writeFileSync(path.join(OUT, "cx.json"), JSON.stringify({ ...meta, 월: undefined, 설명: "생활권 대표 단지 59·84㎡ 지표 (scripts/build_beta.js 머리말 참고). 가격 만원, 날짜 YYYYMMDD.", 생활권: ZONES, 단지: CX }));
 console.log(`→ ${path.relative(ROOT, OUT)} (기준월 ${lastYm}) 생활권 ${ZONES.length}곳`);

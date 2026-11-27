@@ -37,6 +37,19 @@
   .jbt small{display:block;font-weight:500;font-size:11.5px;color:var(--mute);margin-top:2px}
   a.jbtag{display:inline-block;margin:0 4px 6px 0;padding:4px 9px;font-size:12.5px;border-radius:999px;background:#eef0f3;color:#5b616b;text-decoration:none}
   a.jbtag small{color:var(--mute);margin-left:2px}
+  .rq{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d5d9de;border-radius:10px;background:#fff;margin-bottom:6px}
+  #rsug button{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:#fff;padding:9px 4px;font-size:14px}
+  #rsug button small{color:var(--mute);font-size:12px;margin-left:4px}
+  .rp .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:8px 0 4px}
+  .rp .hd b{font-size:17px}
+  .rp .hd small{font-size:12px;color:var(--sub)}
+  .rp table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;table-layout:fixed}
+  .rp th,.rp td{padding:7px 4px;border-top:1px solid var(--line);text-align:left;font-variant-numeric:tabular-nums}
+  .rp th{font-weight:600;color:var(--sub);font-size:12px}
+  .rp td b{font-size:14px}
+  .rp td small{display:block;font-size:11px;color:var(--mute)}
+  .rp .na{font-size:13.5px;color:var(--sub);background:var(--bg);border-radius:10px;padding:10px;margin-top:8px}
+  .sub2{font-size:11.5px;color:var(--sub);margin-top:2px}
   .more{display:block;width:100%;margin-top:8px;border:1px solid #d5d9de;background:#fff;border-radius:10px;padding:9px;color:var(--sub);font-size:13.5px}
   .key{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--sub);margin:0 0 8px}
   .key i{display:inline-block;vertical-align:middle;margin-right:4px}
@@ -57,6 +70,12 @@
     <div id="guRows"></div>
   </div>
 
+  <div class="card rise" style="animation-delay:.12s" id="repCard">
+    <h2>단지 사이클 성적표 <small>같은 생활권 평균과 비교</small></h2>
+    <input id="rq" class="rq" type="search" placeholder="단지 이름·초성 (예: 고덕, ㄱㄷㄱㄹ)" autocomplete="off">
+    <div id="rsug"></div><div id="rep"></div>
+  </div>
+
   <div class="card rise" style="animation-delay:.16s">
     <h2>단지별 <small>생활권 대표 단지 · 시세 = 4층 이상 최근 3건 중간값</small></h2>
     <div class="ctl">
@@ -75,20 +94,20 @@ const $ = id => document.getElementById(id);
 const q = X.qs();
 const S = Object.assign({ guSort: "rec", gu: "", area: "84", cx: "break" }, X.store.get("silgeorae_cycle_v1", {}), q.gu ? { gu: q.gu } : {});
 const save = () => X.store.set("silgeorae_cycle_v1", S);
-let G, C, LIMIT = 30;
+let G, C, CY, LIMIT = 30;
 
-Promise.all([X.get("data/x/gu.json"), X.get("data/x/cx.json")]).then(([g, c]) => {
-  G = g; C = c;
+Promise.all([X.get("data/x/gu.json"), X.get("data/x/cx.json"), X.get("data/x/cycle.json")]).then(([g, c, cy]) => {
+  G = g; C = c; CY = cy;
   $("meta").textContent = `기준 ${X.ym(g.확정월)} (${X.ym(g.잠정월)} 잠정)`;
   const gus = Object.keys(g.구).sort();
   $("selGu").innerHTML = `<option value="">서울 전체</option>` + gus.map(x => `<option${x === S.gu ? " selected" : ""}>${x}</option>`).join("");
   $("foot").innerHTML = `자료: 국토부 실거래가(매매는 해제·직거래 제외, 분양권·입주권 포함).<br>` +
     `· 전고점 = 2021~22년 <b>일반 매매</b> 최고가, 전저점 = 전고점 이후 일반 매매 최저가(2건 이상이면 가장 낮은 1건은 급매로 보고 뺌). 분양권·입주권은 분양가·조합원 가격이라 사이클 판단에서 뺍니다.<br>` +
-    `· <b>판단 불가</b> = 신축·분양권만(2021~22 일반 매매 2건 미만, 분양권만 있었음) · 거래 2건 미만(구축인데 2021~22 일반 매매 부족) · 저≥고(전고점 뒤 최저가가 전고점보다 높음). <b>정비사업 진행</b> = 거래 절반 이상이 입주권. 모두 순위·회복률에서 뺍니다.<br>` +
+    `· <b>판단 불가</b> = 신축·분양권만(2021~22 일반 매매 2건 미만, 분양권만 있었음) · 거래 2건 미만(구축인데 2021~22 일반 매매 부족) · 저≥고(전고점 뒤 최저가가 전고점보다 높음). 신축(입주권 시절)(거래 절반 이상이 입주권이었지만 이미 준공). <b>정비사업 진행</b> = 거래 절반 이상이 입주권이고 아직 준공 전. 모두 순위·회복률에서 뺍니다.<br>` +
     `· 구 단위 지금 값은 <b>${X.ym(g.확정월)}</b> 기준입니다. 마지막 달(${X.ym(g.잠정월)})은 신고기한(30일)이 남아 거래가 덜 들어와 '잠정'으로 봅니다.<br>` +
     `· 회복률 = (지금 − 전저점) ÷ (전고점 − 전저점). 100% 넘으면 전고점 돌파.<br>` +
     `· 구 단위는 구 전체 84㎡ 거래의 3개월 이동 중간값으로 계산해 단지 단위와 숫자가 다를 수 있습니다.`;
-  renderPhase(); renderGu(); renderCx();
+  renderPhase(); renderGu(); renderCx(); initRep();
 }).catch(e => { $("guRows").innerHTML = `<div class="empty">자료를 불러오지 못했습니다.</div>`; console.error(e); });
 
 function cxNA(jb) {   // 시세는 있지만 사이클 판단을 못 하는 단지 (jb=true: 입주권 위주 = 정비사업 진행 단지만, false: 그 밖의 판단 불가)
@@ -114,11 +133,11 @@ function renderPhase() {
     `<div class="p4"><small>판단<br>불가</small><b class="num" id="ph4">0</b></div>`;
   [["ph1", n1], ["ph2", n2], ["ph3", n3], ["ph4", n4]].forEach(([id, v]) => X.count($(id), v, x => Math.round(x)));
   const wc = {}; NA.forEach(x => wc[x.why] = (wc[x.why] || 0) + 1);
-  const WN = { "신축": "신축·분양권만", "거래부족": "거래 2건 미만", "저≥고": "저≥고" };
+  const WN = { "신축": "신축·분양권만", "신축입주권": "신축(입주권 시절)", "거래부족": "거래 2건 미만", "저≥고": "저≥고" };
   $("phase").insertAdjacentHTML("beforeend", `<div style="grid-column:1/5;padding:8px 10px"><small>${S.area}㎡ 대표 단지 <b style="color:var(--ink)">${all}곳</b> = 돌파 ${n1} + 회복 중 ${n2} + 바닥권 ${n3} + 판단 불가 ${n4} + 정비사업 진행 ${n5}</small>` +
     `<div class="bar3"><i style="width:0;background:var(--up)"></i><i style="width:0;background:#c9ced4"></i><i style="width:0;background:var(--down)"></i><i style="width:0;background:#e4e6e9"></i><i style="width:0;background:#b9bec6"></i></div>` +
     (n4 ? `<div class="why">판단 불가 ${n4}곳: ${Object.keys(WN).filter(k => wc[k]).map(k => `${WN[k]} ${wc[k]}`).join(" · ")} <span style="color:var(--mute)">(아래 설명 참고)</span></div>` : "") +
-    (n5 ? `<div class="why">정비사업 진행 ${n5}곳: 거래 절반 이상이 입주권이라 순위·회복률에서 뺌 (단지별 목록 맨 아래)</div>` : "") + `</div>`);
+    (n5 ? `<div class="why">정비사업 진행 ${n5}곳: 아직 준공 전, 거래 절반 이상이 입주권 (단지별 목록 맨 아래)</div>` : "") + `</div>`);
   { const is = $("phase").querySelectorAll(".bar3 i"); [n1, n2, n3, n4, n5].forEach((v, i) => is[i].style.width = (v / all * 100) + "%"); }
 }
 const AX = [60, 130];   // 전고점=100 기준 축
@@ -139,6 +158,13 @@ function renderGu() {
   }).join("");
 }
 
+const zKey = z => z.id || z.구 + "|" + z.이름;
+function cyOf(z, c, A) { const Z = CY && CY.생활권[zKey(z)], d = Z && Z[A]; return d ? { Z: d, me: d.단지.find(y => y.id === c.id) } : null; }
+function cyLine(x) {
+  const r = cyOf(x.z, x.c, S.area); if (!r || !r.me) return "";
+  const n = r.Z.단지.length;
+  return `<div class="sub2" style="grid-column:1/3">하락기 거래 <b>${r.me.거래}건</b> (생활권 ${n}곳 중 ${r.me.거래순위}위) · 저점 뒤 상승 <b class="${r.me.상승률 > 0 ? "up" : "down"}">${X.pct(r.me.상승률, 0)}</b> (생활권 ${r.me.상승률순위}위)</div>`;
+}
 function renderCx() {
   $("segArea").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === S.area));
   $("segCx").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === S.cx));
@@ -158,13 +184,52 @@ function renderCx() {
     return `<div class="row cx"><div class="nm"><b>${X.esc(x.c.이름)}</b>${x.a.확정전 ? ' <span class="tag old">이번 달 거래 포함</span>' : ""}<small>${x.z.구} ${X.esc(x.z.이름)} · ${x.c.준공 || "-"}년${x.c.세대수 ? " · " + x.c.세대수.toLocaleString() + "세대" : ""}</small></div>` +
       `<div class="v num ${cls}">${X.pct(x.vs, 0)}<small>고점대비</small></div>` +
       `<div class="dbw" style="grid-column:1/3"><span class="pk100" style="left:${P(100)}%"></span>${X.dumbbell(100, rel(x.pk, x.lo), rel(x.pk, x.cur), AX[0], AX[1]).replace('class="cur "', `class="cur ${cls}"`)}</div>` +
-      `<div class="nums"><span>고 ${X.eok(x.pk)} <small>${X.ym(Math.floor(x.a.전고점[1] / 100))}</small></span><span>저 ${X.eok(x.lo)} <small>${X.ym(Math.floor(x.a.전저점[1] / 100))}</small></span><span><b style="color:var(--ink)">지금 ${X.eok(x.cur)}</b></span></div></div>`;
+      cyLine(x) + `<div class="nums"><span>고 ${X.eok(x.pk)} <small>${X.ym(Math.floor(x.a.전고점[1] / 100))}</small></span><span>저 ${X.eok(x.lo)} <small>${X.ym(Math.floor(x.a.전저점[1] / 100))}</small></span><span><b style="color:var(--ink)">지금 ${X.eok(x.cur)}</b></span></div></div>`;
   }).join("") + (L.length > LIMIT ? `<button class="more" id="more">더 보기 (${L.length - LIMIT}곳 더)</button>` : "") + jbHtml;
   const m = $("more"); if (m) m.onclick = () => { LIMIT += 30; renderCx(); };
 }
 
+// 단지 사이클 성적표: 검색 → 이 단지 vs 같은 생활권 평균 (낙폭·하락기 거래·상승률·회복률) + 서울 순위
+let RALL = [];
+function initRep() {
+  C.생활권.forEach(z => (C.단지[z.구][z.이름] || []).forEach(c => RALL.push({ z, c, key: X.nz(c.이름 + c.검색명 + z.이름), ch: X.cho(X.nz(c.이름 + c.검색명)) })));
+  const saved = X.store.get("silgeorae_cycle_rep", null), q = X.qs();
+  const pickId = q.cx || saved;
+  const hit = pickId && RALL.find(r => r.c.id === pickId);
+  if (hit) showRep(hit);
+  $("rq").oninput = () => {
+    const t = X.nz($("rq").value), isC = /^[ㄱ-ㅎ]+$/.test(t);
+    const r = t ? RALL.filter(x => isC ? x.ch.includes(t) : x.key.includes(t)).slice(0, 8) : [];
+    $("rsug").innerHTML = r.map(x => `<button data-id="${X.esc(x.c.id)}">${X.esc(x.c.이름)}<small>${x.z.구} ${X.esc(x.z.이름)}</small></button>`).join("");
+  };
+  $("rsug").onclick = e => { const b = e.target.closest("button"); if (!b) return; const x = RALL.find(r => r.c.id === b.dataset.id); $("rq").value = ""; $("rsug").innerHTML = ""; X.store.set("silgeorae_cycle_rep", x.c.id); showRep(x); };
+}
+function seoulRank(A, key, val) {   // 서울 전체 대표 단지 중 순위 (큰 값이 1위)
+  const all = []; Object.values(CY.생활권).forEach(Z => Z[A] && Z[A].단지.forEach(y => all.push(y[key])));
+  return { n: all.length, r: all.filter(v => v > val).length + 1 };
+}
+function showRep(x) {
+  const A = x.c[S.area] ? S.area : (x.c["84"] ? "84" : "59"), a = x.c[A], r = cyOf(x.z, x.c, A);
+  let h = `<div class="rp"><div class="hd"><b>${X.esc(x.c.이름)} <span class="tag">${A}㎡</span></b><small>${x.z.구} ${X.esc(x.z.이름)}</small></div>`;
+  if (!r || !r.me) {
+    const why = a && a.사이클 ? ({ "신축": "신축·분양권만", "신축입주권": "신축(입주권 시절)", "입주권": "정비사업 진행(아직 준공 전)", "거래부족": "2021~22 일반 매매 2건 미만", "저≥고": "전고점 뒤 최저가가 전고점보다 높음" }[a.사이클.이유] || "") : "거래 없음";
+    h += `<div class="na">사이클 판단 불가 — ${why}. 순위·평균 비교에서 뺍니다.</div></div>`;
+    $("rep").innerHTML = h; return;
+  }
+  const m = r.me, av = r.Z.평균, n = r.Z.단지.length, sR = seoulRank(A, "상승률", m.상승률), sD = seoulRank(A, "낙폭", m.낙폭);
+  const cmp = (v, w, unit, good) => { const d = v - w; const cls = d === 0 ? "" : (good ? d > 0 : d < 0) ? "up" : "down"; return `<small class="${cls}">평균보다 ${d > 0 ? "+" : ""}${Math.round(d * 10) / 10}${unit}</small>`; };
+  h += X.dumbbell(m.고, m.저, m.지금, Math.min(m.저, m.지금) * 0.93, Math.max(m.고, m.지금) * 1.05) +
+    `<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub)"><span>저 ${X.eok(m.저)}</span><span>고 ${X.eok(m.고)}</span><span><b style="color:var(--ink)">지금 ${X.eok(m.지금)}</b></span></div>` +
+    `<table><tr><th style="width:30%">항목</th><th>이 단지</th><th>생활권 평균 <small style="display:inline">(${n}곳)</small></th></tr>` +
+    `<tr><td>하락기 낙폭<small>전고점→전저점</small></td><td><b class="down">${X.pct(m.낙폭, 1)}</b>${cmp(m.낙폭, av.낙폭, "%p", true)}<small>생활권 ${m.낙폭순위}위 · 서울 ${sD.r}/${sD.n}</small></td><td>${X.pct(av.낙폭, 1)}</td></tr>` +
+    `<tr><td>하락기 거래<small>${X.ym(CY.하락기[0])}~${X.ym(CY.하락기[1])}</small></td><td><b>${m.거래}건</b>${cmp(m.거래, av.거래, "건", true)}<small>생활권 ${m.거래순위}위</small></td><td>${av.거래}건</td></tr>` +
+    `<tr><td>저점 뒤 상승<small>전저점→지금</small></td><td><b class="up">${X.pct(m.상승률, 1)}</b>${cmp(m.상승률, av.상승률, "%p", true)}<small>생활권 ${m.상승률순위}위 · 서울 ${sR.r}/${sR.n}</small></td><td>${X.pct(av.상승률, 1)}</td></tr>` +
+    `<tr><td>회복률<small>(지금−저)÷(고−저)</small></td><td><b>${m.회복률}%</b>${cmp(m.회복률, av.회복률, "%p", true)}</td><td>${Math.round(av.회복률)}%</td></tr></table>` +
+    `<div class="sub2" style="margin-top:6px">${r.Z.잘팔린.includes(m.id) ? "★ 생활권 '하락기에도 잘 팔린 단지' 상위 3에 들어감 · " : ""}하락기 = 서울 84㎡ 시세가 정점이던 ${X.ym(CY.하락기[0])}부터 바닥이던 ${X.ym(CY.하락기[1])}까지 (모든 단지 같은 구간)</div></div>`;
+  $("rep").innerHTML = h;
+}
 $("segGuSort").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.guSort = b.dataset.v; save(); renderGu(); };
-$("segArea").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.area = b.dataset.v; LIMIT = 30; save(); renderPhase(); renderCx(); };
+$("segArea").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.area = b.dataset.v; LIMIT = 30; save(); renderPhase(); renderCx(); const id = X.store.get("silgeorae_cycle_rep", null), x = id && RALL.find(r => r.c.id === id); if (x) showRep(x); };
 $("segCx").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.cx = b.dataset.v; LIMIT = 30; save(); renderCx(); };
 $("selGu").onchange = e => { S.gu = e.target.value; LIMIT = 30; save(); renderCx(); };
 </script>

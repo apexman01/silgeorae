@@ -289,6 +289,22 @@
   #segJb small{font-size:12px;opacity:.75;margin-left:3px}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);margin-left:10px;cursor:pointer;vertical-align:middle}
   .chk input{width:18px;height:18px;accent-color:var(--ink)}
+  #soldCard .gsrc{font-size:12.5px;margin:6px 1px 0;line-height:1.5}
+  #soldCard .gsrc summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;list-style:none}
+  #soldCard .gsrc .gs1{color:var(--mute);font-size:12px}
+  #soldCard .gsrc .gs2{color:#1f56b3;white-space:nowrap;font-size:11px}
+  #soldCard .gsrc[open] .gs2{color:var(--mute)}
+  #soldCard .gsrc summary::-webkit-details-marker{display:none}
+  #soldCard .gsrc > div{margin-top:6px;padding:8px 11px;background:#f6f7f9;border-radius:8px;color:var(--sub);font-size:12.5px}
+  #soldCard .gsrc p{margin:2px 0}
+  #soldCard .gsrc p b{color:var(--ink);font-weight:600;margin-right:6px}
+  a.sold{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);text-decoration:none;color:inherit}
+  a.sold .sk{flex:none;width:24px;height:24px;border-radius:50%;background:#1f9d6b;color:#fff;font-size:12.5px;font-weight:700;display:grid;place-items:center}
+  a.sold .sn{flex:1;min-width:0}
+  a.sold .sn b{display:block;font-size:14.5px}
+  a.sold .sn small{display:block;font-size:12px;color:var(--sub,#5b616b);margin-top:1px}
+  a.sold .sv{flex:none;text-align:right;font-size:11px;color:var(--sub,#5b616b)}
+  a.sold .sv b{display:block;font-size:15px;color:#d9443a}
   .lzsum{margin:10px 0 2px;padding:10px 12px;border-radius:10px;background:#f6f8fb;font-size:13.5px;line-height:1.55;color:var(--ink)}
   .lzsum b{display:block;font-size:13px;margin-bottom:2px}
   .lzsum span{display:block}
@@ -448,6 +464,7 @@
     <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="sumCard">이미지로 저장 ↓</button></div>
   </div>
 
+  <div class="card vt-only" id="soldCard" style="display:none"></div>
   <div class="card vt-only" id="jbCard" style="display:none"></div>
 
   <div class="card vt-only">
@@ -567,6 +584,24 @@ function shareLink() {   // 지금 보는 구·생활권 주소 (카페 글에 �
   (navigator.clipboard ? navigator.clipboard.writeText(u.toString()).then(() => toast(msg)) : Promise.reject()).catch(() => window.prompt("아래 주소를 길게 눌러 복사하세요", u.toString()));
 }
 $("shareBtn").onclick = shareLink;
+/* 하락기에도 잘 팔린 단지 (data/x/cycle.json, build_beta.js) — 생활권 보기 탭 카드 */
+let CYC = null;
+fetch("data/x/cycle.json", { cache: "no-cache" }).then(r => r.json()).then(j => { CYC = j; if (state.tab === "view" && typeof DATA !== "undefined" && DATA) renderSold(zonesFor(state.sido, state.gu)[state.zone]); }).catch(() => {});
+function renderSold(z) {
+  const el = $("soldCard"), Z = CYC && z && z.kind === "base" && CYC.생활권[z.id || state.gu + "|" + z.name];
+  const A = state.area === "59" ? "59" : "84", d = Z && (Z[A] || Z[A === "84" ? "59" : "84"]);
+  if (!d || d.잘팔린.length < 1 || d.단지.length < 2) { el.style.display = "none"; return; }
+  const AA = Z[A] ? A : (A === "84" ? "59" : "84"), n = d.단지.length, w = CYC.하락기, ym = v => `${String(v).slice(2, 4)}.${String(v).slice(4, 6)}`;
+  const pc = v => (v > 0 ? "+" : "") + Math.round(v) + "%";
+  el.style.display = "";
+  el.innerHTML = `<h2 style="font-size:17px;margin:0 0 2px">하락기에도 잘 팔린 단지</h2>
+    <div class="hint" style="margin-bottom:6px">${z.name} · ${AA}㎡ · 서울 하락기 ${ym(w[0])}~${ym(w[1])} · 대표 단지 ${n}곳 중</div>` +
+    d.잘팔린.map((id, k) => { const x = d.단지.find(y => y.id === id); return `<a class="sold" href="cycle.html?cx=${encodeURIComponent(id)}"><span class="sk">${k + 1}</span><span class="sn"><b>${x.이름}</b><small>하락기 거래 ${x.거래}건 (${x.거래순위}위) · 낙폭 ${pc(x.낙폭)} (${x.낙폭순위}위)</small></span><span class="sv">저점 뒤<b>${pc(x.상승률)}</b></span></a>`; }).join("") +
+    `<details class="gsrc" style="margin-top:6px"><summary><span class="gs2">ⓘ 고른 기준</span></summary><div>
+      <p><b>하락기</b> 서울 84㎡ 시세(25개 구 3개월 이동 중간값의 중간값)가 2021~22년 가장 높던 달(${ym(w[0])})부터 그 뒤 가장 낮던 달(${ym(w[1])})까지. 모든 단지를 같은 구간으로 봅니다.</p>
+      <p><b>하락기 거래</b> 그 구간 ${AA}㎡ 일반 매매 건수(분양권·입주권 제외). <b>낙폭</b> 단지 전고점→전저점 하락률. 순위는 생활권 대표 단지끼리.</p>
+      <p><b>잘 팔린 순서</b> 거래 순위 + 낙폭 순위(덜 빠진 쪽이 위)의 합이 작은 순. 신축·거래 부족 등 사이클 판단이 안 되는 단지는 뺍니다. 누르면 그 단지 사이클 성적표로 갑니다.</p></div></details>`;
+}
 fetch("data/lz_summary.json", { cache: "no-cache" }).then(r => r.json()).then(j => { window.LZSUM = j; if (state.tab === "view" && typeof DATA !== "undefined" && DATA) renderGuInfo(); }).catch(() => {});
 function initZone(keep) {
   const zs = zonesFor(state.sido, state.gu);
@@ -821,7 +856,7 @@ function render() {
   $("selZone").disabled = topMode;
   $("picker").classList.toggle("show", !topMode && (z.kind === "pick" || z.kind === "custom"));
   $("segArea").style.opacity = lockArea ? .4 : 1; $("segArea").title = lockArea ? "TOP5는 단지마다 거래 많은 평형을 자동으로 보여줘요" : "";
-  renderGuInfo(z); renderTransit(z);
+  renderGuInfo(z); renderTransit(z); renderSold(z);
   const list = currentComplexes();
   const card = $("chartCard");
   const typeLabel = state.type === "sale" ? "실거래가" : "전세가";
