@@ -1868,9 +1868,35 @@ function goZone(gu, zi) {
   loadGu(state.sido, gu, () => { initZone(); state.zone = Math.max(0, zi); $("selZone").value = state.zone; setTab("view"); onZoneChange(); window.scrollTo(0, 0); });
 }
 $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => setTab(b.dataset.t));
+/* 생활권 대표 단지 목록을 강의자료(lifezones.js) 대신 단지 마스터(가격순 자동 선정, build_master.js)로 바꿔치기.
+ * 법정동이 다른 생활권과 겹치면(동대문구 청량리↔전농·답십리 등) 단지 마스터도 강의자료 목록을 그대로 쓰므로 바뀌는 게 없음.
+ * 초기 렌더 전에 미리 받아서, 바뀐 목록으로 바로 그림(깜빡임 없음). 못 받아도(네트워크 등) 강의자료 그대로 보여줌. */
+async function patchZonesFromMaster() {
+  try {
+    const r = await fetch("data/master/complexes.json", { cache: "no-cache" });
+    if (!r.ok) return;
+    const j = await r.json();
+    const byZone = {};
+    j.단지.forEach(x => (byZone[x.구 + "|" + x.생활권이름] = byZone[x.구 + "|" + x.생활권이름] || []).push(x));
+    for (const [gu, zs] of Object.entries((LIFEZONES["서울특별시"] || {}))) {
+      zs.forEach(z => {
+        const items = byZone[gu + "|" + z.name];
+        if (!items || !items.length) return;   // 단지 마스터에 없으면(아직 안 만들어졌거나) 강의자료 그대로
+        const short = {}, hh = {};
+        z.complexes = items.map(x => {
+          const names = (x.실거래 && x.실거래.length) ? x.실거래.map(t => t.이름) : [x.이름];
+          const tag = x.동 && x.동.length === 1 ? "@" + x.동[0] : "";
+          const n = names.map(nm => nm + tag).join("|");
+          short[n] = x.이름; if (x.세대수) hh[n] = x.세대수;
+          return n;
+        });
+        z.short = short; z.hh = hh;
+      });
+    }
+  } catch (e) { console.error(e); }
+}
 setRange(Math.max(0, N - 12), N - 1);
-initSido();
-showPeriod();
+patchZonesFromMaster().finally(() => { initSido(); showPeriod(); });
 let _rw = 0; window.addEventListener("resize", () => { const w = $("chartCard").clientWidth; if (Math.abs(w - _rw) > 40) { _rw = w; render(); } });
 </script>
 <script src="nav.js"></script>
