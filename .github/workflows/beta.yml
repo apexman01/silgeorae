@@ -49,6 +49,12 @@ jobs:
       - name: 단지 마스터 (K-apt 코드 ID · 세대수 · 정비사업 연결)
         run: node scripts/build_master.js
 
+      - name: K-apt 사용승인일(연월) 받기 (최근 준공 단지만 → data/master/kapt_usedate.json)
+        continue-on-error: true
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: python3 scripts/fetch_usedate_beta.py
+
       - name: 시세 요약 파일 (임장기록용)
         run: node scripts/build_summary.js
 
@@ -59,7 +65,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/beta/data/summary docs/beta/data/x docs/beta/data/jb.js docs/beta/data/master data/jb_auto
+          git add docs/beta/data/summary docs/beta/data/x docs/beta/data/jb.js docs/beta/data/master data/jb_auto data/master
           if git diff --cached --quiet; then
             echo "바뀐 것 없음"
           else

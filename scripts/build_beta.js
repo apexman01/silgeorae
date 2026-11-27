@@ -13,7 +13,8 @@
  *       전고점 = 2021~2022년 일반 매매 최고가, 전저점 = 전고점 이후 일반 매매 최저가(2건 이상이면 가장 낮은 1건은 급매로 보고 제외)
  *         분양권·입주권은 분양가·조합원 가격이라 사이클 판단에서 뺌. 판단 못 하면 사이클 = {판정:"불가", 이유}
  *         이유: 신축(21~22 일반 매매 2건 미만 + 분양권 거래 있음/2021년 이후 준공) · 입주권(거래의 절반 이상이 입주권)
- *               · 신축입주권(입주권 위주였지만 이미 준공: 준공 연도가 올해 이전이거나 일반 매매가 있음)
+ *               · 신축입주권(입주권 위주였지만 이미 준공: 준공(사용승인) 연월 ≤ 자료 기준월이거나 일반 매매가 있음)
+ *                 준공 연월 = data/master/kapt_usedate.json(K-apt 자동) → data/master/usedate.json(손 확인) 순. 연도만 알면 그 해가 기준월보다 앞일 때만 준공으로 봄
  *               · 거래부족(구축인데 21~22 일반 매매 2건 미만, 또는 전고점 뒤 거래 없음) · 저≥고
  *  - 마지막 달(자료의 마지막 월)은 신고기한(30일)이 남아 '잠정'. 구 대표 숫자(현재·회복률·전세가율)는 그 직전 달(확정월) 기준
  *       전세 = 신규 계약 4층 이상 최근 6개월 중간값(3건 미만이면 12개월, 같은 보증금 3건 이상 반복=임대 물량 제외)
@@ -50,6 +51,14 @@ const months = INDEX.months, lastYm = months[months.length - 1];
 const idxOf = {}; months.forEach((m, i) => idxOf[m] = i);
 const from6 = months[Math.max(0, months.length - 6)], from12 = months[Math.max(0, months.length - 12)];
 const PEAK_FROM = 202101, PEAK_TO = 202212;
+// 준공(사용승인) 연월 YYYYMM: K-apt 자동(전체 날짜) → 손 확인 파일(예정 제외)
+const USE_YM = {};
+{
+  const rd = f => { const p = path.join(ROOT, f); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")).단지 || {} : {}; };
+  for (const [id, v] of Object.entries(rd("data/master/usedate.json"))) if (!v.예정 && /^\d{6}$/.test(v.연월)) USE_YM[id] = { 연월: +v.연월, 출처: "손 확인(" + v.기준 + ")" };
+  const ka = rd("data/master/kapt_usedate.json");
+  Object.values(MASTER).forEach(x => (x.kapt || []).forEach(k => { const d = ka[k.코드]; if (d && /^\d{6}/.test(d)) USE_YM[x.id] = { 연월: +d.slice(0, 6), 출처: "K-apt 사용승인일 " + d }; }));
+}
 
 /* ---------- 1) 지도 ---------- */
 function buildMap() {
@@ -104,7 +113,7 @@ function peakTrough(series) {   // 월별 값 [..] → 전고점(21~22) · 이�
   };
 }
 function cleanJeonse(rs) { const c = {}; rs.forEach(r => c[r[4]] = (c[r[4]] || 0) + 1); const k = rs.filter(r => c[r[4]] < 3); return k.length ? k : rs; }
-function cxArea(sale, jeon, lo, hi, built, win) {
+function cxArea(sale, jeon, lo, hi, built, win, useYm) {
   const rs = sale.filter(r => r[1] >= lo && r[1] < hi).sort((a, b) => key(a) - key(b));
   if (!rs.length) return null;
   const out = {};
@@ -126,8 +135,8 @@ function cxArea(sale, jeon, lo, hi, built, win) {
   let why = null;
   if (pk.length < 2) {
     if (nIp / rs.length >= 0.5) {
-      // 입주권 위주: 이미 준공(준공 연도가 올해 이전이거나 일반 매매가 있음)이면 '신축(입주권 시절)', 아직이면 '정비사업 진행'
-      const done = (built && +built < +String(lastYm).slice(0, 4)) || gen.length > 0;
+      // 입주권 위주: 이미 준공(사용승인 연월 ≤ 자료 기준월, 연월을 모르면 준공 연도 < 기준월 연도, 또는 일반 매매 있음)이면 '신축(입주권 시절)', 아직이면 '정비사업 진행'
+      const done = (useYm ? useYm <= lastYm : !!(built && +built < Math.floor(lastYm / 100))) || gen.length > 0;
       why = done ? "신축입주권" : "입주권";
     }
     else if (rs.some(r => r[6] === "분양권" && r[2] <= PEAK_TO) || (built && +built >= 2021)) why = "신축";
@@ -210,8 +219,9 @@ function buildData() {
         cxs.forEach(x => { (byIdx.get(x.i) || []).forEach(r => sale.push(r)); (jbIdx.get(x.i) || []).forEach(r => jeon.push(r)); });
         const mx = MASTER[gu + "|" + z.name + "|" + base] || {};
         const item = { id: mx.id || null, 이름: base, 검색명: cxs[0].name, 준공: info.준공 || null, 세대수: info.세대수 || mx.세대수 || null, 법정동: info.법정동 || cxs[0].dong };
+        const uy = mx.id && USE_YM[mx.id]; if (uy) item.준공월 = uy;
         const win = SEOUL_WIN;
-        for (const [a, [lo, hi]] of Object.entries(AREAS)) { const v = cxArea(sale, jeon, lo, hi, item.준공 || D.complexes[cxs[0].i][4], win); if (v) item[a] = v; }
+        for (const [a, [lo, hi]] of Object.entries(AREAS)) { const v = cxArea(sale, jeon, lo, hi, item.준공 || mx.준공 || D.complexes[cxs[0].i][4], win, uy && uy.연월); if (v) item[a] = v; }
         list.push(item);
       });
       list.sort((a, b) => (b.세대수 || 0) - (a.세대수 || 0));
@@ -245,7 +255,7 @@ ZONES.forEach(z => {
   ["84", "59"].forEach(A => {
     const L = list.filter(c => c[A] && c[A].사이클 && c[A].사이클.판정 === "가능" && c[A].하락기).map(c => {
       const a = c[A], rec = (a.시세 - a.전저점[0]) / (a.전고점[0] - a.전저점[0]) * 100;
-      return { id: c.id, 이름: c.이름, 세대수: c.세대수, 거래: a.하락기.거래, 낙폭: a.낙폭, 상승률: a.상승률, 회복률: Math.round(rec), 고: a.전고점[0], 저: a.전저점[0], 지금: a.시세 };
+      return { id: c.id, 이름: c.이름, 세대수: c.세대수, 거래: a.하락기.거래, 회전율: c.세대수 ? Math.round(a.하락기.거래 / c.세대수 * 1000) / 10 : null, 낙폭: a.낙폭, 상승률: a.상승률, 회복률: Math.round(rec), 고: a.전고점[0], 저: a.전저점[0], 지금: a.시세 };
     });
     if (!L.length) return;
     const rankOf = (key, desc) => { const s = L.slice().sort((x, y) => desc ? y[key] - x[key] : x[key] - y[key]); L.forEach(x => x[key + "순위"] = s.findIndex(y => y[key] === x[key]) + 1); };

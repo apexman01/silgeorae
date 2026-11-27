@@ -596,10 +596,10 @@ function renderSold(z) {
   el.style.display = "";
   el.innerHTML = `<h2 style="font-size:17px;margin:0 0 2px">하락기에도 잘 팔린 단지</h2>
     <div class="hint" style="margin-bottom:6px">${z.name} · ${AA}㎡ · 서울 하락기 ${ym(w[0])}~${ym(w[1])} · 대표 단지 ${n}곳 중</div>` +
-    d.잘팔린.map((id, k) => { const x = d.단지.find(y => y.id === id); return `<a class="sold" href="cycle.html?cx=${encodeURIComponent(id)}"><span class="sk">${k + 1}</span><span class="sn"><b>${x.이름}</b><small>하락기 거래 ${x.거래}건 (${x.거래순위}위) · 낙폭 ${pc(x.낙폭)} (${x.낙폭순위}위)</small></span><span class="sv">저점 뒤<b>${pc(x.상승률)}</b></span></a>`; }).join("") +
+    d.잘팔린.map((id, k) => { const x = d.단지.find(y => y.id === id); return `<a class="sold" href="cycle.html?cx=${encodeURIComponent(id)}"><span class="sk">${k + 1}</span><span class="sn"><b>${x.이름}</b><small>하락기 거래 ${x.거래}건 (${x.거래순위}위)${x.회전율 != null ? ` <span style="color:var(--sub,#888)">세대수 대비 ${x.회전율}%</span>` : ""} · 낙폭 ${pc(x.낙폭)} (${x.낙폭순위}위)</small></span><span class="sv">저점 뒤<b>${pc(x.상승률)}</b></span></a>`; }).join("") +
     `<details class="gsrc" style="margin-top:6px"><summary><span class="gs2">ⓘ 고른 기준</span></summary><div>
       <p><b>하락기</b> 서울 84㎡ 시세(25개 구 3개월 이동 중간값의 중간값)가 2021~22년 가장 높던 달(${ym(w[0])})부터 그 뒤 가장 낮던 달(${ym(w[1])})까지. 모든 단지를 같은 구간으로 봅니다.</p>
-      <p><b>하락기 거래</b> 그 구간 ${AA}㎡ 일반 매매 건수(분양권·입주권 제외). <b>낙폭</b> 단지 전고점→전저점 하락률. 순위는 생활권 대표 단지끼리.</p>
+      <p><b>하락기 거래</b> 그 구간 ${AA}㎡ 일반 매매 건수(분양권·입주권 제외). <b>낙폭</b> 단지 전고점→전저점 하락률. 순위는 생활권 대표 단지끼리. <b>세대수 대비</b> 하락기 거래 ÷ 단지 전체 세대수(모든 평형)×100 — 큰 단지가 거래가 많아 보이는 것을 감안해 보라는 보조 숫자(순서에는 안 씀).</p>
       <p><b>잘 팔린 순서</b> 거래 순위 + 낙폭 순위(덜 빠진 쪽이 위)의 합이 작은 순. 신축·거래 부족 등 사이클 판단이 안 되는 단지는 뺍니다. 누르면 그 단지 사이클 성적표로 갑니다.</p></div></details>`;
 }
 fetch("data/lz_summary.json", { cache: "no-cache" }).then(r => r.json()).then(j => { window.LZSUM = j; if (state.tab === "view" && typeof DATA !== "undefined" && DATA) renderGuInfo(); }).catch(() => {});
