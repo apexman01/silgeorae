@@ -30,6 +30,7 @@
   .trs div:first-child{border-top:0}
   .trs b{color:var(--ink)}
   .loc{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kpi em span{font-size:inherit}
   .loc div{background:var(--bg);border-radius:12px;padding:10px}
   .loc small{display:block;font-size:11.5px;color:var(--sub)}
   .loc b{font-size:22px}
@@ -60,8 +61,8 @@
 <script src="nav.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const KEY = "silgeorae_mine_v1";
-let C, ALL = [], ME = X.store.get(KEY, null);
+const KEY = "silgeorae_mine_v1", TKEY = "silgeorae_target_v1";   // 내 집 · 가고 싶은 집 (이 기기에만 저장)
+let C, ALL = [], ME = X.store.get(KEY, null), TG = X.store.get(TKEY, null), TPICK = false, ALT_N = 8;
 
 X.get("data/x/cx.json").then(c => {
   C = c; $("meta").textContent = `기준 ${X.ym(c.기준월)}`;
@@ -73,18 +74,53 @@ X.get("data/x/cx.json").then(c => {
 }).catch(e => { $("out").innerHTML = `<div class="empty">자료를 불러오지 못했습니다.</div>`; console.error(e); });
 
 function find(m) { return ALL.find(x => x.id === m.id); }
+function searchBox(box, ph, onPick) {   // 단지 검색 (이름·초성)
+  box.innerHTML = `<div class="search"><input type="search" placeholder="${ph}" autocomplete="off"><div class="sug" hidden></div></div>`;
+  const q = box.querySelector("input"), sug = box.querySelector(".sug"); q.focus();
+  q.oninput = () => {
+    const t = X.nz(q.value), isC = /^[ㄱ-ㅎ]+$/.test(t);
+    const r = t ? ALL.filter(x => isC ? X.cho(X.nz(x.c.이름 + x.c.검색명)).includes(t) : X.nz(x.c.이름 + x.c.검색명 + x.z.이름 + x.z.구).includes(t)).slice(0, 12) : [];
+    sug.hidden = !r.length;
+    sug.innerHTML = r.map(x => `<button data-id="${X.esc(x.id)}">${X.esc(x.c.이름)}<small>${x.z.구} ${X.esc(x.z.이름)} · ${x.c.준공 || "-"}년${x.c.세대수 ? " · " + x.c.세대수.toLocaleString() + "세대" : ""}</small></button>`).join("");
+  };
+  sug.onclick = e => { const b = e.target.closest("button"); if (!b) return; onPick(ALL.find(y => y.id === b.dataset.id)); };
+}
 function pick() {
   $("out").innerHTML = "";
-  $("pickBox").innerHTML = `<div class="search"><input id="q" type="search" placeholder="단지 이름 검색 (예: 고덕그라시움, 마포래미안)" autocomplete="off"><div class="sug" id="sug" hidden></div></div>` +
-    `<div class="empty" style="margin-top:12px">내 단지(또는 관심 단지)를 검색해서 고르세요.</div>`;
-  const q = $("q"); q.focus();
-  q.oninput = () => {
-    const t = q.value.replace(/\s+/g, "").toLowerCase();
-    const r = t ? ALL.filter(x => (x.c.이름 + x.c.검색명 + x.z.이름 + x.z.구).replace(/\s+/g, "").toLowerCase().includes(t)).slice(0, 12) : [];
-    $("sug").hidden = !r.length;
-    $("sug").innerHTML = r.map(x => `<button data-id="${X.esc(x.id)}">${X.esc(x.c.이름)}<small>${x.z.구} ${X.esc(x.z.이름)} · ${x.c.준공 || "-"}년${x.c.세대수 ? " · " + x.c.세대수.toLocaleString() + "세대" : ""}</small></button>`).join("");
-  };
-  $("sug").onclick = e => { const b = e.target.closest("button"); if (!b) return; const x = ALL.find(y => y.id === b.dataset.id); ME = { id: x.id, area: x.c["84"] ? "84" : "59" }; X.store.set(KEY, ME); show(); };
+  $("pickBox").innerHTML = `<div id="pb"></div><div class="empty" style="margin-top:12px">내 단지(또는 관심 단지)를 검색해서 고르세요.</div>`;
+  searchBox($("pb"), "단지 이름·초성 (예: 고덕그라시움, ㄱㄷㄱㄹ)", x => { ME = { id: x.id, area: x.c["84"] ? "84" : "59" }; X.store.set(KEY, ME); show(); });
+}
+// 순위: 같은 평형 시세가 높은 순 (생활권 안 / 서울 전체 대표 단지)
+function ranks(x, A) {
+  const v = x.c[A] && x.c[A].시세; if (!v) return null;
+  const all = ALL.filter(y => y.c[A] && y.c[A].시세).map(y => y.c[A].시세), zone = ALL.filter(y => y.z === x.z && y.c[A] && y.c[A].시세).map(y => y.c[A].시세);
+  return { z: zone.filter(w => w > v).length + 1, zn: zone.length, s: all.filter(w => w > v).length + 1, sn: all.length };
+}
+// 가고 싶은 집 카드: 생활권 안 순위 + 내 집과의 가격 차이 추이 (월별 중간값, 거래 없는 달은 앞 달 값으로 이어 봄)
+function targetCard(me, A) {
+  if (TPICK || !TG || !ALL.find(y => y.id === TG.id)) return `<div class="card rise" style="animation-delay:.26s" id="tgCard"><h2>가고 싶은 집 <small>내 집과 비교 · 이 기기에만 저장</small></h2><div id="tgBox"></div>` +
+    (TG && !TPICK ? "" : `<div style="font-size:12.5px;color:var(--mute);margin-top:6px">목표 단지를 고르면 그 생활권 안 순위와, 내 집과의 가격 차이가 어떻게 변해 왔는지 그래프로 보여 줍니다.</div>`) + `</div>`;
+  const t = ALL.find(y => y.id === TG.id), TA = t.c[A] ? A : (t.c["84"] ? "84" : "59"), ta = t.c[TA], ma = me.c[A];
+  const rk = ranks(t, TA);
+  const mm = new Map((ma.월별 || []).map(([m, v]) => [m, v])), tm = new Map((ta.월별 || []).map(([m, v]) => [m, v]));
+  const ms = C.월 || [...new Set([...mm.keys(), ...tm.keys()])].sort();
+  let lm = null, lt = null; const diff = [];
+  ms.forEach((m, i) => { if (mm.has(m)) lm = mm.get(m); if (tm.has(m)) lt = tm.get(m); if (lm != null && lt != null) diff.push([Math.floor(m / 100) * 12 + m % 100, lt - lm, m]); });
+  const now = ta.시세 && ma.시세 ? ta.시세 - ma.시세 : null;
+  const yAgo = diff.filter(d => d[2] <= (Math.floor(C.확정월 / 100) - 1) * 100 + C.확정월 % 100).pop();
+  const lo = diff.length ? Math.min(...diff.map(d => d[1])) : 0, hi = diff.length ? Math.max(...diff.map(d => d[1])) : 0;
+  const minD = diff.find(d => d[1] === lo), maxD = diff.find(d => d[1] === hi);
+  return `<div class="card rise" style="animation-delay:.26s" id="tgCard"><h2>가고 싶은 집 <small>내 집과 비교 · 이 기기에만 저장</small></h2>` +
+    `<div class="hd"><div class="t"><h2 style="font-size:17px">${X.esc(t.c.이름)} <span class="tag">${TA}㎡</span></h2><small>${t.z.구} ${X.esc(t.z.이름)} · 생활권 서열 ${t.z.중간순위 || "-"}위</small></div><button class="chg" id="tgChg">바꾸기</button></div>` +
+    `<div class="kpi"><div><small>목표 시세</small><b class="num">${X.eok(ta.시세)}</b><em>${ta.시세근거 ? ta.시세근거.층조건 + " 최근 " + ta.시세근거.건수 + "건 중간값" : "-"}</em></div>` +
+    `<div><small>지금 가격 차이</small><b class="num ${now > 0 ? "up" : "down"}">${now == null ? "-" : (now > 0 ? "+" : "−") + X.eok(Math.abs(now))}</b><em>목표 − 내 집</em></div>` +
+    `<div><small>생활권 안 순위</small><b class="num">${rk ? rk.z : "-"}<span style="font-size:13px;color:var(--mute)"> / ${rk ? rk.zn : "-"}</span></b><em>${t.z.이름} 대표 단지 ${TA}㎡ 시세 순</em></div>` +
+    `<div><small>서울 순위</small><b class="num">${rk ? rk.s : "-"}<span style="font-size:13px;color:var(--mute)"> / ${rk ? rk.sn : "-"}</span></b><em>서울 대표 단지 ${TA}㎡</em></div></div>` +
+    (diff.length > 2 ? `<div class="lbl" style="margin:12px 0 4px">가격 차이 추이 <small style="font-weight:400;color:var(--mute)">(목표 − 내 집, 월별 중간값)</small></div>` +
+      X.spark(diff.map(d => [d[0], d[1]]), { w: 600, h: 140, c: "#7a4fd6", fill: "#efe9fb", lines: [{ y: 0, c: "#9aa0a8", t: "차이 0" }], extra: [0] }) +
+      `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mute)"><span>${X.ym(diff[0][2])}</span><span>${X.ym(diff[diff.length - 1][2])}</span></div>` +
+      `<p style="font-size:12.5px;color:var(--sub);margin:8px 0 0;line-height:1.55">가장 좁았을 때 ${X.eok1(minD[1])}(${X.ym(minD[2])}) · 가장 벌어졌을 때 ${X.eok1(maxD[1])}(${X.ym(maxD[2])})${yAgo ? ` · 1년 전 ${X.eok1(yAgo[1])}` : ""}. 그 달 거래가 없으면 앞 달 값으로 이어 계산합니다.</p>` : `<div style="font-size:13px;color:var(--sub);margin-top:10px">두 단지 모두 거래가 있는 달이 적어 추이를 그리기 어렵습니다.</div>`) +
+    `</div>`;
 }
 
 function show() {
@@ -110,9 +146,10 @@ function show() {
   const nZ = C.생활권.filter(q => q.중간순위).length;
   const guZ = C.생활권.filter(q => q.구 === z.구 && q.중간순위).sort((p, q) => p.중간순위 - q.중간순위);
   const inGu = guZ.findIndex(q => q === z) + 1;
-  // 갈아타기: 같은 평형, 시세 ±10%, 서열이 더 높은 생활권
-  const alts = cur ? ALL.filter(y => y.z !== z && y.z.중간순위 && z.중간순위 && y.z.중간순위 < z.중간순위 && y.c[ME.area] && y.c[ME.area].시세 &&
-    Math.abs(y.c[ME.area].시세 / cur - 1) <= 0.1).sort((p, q) => p.z.중간순위 - q.z.중간순위).slice(0, 6) : [];
+  // 같은 금액대: 같은 평형, 시세 ±5%, 다른 생활권 전체 (서열 높은 순)
+  const altAll = cur ? ALL.filter(y => y.z !== z && y.c[ME.area] && y.c[ME.area].시세 && Math.abs(y.c[ME.area].시세 / cur - 1) <= 0.05).sort((p, q) => (p.z.중간순위 || 999) - (q.z.중간순위 || 999)) : [];
+  const alts = altAll.slice(0, ALT_N), nUp = altAll.filter(y => y.z.중간순위 && z.중간순위 && y.z.중간순위 < z.중간순위).length;
+  const myRk = ranks(x, ME.area);
   const ser = (a.월별 || []).map(([m, v]) => [Math.floor(m / 100) * 12 + m % 100, v]);
   const lines = []; if (pk) lines.push({ y: pk, c: "#d9443a", t: "전고점 " + X.eok1(pk) }); if (lo) lines.push({ y: lo, c: "#2a6fdb", t: "전저점 " + X.eok1(lo) });
   const tr = a.시세근거 ? a.시세근거.거래.slice().reverse() : [];
@@ -135,20 +172,30 @@ function show() {
 
   `<div class="card rise" style="animation-delay:.14s"><h2>입지 서열</h2><div class="loc">` +
   `<div><small>서울 생활권 서열</small><b class="num">${z.중간순위 || "-"}<span> / ${nZ}</span></b><div class="gauge"><i id="g1"></i></div></div>` +
-  `<div><small>${z.구} 안 순위</small><b class="num">${inGu || "-"}<span> / ${guZ.length}</span></b><div class="gauge"><i id="g2"></i></div></div></div>` +
-  `<p style="font-size:12.5px;color:var(--sub);margin:10px 0 0">${X.esc(z.이름)} 생활권 대표 단지 84㎡ 시세 중간값 ${X.eok1(z.중간)}. 막대가 길수록 상급지입니다.</p></div>` +
+  `<div><small>${z.구} 안 생활권 순위</small><b class="num">${inGu || "-"}<span> / ${guZ.length}</span></b><div class="gauge"><i id="g2"></i></div></div>` +
+  `<div><small>생활권 안 단지 순위</small><b class="num">${myRk ? myRk.z : "-"}<span> / ${myRk ? myRk.zn : "-"}</span></b><div class="gauge"><i id="g3"></i></div></div>` +
+  `<div><small>서울 단지 순위</small><b class="num">${myRk ? myRk.s : "-"}<span> / ${myRk ? myRk.sn : "-"}</span></b><div class="gauge"><i id="g4"></i></div></div></div>` +
+  `<p style="font-size:12.5px;color:var(--sub);margin:10px 0 0">생활권 서열 = 대표 단지 84㎡ 시세 중간값 순(${X.esc(z.이름)} ${X.eok1(z.중간)}). 단지 순위 = 같은 ${ME.area}㎡ 시세가 높은 순(생활권 대표 단지 기준). 막대가 길수록 위쪽입니다.</p></div>` +
 
-  `<div class="card rise" style="animation-delay:.2s"><h2>갈아타기 후보 <small>같은 ${ME.area}㎡ · 시세 ±10% · 더 높은 생활권</small></h2>` +
-  (alts.length ? alts.map(y => { const v = y.c[ME.area].시세; return `<div class="alt"><span class="rk">${y.z.중간순위}위</span><div class="nm">${X.esc(y.c.이름)}<small>${y.z.구} ${X.esc(y.z.이름)}</small></div><b class="num">${X.eok(v)} <small style="font-size:11px;color:${v > cur ? "var(--up)" : "var(--down)"}">${v > cur ? "+" : ""}${X.eok1(v - cur)}</small></b></div>`; }).join("")
-    : `<div style="font-size:13.5px;color:var(--sub)">비슷한 가격에 더 높은 서열의 생활권 단지가 없습니다. 이미 이 가격대 최상위권입니다.</div>`) +
-  `<div class="links"><a href="group.html?cx=${encodeURIComponent(x.id)}&a=${ME.area}">시세 그룹에서 더 보기</a><a href="cycle.html?gu=${encodeURIComponent(z.구)}">${z.구} 상승·하락</a></div></div>`;
+  `<div class="card rise" style="animation-delay:.2s"><h2>같은 금액대 다른 생활권 <small>같은 ${ME.area}㎡ · 시세 ±5% (${X.eok1(cur * 0.95)}~${X.eok1(cur * 1.05)})</small></h2>` +
+  (altAll.length ? `<div style="font-size:12.5px;color:var(--sub);margin-bottom:4px">${altAll.length}곳 · 그중 내 생활권(${z.중간순위 || "-"}위)보다 서열이 높은 곳 <b style="color:var(--violet)">${nUp}곳</b> (보라색)</div>` +
+    alts.map(y => { const v = y.c[ME.area].시세, up = y.z.중간순위 && z.중간순위 && y.z.중간순위 < z.중간순위; return `<div class="alt"><span class="rk" style="background:${up ? "var(--violet)" : "#c2c7ce"}">${y.z.중간순위 || "-"}위</span><div class="nm">${X.esc(y.c.이름)}<small>${y.z.구} ${X.esc(y.z.이름)}</small></div><b class="num">${X.eok(v)} <small style="font-size:11px;color:${v > cur ? "var(--up)" : "var(--down)"}">${v > cur ? "+" : v < cur ? "−" : ""}${X.eok1(Math.abs(v - cur))}</small></b></div>`; }).join("") +
+    (altAll.length > ALT_N ? `<button class="chg" id="altMore" style="width:100%;margin-top:8px">더 보기 (${altAll.length - ALT_N}곳 더)</button>` : "")
+    : `<div style="font-size:13.5px;color:var(--sub)">±5% 안에 다른 생활권 대표 단지가 없습니다.</div>`) +
+  `<div class="links"><a href="group.html?cx=${encodeURIComponent(x.id)}&a=${ME.area}">시세 그룹에서 더 보기</a><a href="cycle.html?gu=${encodeURIComponent(z.구)}">${z.구} 상승·하락</a></div></div>` +
+  targetCard(x, ME.area);
 
   if (cur) X.count($("k1"), cur, v => X.eok(Math.round(v / 100) * 100));
   requestAnimationFrame(() => setTimeout(() => {
     if ($("g1") && z.중간순위) $("g1").style.width = ((nZ - z.중간순위 + 1) / nZ * 100) + "%";
     if ($("g2") && inGu) $("g2").style.width = ((guZ.length - inGu + 1) / guZ.length * 100) + "%";
+    if ($("g3") && myRk) $("g3").style.width = ((myRk.zn - myRk.z + 1) / myRk.zn * 100) + "%";
+    if ($("g4") && myRk) $("g4").style.width = ((myRk.sn - myRk.s + 1) / myRk.sn * 100) + "%";
   }, 50));
   $("chg").onclick = pick;
+  const am = $("altMore"); if (am) am.onclick = () => { ALT_N += 10; show(); };
+  if ($("tgBox")) searchBox($("tgBox"), "가고 싶은 단지 이름·초성", y => { TG = { id: y.id }; TPICK = false; X.store.set(TKEY, TG); show(); setTimeout(() => $("tgCard").scrollIntoView({ behavior: "smooth", block: "start" }), 50); });
+  const tc = $("tgChg"); if (tc) tc.onclick = () => { TPICK = true; show(); $("tgCard").scrollIntoView({ block: "start" }); };
   const sa = $("segA"); if (sa) sa.onclick = e => { const b = e.target.closest("button"); if (!b) return; ME.area = b.dataset.v; X.store.set(KEY, ME); show(); };
 }
 </script>
