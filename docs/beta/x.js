@@ -22,9 +22,15 @@ const X = (() => {
   // 숫자 올라가는 모션
   function count(el, to, fmt, ms = 900) {
     const from = +el.dataset.v || 0; el.dataset.v = to;
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = fmt(to); return; }
-    const t0 = performance.now();
-    const step = now => { const t = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - t, 3); el.textContent = fmt(from + (to - from) * e); if (t < 1) requestAnimationFrame(step); };
+    el.textContent = fmt(to);   // 최종값을 먼저 넣어 둠 (애니메이션이 멈춰도 맞는 값이 보이게)
+    if (to == null || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let t0 = null;
+    const step = now => {
+      if (t0 == null) t0 = now;   // 첫 화면 갱신 시각을 시작으로 (진행률이 0보다 작아지지 않게)
+      const t = Math.max(0, Math.min(1, (now - t0) / ms)), e = 1 - Math.pow(1 - t, 3);
+      el.textContent = fmt(t < 1 ? from + (to - from) * e : to);
+      if (t < 1) requestAnimationFrame(step);
+    };
     requestAnimationFrame(step);
   }
   // 작은 선 그래프 (series: [[x, y], ...]) — 선이 그려지는 모션
@@ -54,7 +60,17 @@ const X = (() => {
   }
   const naver = (name, dong) => "https://m.land.naver.com/search/result/" + encodeURIComponent(name);
   const qs = () => Object.fromEntries(new URLSearchParams(location.search));
-  return { get, eok, eok1, ym, ymd, pct, esc, store, seq, div, inkOn, count, spark, dumbbell, naver, qs };
+  function toast(msg) {
+    let t = document.getElementById("xToast");
+    if (!t) { t = document.createElement("div"); t.id = "xToast"; t.style.cssText = "position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1d1f23;color:#fff;font-size:14px;padding:10px 16px;border-radius:999px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.2);opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center"; document.body.appendChild(t); }
+    t.textContent = msg; t.style.opacity = 1; clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = 0, 1800);
+  }
+  // 지금 보는 화면의 주소를 복사 (카페 글에 붙이는 용도)
+  async function share(url, label) {
+    try { await navigator.clipboard.writeText(url); toast((label ? label + " " : "") + "링크를 복사했어요"); }
+    catch (e) { window.prompt("아래 주소를 길게 눌러 복사하세요", url); }
+  }
+  return { get, toast, share, eok, eok1, ym, ymd, pct, esc, store, seq, div, inkOn, count, spark, dumbbell, naver, qs };
 })();
 // 선 그리기 모션
 (() => { const s = document.createElement("style"); s.textContent = `.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.1s cubic-bezier(.4,.1,.2,1) forwards}@keyframes draw{to{stroke-dashoffset:0}}@media (prefers-reduced-motion:reduce){.draw{animation:none;stroke-dashoffset:0}}`; document.head.appendChild(s); })();

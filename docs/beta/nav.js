@@ -27,6 +27,14 @@ body.has-bnav{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
 body.has-bnav .toast{bottom:calc(80px + env(safe-area-inset-bottom))}`;
     document.head.appendChild(st);
   }
-  const add = () => { document.body.appendChild(nav); document.body.classList.add("has-bnav"); };
+  // 화면 맨 아래 안내 줄: 참고용 문구 + 정식 사이트 링크 (메뉴는 5칸 유지)
+  const off = document.createElement("p");
+  off.className = "xoff";
+  off.style.cssText = "max-width:720px;margin:18px auto 0;padding:10px 16px 4px;border-top:1px solid #e6e8eb;font-size:12px;line-height:1.6;color:#9aa0a8;font-family:inherit";
+  off.innerHTML = '참고용 정보이며 투자 권유가 아닙니다. 최종 판단은 직접 확인하세요. · <a href="../" style="color:#2a6fdb;font-weight:600;text-decoration:none">정식 사이트 →</a>';
+  const add = () => {
+    (document.querySelector(".wrap") || document.body).appendChild(off);
+    document.body.appendChild(nav); document.body.classList.add("has-bnav");
+  };
   if (document.body) add(); else document.addEventListener("DOMContentLoaded", add);
 })();

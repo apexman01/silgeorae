@@ -34,6 +34,13 @@
   .play input[type=range]{width:100%;accent-color:var(--ink);margin:0}
   .play .sp{height:34px;margin-top:2px;position:relative}
   .play .ph{position:absolute;top:0;bottom:0;width:2px;background:var(--up);border-radius:1px;transition:left .12s linear}
+  details.info{margin:6px 2px 0;font-size:12px;color:var(--sub)}
+  details.info summary{cursor:pointer;color:var(--mute);list-style:none}
+  details.info summary::-webkit-details-marker{display:none}
+  details.info div{margin-top:4px;line-height:1.6;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .zl a.z{text-decoration:none;color:inherit}
+  .zl a.z .go{flex:none;color:var(--accent);font-size:16px;margin-left:2px}
+  .shr{flex:none;font-size:12px;border:1px solid #d5d9de;background:#fff;border-radius:999px;padding:4px 10px;color:var(--sub)}
   .det .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
   .det .hd h2{margin:0;font-size:19px}
   .det .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
@@ -68,10 +75,11 @@
   <p class="lead">25개 구의 84㎡ 실거래 시세를 지도로 봅니다. ▶를 누르면 2021년부터 지금까지 시세 변화가 지도 위에서 재생됩니다.</p>
 
   <div class="hero">
-    <div class="tile rise"><small>서울 84㎡ 시세<br><em>25개 구 중간값</em></small><b class="num" id="hSeoul">-</b></div>
-    <div class="tile rise" style="animation-delay:.08s"><small>최근 6개월<br><em>서울 시세 변화</em></small><b class="num" id="hChg">-</b></div>
-    <div class="tile rise" style="animation-delay:.16s"><small>전고점 넘은 구<br><em>2021~22 최고 대비</em></small><b class="num" id="hPeak">-</b></div>
+    <div class="tile rise"><small>서울 84㎡ 시세<br><em>25개 구 중간값</em></small><b class="num" id="hSeoul"></b></div>
+    <div class="tile rise" style="animation-delay:.08s"><small>최근 6개월<br><em>서울 시세 변화</em></small><b class="num" id="hChg"></b></div>
+    <div class="tile rise" style="animation-delay:.16s"><small>전고점 넘은 구<br><em>2021~22 최고 대비</em></small><b class="num" id="hPeak"></b></div>
   </div>
+  <details class="info"><summary>ⓘ 위 숫자 기준</summary><div id="heroInfo"></div></details>
 
   <div class="card mapcard rise" style="animation-delay:.2s">
     <div class="chips" id="metrics"></div>
@@ -102,13 +110,17 @@ const METRICS = [
   { k: "jr", t: "전세가율", fmt: v => v == null ? "-" : v.toFixed(0) + "%", kind: "seq" },
 ];
 const S = Object.assign({ m: "cur", gu: null }, X.store.get("silgeorae_home_v1", {}));
+const Q = X.qs(); if (Q.gu) S.gu = Q.gu;   // 공유 링크(?gu=)로 들어오면 그 구를 열어 둠
+let CONF;   // 확정월 위치 (마지막 달은 신고기한 30일이 남아 '잠정')
 const save = () => X.store.set("silgeorae_home_v1", { m: S.m, gu: S.gu });
 let MAP, G, CX, MONTHS, ROWS = [], playing = false, tIdx = null, timer = null;
 
 Promise.all([X.get("data/x/map.json"), X.get("data/x/gu.json"), X.get("data/x/cx.json")]).then(([m, g, c]) => {
   MAP = m; G = g; CX = c; MONTHS = g.월;
-  $("meta").textContent = `기준 ${X.ym(g.기준월)} · 갱신 ${g.자료갱신}`;
-  const last = MONTHS.length - 1;
+  CONF = MONTHS.indexOf(g.확정월); if (CONF < 0) CONF = MONTHS.length - 2;
+  if (S.gu && !g.구[S.gu]) S.gu = null;
+  $("meta").textContent = `기준 ${X.ym(g.확정월)} · ${X.ym(g.잠정월)} 잠정 · 갱신 ${g.자료갱신}`;
+  const last = CONF;   // 대표 숫자는 확정월 기준
   ROWS = Object.entries(g.구).map(([gu, d]) => {
     let i = last; while (i >= 0 && d.매매[i] == null) i--;
     const p6 = d.매매[i - 6];
@@ -122,11 +134,15 @@ Promise.all([X.get("data/x/map.json"), X.get("data/x/gu.json"), X.get("data/x/cx
   X.count($("hChg"), (sNow / s6 - 1) * 100, v => X.pct(v));
   $("hChg").className = "num " + (sNow >= s6 ? "up" : "down");
   X.count($("hPeak"), ROWS.filter(r => r.peak > 0).length, v => Math.round(v) + " / 25");
-  // 타임랩스 바
-  $("tl").max = last; $("tl").value = last;
+  $("heroInfo").innerHTML = `· 모든 숫자는 <b>${X.ym(MONTHS[last])}</b> 기준입니다. 마지막 달(${X.ym(g.잠정월)})은 신고기한(30일)이 남아 거래가 덜 들어와 '잠정'으로 보고 대표 숫자에서 뺐습니다.<br>` +
+    `· 구 시세 = 그 구 84㎡(전용 80~90㎡) 매매의 3개월 이동 중간값(3개월 거래 5건 미만이면 빈칸). 서울 시세 = 그달 25개 구 값의 중간값.<br>` +
+    `· 6개월 변화 = 서울 시세 ${X.ym(MONTHS[last])} ÷ ${X.ym(MONTHS[last - 6])} − 1 = ${X.eok1(sNow)} ÷ ${X.eok1(s6)} − 1.<br>` +
+    `· 전고점 넘은 구 = 지금 구 시세가 2021~22년 구 시세 최고값보다 높은 구의 수.`;
+  // 타임랩스 바 (마지막 잠정 달까지 재생)
+  $("tl").max = MONTHS.length - 1; $("tl").value = last;
   $("tlSpark").innerHTML = X.spark(seoul.map((v, i) => [i, v]), { w: 600, h: 34, pad: 2, c: "#9aa0a8", sw: 1.5, dot: false }) + `<div class="ph" id="ph"></div>`;
   $("foot").innerHTML = `자료: 국토부 실거래가(${X.ym(MONTHS[0])}~${X.ym(g.기준월)}), 매매는 해제·직거래 제외, 전세는 신규 계약.<br>` +
-    `· 구 시세 = 구 전체 84㎡(전용 80~90㎡) 거래의 3개월 이동 중간값.<br>· 전고점 = 2021~22년 중 가장 높았던 시세, 전저점 = 그 뒤 가장 낮았던 시세. 전세가율 = 전세 ÷ 매매.<br>· 지도 경계: 통계청 2013년 행정구역(southkorea/seoul-maps).`;
+    `· 구 시세 = 구 전체 84㎡(전용 80~90㎡) 거래의 3개월 이동 중간값. ${X.ym(g.잠정월)}은 신고기한(30일)이 남아 거래가 덜 들어온 잠정 값입니다.<br>· 전고점 = 2021~22년 중 가장 높았던 시세, 전저점 = 그 뒤 가장 낮았던 시세. 전세가율 = 전세 ÷ 매매.<br>· 지도 경계: 통계청 2013년 행정구역(southkorea/seoul-maps).`;
   drawMap(); render(); renderDet();
 }).catch(e => { $("det").innerHTML = `<div class="empty">자료를 불러오지 못했습니다. 새로고침해 주세요.</div>`; console.error(e); });
 
@@ -177,8 +193,8 @@ function render() {
   const stops = [0, .25, .5, .75, 1].map(t => m.kind === "div" && tIdx == null ? X.div(t * 2 - 1) : X.seq(t));
   $("legend").innerHTML = `<span>${m.fmt(C.lo)}</span><span class="bar" style="background:linear-gradient(90deg,${stops.join(",")})"></span><span>${m.fmt(C.hi)}</span>`;
   // 재생 표시
-  const i = tIdx == null ? MONTHS.length - 1 : tIdx;
-  $("ymBig").textContent = "20" + X.ym(MONTHS[i]).replace(".", ".");
+  const i = tIdx == null ? CONF : tIdx;
+  $("ymBig").textContent = "20" + X.ym(MONTHS[i]) + (i > CONF ? " 잠정" : "");
   $("ymBig").classList.toggle("show", tIdx != null);
   const ph = $("ph"); if (ph) ph.style.left = `calc(${(i / (MONTHS.length - 1)) * 100}% - 1px)`;
   $("tl").value = i;
@@ -195,6 +211,7 @@ function render() {
   $("rank").onclick = e => { const r = e.target.closest(".r"); if (r) pick(r.dataset.gu); };
 }
 
+function shareGu() { const u = new URL(location.href); u.search = "?gu=" + encodeURIComponent(S.gu); X.share(u.toString(), S.gu); }
 function renderDet() {
   const el = $("det");
   if (!S.gu) { el.innerHTML = `<div style="font-size:14px;color:var(--sub);text-align:center;padding:6px 0">지도에서 구를 누르면 시세 흐름과 생활권 서열이 나옵니다.</div>`; return; }
@@ -203,7 +220,7 @@ function renderDet() {
   const lo = Math.min(d.전저점 || d.현재, d.현재) * 0.95, hi = Math.max(d.전고점, d.현재) * 1.03;
   const zones = CX.생활권.filter(z => z.구 === S.gu).sort((a, b) => (a.중간순위 || 999) - (b.중간순위 || 999));
   const w = 600, h = 120;
-  el.innerHTML = `<div class="hd"><h2>${S.gu}</h2><span class="tag ${r.peak > 0 ? "up" : "down"}">전고점 대비 ${X.pct(r.peak)}</span></div>` +
+  el.innerHTML = `<div class="hd"><h2>${S.gu}</h2><span style="display:flex;gap:6px;align-items:center"><span class="tag ${r.peak > 0 ? "up" : "down"}">전고점 대비 ${X.pct(r.peak)}</span><button class="shr" id="shr">링크 복사</button></span></div>` +
     `<div class="kpi"><div><small>84㎡ 시세</small><b class="num">${X.eok1(r.cur)}</b></div><div><small>6개월 변화</small><b class="num ${r.chg6 > 0 ? "up" : "down"}">${X.pct(r.chg6)}</b></div><div><small>전세가율</small><b class="num">${r.jr == null ? "-" : r.jr.toFixed(0) + "%"}</b></div></div>` +
     `<div class="lg"><span><i style="background:#2a6fdb"></i>매매</span><span><i style="background:#1f9d6b"></i>전세(신규)</span></div>` +
     `<div style="position:relative">${X.spark(ser, { w, h, c: "#2a6fdb", fill: "#e3ecfb", extra: d.전세.filter(v => v != null), lines: [{ y: d.전고점, c: "#d9443a", t: "전고점 " + X.eok1(d.전고점) }] })}` +
@@ -212,8 +229,10 @@ function renderDet() {
     X.dumbbell(d.전고점, d.전저점, d.현재, lo, hi) +
     `<div class="cyc lab"><span>${X.ym(MONTHS[0])}</span><span>${X.ym(G.기준월)}</span></div>` +
     `<div class="zl"><div class="lbl" style="margin-top:4px">생활권 서열 <small style="font-weight:400;color:var(--mute)">서울 101곳 중 · 대표 단지 84㎡ 시세 중간값 순</small></div>` +
-    zones.map(z => `<div class="z"><span class="rk">${z.중간순위 || "-"}위</span><div class="nm">${X.esc(z.이름)}<small>${X.esc(z.설명)}</small></div><b class="num">${X.eok1(z.중간)}</b></div>`).join("") + `</div>` +
-    `<div class="acts"><a href="group.html?gu=${encodeURIComponent(S.gu)}">시세 그룹</a><a href="cycle.html?gu=${encodeURIComponent(S.gu)}">상승·하락</a><a href="./">생활권 그래프</a></div>`;
+    zones.map(z => `<a class="z" href="./?gu=${encodeURIComponent(S.gu)}&lz=${encodeURIComponent(z.id || z.이름)}&tab=view"><span class="rk">${z.중간순위 || "-"}위</span><div class="nm">${X.esc(z.이름)}<small>${X.esc(z.설명)}</small></div><b class="num">${X.eok1(z.중간)}</b><span class="go">›</span></a>`).join("") +
+    `<div style="font-size:11.5px;color:var(--mute);margin-top:4px">생활권을 누르면 그 생활권 시세 그래프로 갑니다.</div></div>` +
+    `<div class="acts"><a href="group.html?gu=${encodeURIComponent(S.gu)}">시세 그룹</a><a href="cycle.html?gu=${encodeURIComponent(S.gu)}">상승·하락</a><a href="./?gu=${encodeURIComponent(S.gu)}&tab=view">생활권 그래프</a></div>`;
+  $("shr").onclick = shareGu;
 }
 
 // 타임랩스
@@ -225,7 +244,7 @@ $("btnPlay").onclick = () => {
   render();
   timer = setInterval(() => { tIdx++; if (tIdx >= MONTHS.length - 1) { tIdx = MONTHS.length - 1; render(); playing = false; clearInterval(timer); $("icPlay").innerHTML = '<path d="M7 4v16l13-8z"/>'; return; } render(); }, 260);
 };
-$("tl").oninput = e => { playing = false; clearInterval(timer); $("icPlay").innerHTML = '<path d="M7 4v16l13-8z"/>'; const v = +e.target.value; tIdx = v >= MONTHS.length - 1 ? null : v; render(); };
+$("tl").oninput = e => { playing = false; clearInterval(timer); $("icPlay").innerHTML = '<path d="M7 4v16l13-8z"/>'; const v = +e.target.value; tIdx = v === CONF ? null : v; render(); };
 </script>
 </body>
 </html>

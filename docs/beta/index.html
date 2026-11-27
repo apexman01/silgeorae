@@ -366,7 +366,7 @@
     <div class="gzl" id="zoneLabel">생활권 선택</div>
     <div class="gzt rkgrid" id="zoneTabs"></div>
     <div class="onerow" data-html2canvas-ignore><button type="button" class="onebtn" id="oneBtn">임장 기록용 한 장 이미지 만들기</button></div>
-    <div class="capline" data-html2canvas-ignore><button type="button" class="capt cap" data-cap="guInfo">이미지로 저장 ↓</button></div>
+    <div class="capline" data-html2canvas-ignore><button type="button" class="capt" id="shareBtn">링크 복사</button> <button type="button" class="capt cap" data-cap="guInfo">이미지로 저장 ↓</button></div>
   </div>
   <div class="card vt-only" id="trCard" style="display:none">
     <div class="ch"><h3>교통</h3><span class="cbtn" data-html2canvas-ignore><button type="button" class="mini" id="trAll">전체 생활권 펼치기</button></span></div>
@@ -450,7 +450,7 @@
     <div class="scroll"><table id="recent"></table></div>
   </div>
 
-  <div class="sign">시험판 · 새 기능을 먼저 만들어 보는 곳 · <a href="../">기본 사이트</a> · <a href="../v1/">v1 고정판</a> · 만든이 비상</div>
+  <div class="sign">시험판 · 새 기능을 먼저 만들어 보는 곳 · <a href="../v1/">v1 고정판</a> · 만든이 비상</div>
 </div>
 <div class="one" id="oneDlg" hidden role="dialog" aria-label="한 장 이미지 미리보기">
   <div class="onebar"><b>한 장 이미지 미리보기</b><button type="button" class="mini" id="oneClose">닫기</button></div>
@@ -530,15 +530,34 @@ function initSido() {
   $("selSido").onchange = e => { state.sido = sidos[+e.target.value]; initGu(); };
   initGu();
 }
+/* 주소 바로가기: ?gu=구이름&lz=생활권id(또는 이름)&tab=view|top|cmp|jb — 지도·공유 링크에서 들어올 때 */
+const DEEP = (() => { const q = new URLSearchParams(location.search); return { gu: q.get("gu"), lz: q.get("lz"), tab: q.get("tab") }; })();
 function initGu() {
   const gus = Object.keys(INDEX.regions[state.sido] || {}).sort();
   let last = null; try { last = localStorage.getItem(GU_KEY); } catch (e) {}
-  const gi = Math.max(0, gus.indexOf(last));
+  const want = DEEP.gu && gus.includes(DEEP.gu) ? DEEP.gu : null;
+  const gi = want ? gus.indexOf(want) : Math.max(0, gus.indexOf(last));
   state.gu = gus[gi];
   fillSelect($("selGu"), gus, gi);
   $("selGu").onchange = e => { state.gu = gus[+e.target.value]; state.zone = 0; state.picked = []; loadGu(state.sido, state.gu, () => initZone()); };
-  loadGu(state.sido, state.gu, () => initZone());
+  loadGu(state.sido, state.gu, () => { initZone(); applyDeep(want); });
 }
+function applyDeep(gu) {   // 첫 화면에서 한 번만
+  if (!gu) return;
+  if (DEEP.lz) {
+    const zi = zonesFor(state.sido, gu).findIndex(z => z.kind === "base" && (z.id === DEEP.lz || z.name === DEEP.lz));
+    if (zi >= 0) { state.zone = zi; $("selZone").value = zi; onZoneChange(); }
+  }
+  if (DEEP.tab && ["view", "top", "cmp", "jb"].includes(DEEP.tab) && DEEP.tab !== state.tab) { if (DEEP.tab === "jb") jbS.gu = gu; setTab(DEEP.tab); }
+}
+function shareLink() {   // 지금 보는 구·생활권 주소 (카페 글에 붙이는 용도)
+  const z = zonesFor(state.sido, state.gu)[state.zone] || {};
+  const u = new URL(location.href);
+  u.search = "?gu=" + encodeURIComponent(state.gu) + (z.kind === "base" ? "&lz=" + encodeURIComponent(z.id || z.name) : "") + "&tab=" + state.tab;
+  const msg = state.gu + (z.kind === "base" ? " " + z.name : "") + " 링크를 복사했어요";
+  (navigator.clipboard ? navigator.clipboard.writeText(u.toString()).then(() => toast(msg)) : Promise.reject()).catch(() => window.prompt("아래 주소를 길게 눌러 복사하세요", u.toString()));
+}
+$("shareBtn").onclick = shareLink;
 function initZone(keep) {
   const zs = zonesFor(state.sido, state.gu);
   if (!keep || state.zone >= zs.length) state.zone = 0;
